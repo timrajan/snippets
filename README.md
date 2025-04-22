@@ -224,3 +224,29 @@ updateTestCaseParameters().catch((err: Error) => {
   console.error('Error:', err);
   process.exit(1);
 });
+
+
+
+
+// Create a JSON patch document to update the parameters field
+    const patchDocument: JsonPatchDocument = [
+      {
+        op: Operation.Add,
+        path: '/fields/Microsoft.VSTS.TCM.Parameters',
+        value: parameterizedString
+      }
+    ];
+    
+    // Update the work item with the new parameters
+    const updatedWorkItem = await workItemTrackingApi.updateWorkItem(
+      {},  // customHeaders
+      patchDocument,
+      testCaseId,
+      project
+    );
+    
+    console.log('Test case parameters updated successfully!');
+    console.log(updatedWorkItem);
+  } catch (error) {
+    console.error('Error updating test case parameters:', error);
+    throw error;
