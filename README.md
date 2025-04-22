@@ -250,3 +250,19 @@ updateTestCaseParameters().catch((err: Error) => {
   } catch (error) {
     console.error('Error updating test case parameters:', error);
     throw error;
+
+
+
+
+
+    const updatedParametersField = verifiedWorkItem?.fields?.['Microsoft.VSTS.TCM.Parameters'];
+    console.log('Updated parameters field:');
+    console.log(updatedParametersField);
+    
+    if (updatedParametersField === parameterizedString) {
+      console.log('✅ Parameters successfully updated!');
+    } else {
+      console.log('❌ Parameters were not updated correctly.');
+      console.log('Expected:', parameterizedString);
+      console.log('Actual:', updatedParametersField);
+    }
