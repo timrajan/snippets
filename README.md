@@ -1,1 +1,4 @@
-'|Username|AAA,BBB,CCC|\n|Email|a@d.com,c@d.com,e@f.com|\n|FinancialYear|2022,2023,2024|\n'
+ Non-whitespace before first tag.
+    Line: 0
+    Column: 1
+    Char: |
