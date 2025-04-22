@@ -1,243 +1,74 @@
-
-
-
 import * as azdev from 'azure-devops-node-api';
+import * as witApi from 'azure-devops-node-api/WorkItemTrackingApi';
+import { JsonPatchDocument, Operation } from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
 
-import * as TestApi from 'azure-devops-node-api/TestApi';
-
-import * as TestInterfaces from 'azure-devops-node-api/interfaces/TestInterfaces';
-
-import * as WorkItemInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
-
-
-interface TestCaseParameter {
-  name: string;
-  defaultValue: string;
-  values: string[];
-}
-
-async function updateTestCaseParameters(): Promise<TestInterfaces.TestCase | undefined> {
-
+async function updateTestCaseLocalDataSource(): Promise<void> {
   try {
     // Connection parameters
     const orgUrl: string = 'https://dev.azure.com/yourOrganization';
-    const token: string = 'your-personal-access-token'; // Use a PAT with appropriate permissions
-    
-    // Create authentication handler
-    const authHandler = azdev.getPersonalAccessTokenHandler(token);
-    
-    // Initialize the connection to Azure DevOps
-    const connection: azdev.WebApi = new azdev.WebApi(orgUrl, authHandler);
-    
-    // Get the Test API client
-    const testApi: TestApi.ITestApi = await connection.getTestApi();
-    
-    // Variables for the test case
+    const token: string = 'your-personal-access-token';
     const project: string = 'YourProjectName';
     const testCaseId: number = 12345; // Replace with your test case ID
     
-    // Get current test case
-    const testCase: TestInterfaces.TestCase = await testApi.getTestCaseById(project, testCaseId);
-    
-    if (!testCase || !testCase.workItem) {
-      throw new Error(`Test case with ID ${testCaseId} not found`);
-    }
-    
-    // Define new parameters or update existing ones
-    const updatedParameters: TestCaseParameter[] = [
-      {
-        name: 'Parameter1',
-        defaultValue: 'DefaultValue1',
-        values: ['Value1', 'Value2', 'Value3']
-      },
-      {
-        name: 'Parameter2',
-        defaultValue: 'DefaultValue2',
-        values: ['ValueA', 'ValueB', 'ValueC']
-      }
-      // Add more parameters as needed
-    ];
-    
-    // Create parameter table in the format expected by the API
-    const parameterizedString: string = createParameterizedString(updatedParameters);
-    
-    // Update the test case with new parameters
-    // The parameter table is part of the workItemFields
-    if (testCase.workItem.fields) {
-      testCase.workItem.fields['Microsoft.VSTS.TCM.Parameters'] = parameterizedString;
-    } else {
-      testCase.workItem.fields = {
-        'Microsoft.VSTS.TCM.Parameters': parameterizedString
-      };
-    }
-    
-    // Save the updated test case
-    const updatedTestCase: TestInterfaces.TestCase = await testApi.updateTestCase(testCase, project);
-    
-    console.log('Test case parameters updated successfully!');
-    console.log(updatedTestCase);
-    
-    return updatedTestCase;
-  } catch (error) {
-    console.error('Error updating test case parameters:', error);
-    throw error;
-  }
-}
-
-/**
- * Creates a parameterized string in the format required by Azure DevOps
- * @param parameters - Array of parameter objects with name, defaultValue, and values
- * @returns Formatted parameter string
- */
-function createParameterizedString(parameters: TestCaseParameter[]): string {
-  // Azure DevOps expects parameters in this format:
-  // |Parameter1|DefaultValue1|Value1,Value2,Value3|
-  // |Parameter2|DefaultValue2|ValueA,ValueB,ValueC|
-  
-  let paramString: string = '';
-  
-  for (const param of parameters) {
-    paramString += `|${param.name}|${param.defaultValue}|${param.values.join(',')}|\n`;
-  }
-  
-  return paramString;
-}
-
-// If running as a standalone script
-updateTestCaseParameters().catch((err: Error) => {
-  console.error('Error:', err);
-  process.exit(1);
-});
-
-
-
-
-
-
-
-##########################################################################################################################
-
-import * as azdev from 'azure-devops-node-api';
-import * as TestAPI from 'azure-devops-node-api/TestApi';
-import * as TestInterfaces from 'azure-devops-node-api/interfaces/TestInterfaces';
-import * as WorkItemInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
-
-interface TestCaseParameter {
-  name: string;
-  defaultValue: string;
-  values: string[];
-}
-
-async function updateTestCaseParameters(): Promise<void> {
-  try {
-    // Connection parameters
-    const orgUrl: string = 'https://dev.azure.com/yourOrganization';
-    const token: string = 'your-personal-access-token'; // Use a PAT with appropriate permissions
-    
     // Create authentication handler
     const authHandler = azdev.getPersonalAccessTokenHandler(token);
+    const connection = new azdev.WebApi(orgUrl, authHandler);
+    const workItemTrackingApi = await connection.getWorkItemTrackingApi();
     
-    // Initialize the connection to Azure DevOps
-    const connection: azdev.WebApi = new azdev.WebApi(orgUrl, authHandler);
-    
-    // Get the Test API client
-    const testApi: TestAPI.ITestApi = await connection.getTestApi();
-    
-    // Get the Work Item Tracking API client (needed for updating work items)
-    const witApi = await connection.getWorkItemTrackingApi();
-    
-    // Variables for the test case
-    const project: string = 'YourProjectName';
-    const testCaseId: number = 12345; // Replace with your test case ID
-    
-    // First, get the work item associated with the test case
-    const workItem = await witApi.getWorkItem(testCaseId, undefined, undefined, WorkItemInterfaces.WorkItemExpand.All);
-    
-    if (!workItem) {
-      throw new Error(`Test case with ID ${testCaseId} not found`);
-    }
-    
-    // Define new parameters or update existing ones
-    const updatedParameters: TestCaseParameter[] = [
-      {
-        name: 'Parameter1',
-        defaultValue: 'DefaultValue1',
-        values: ['Value1', 'Value2', 'Value3']
-      },
-      {
-        name: 'Parameter2',
-        defaultValue: 'DefaultValue2',
-        values: ['ValueA', 'ValueB', 'ValueC']
-      }
-      // Add more parameters as needed
-    ];
-    
-    // Create parameter table in the format expected by the API
-    const parameterizedString: string = createParameterizedString(updatedParameters);
-    
-    // Create a JSON patch document to update the parameters field
-    const patchDocument: WorkItemInterfaces.JsonPatchOperation[] = [
-      {
-        op: WorkItemInterfaces.Operation.Add,
-        path: '/fields/Microsoft.VSTS.TCM.Parameters',
-        value: parameterizedString
-      }
-    ];
-    
-    // Update the work item with the new parameters
-    const updatedWorkItem = await witApi.updateWorkItem(
-      undefined,   // customHeaders
-      patchDocument,
+    // First, retrieve the current work item to see its existing data source
+    console.log(`Retrieving test case #${testCaseId}...`);
+    const workItem = await workItemTrackingApi.getWorkItem(
       testCaseId,
-      project
+      undefined,
+      undefined,
+      undefined,
+      undefined
     );
     
-    console.log('Test case parameters updated successfully!');
-    console.log(updatedWorkItem);
-  } catch (error) {
-    console.error('Error updating test case parameters:', error);
-    throw error;
-  }
-}
-
-/**
- * Creates a parameterized string in the format required by Azure DevOps
- * @param parameters - Array of parameter objects with name, defaultValue, and values
- * @returns Formatted parameter string
- */
-function createParameterizedString(parameters: TestCaseParameter[]): string {
-  // Azure DevOps expects parameters in this format:
-  // |Parameter1|DefaultValue1|Value1,Value2,Value3|
-  // |Parameter2|DefaultValue2|ValueA,ValueB,ValueC|
-  
-  let paramString: string = '';
-  
-  for (const param of parameters) {
-    paramString += `|${param.name}|${param.defaultValue}|${param.values.join(',')}|\n`;
-  }
-  
-  return paramString;
-}
-
-// If running as a standalone script
-updateTestCaseParameters().catch((err: Error) => {
-  console.error('Error:', err);
-  process.exit(1);
-});
-
-
-
-
-// Create a JSON patch document to update the parameters field
+    // Check if it has LocalDataSource field already
+    const currentDataSource = workItem?.fields?.['Microsoft.VSTS.TCM.LocalDataSource'];
+    console.log('Current LocalDataSource:', currentDataSource);
+    
+    // IMPORTANT: If the field exists, we need to get its current value
+    // and modify it instead of completely replacing it, or we'll lose data
+    
+    // Parse the current data source (if it exists) or initialize a new one
+    let dataSourceTable: { [key: string]: string[] } = {};
+    
+    if (currentDataSource && typeof currentDataSource === 'string') {
+      try {
+        // Try to parse existing data source
+        dataSourceTable = parseLocalDataSource(currentDataSource);
+        console.log('Parsed current data source:', dataSourceTable);
+      } catch (e) {
+        console.warn('Could not parse existing data source, creating new one.');
+      }
+    }
+    
+    // Add or update parameters in the data source
+    dataSourceTable['Parameter1'] = ['Value1', 'Value2', 'Value3'];
+    dataSourceTable['Parameter2'] = ['ValueA', 'ValueB', 'ValueC'];
+    
+    // Create the formatted LocalDataSource string
+    const formattedDataSource = formatLocalDataSource(dataSourceTable);
+    console.log('New LocalDataSource to be set:');
+    console.log(formattedDataSource);
+    
+    // Important: Use REPLACE operation if the field already exists, otherwise use ADD
+    const operation = currentDataSource ? Operation.Replace : Operation.Add;
+    
+    // Create a JSON patch document to update the LocalDataSource field
     const patchDocument: JsonPatchDocument = [
       {
-        op: Operation.Add,
-        path: '/fields/Microsoft.VSTS.TCM.Parameters',
-        value: parameterizedString
+        op: operation,
+        path: '/fields/Microsoft.VSTS.TCM.LocalDataSource',
+        value: formattedDataSource
       }
     ];
     
-    // Update the work item with the new parameters
+    console.log(`Sending ${operation} operation to update LocalDataSource...`);
+    
+    // Update the work item with the new LocalDataSource
     const updatedWorkItem = await workItemTrackingApi.updateWorkItem(
       {},  // customHeaders
       patchDocument,
@@ -245,24 +76,76 @@ updateTestCaseParameters().catch((err: Error) => {
       project
     );
     
-    console.log('Test case parameters updated successfully!');
-    console.log(updatedWorkItem);
-  } catch (error) {
-    console.error('Error updating test case parameters:', error);
-    throw error;
-
-
-
-
-
-    const updatedParametersField = verifiedWorkItem?.fields?.['Microsoft.VSTS.TCM.Parameters'];
-    console.log('Updated parameters field:');
-    console.log(updatedParametersField);
+    console.log('Test case update successful.');
     
-    if (updatedParametersField === parameterizedString) {
-      console.log('✅ Parameters successfully updated!');
-    } else {
-      console.log('❌ Parameters were not updated correctly.');
-      console.log('Expected:', parameterizedString);
-      console.log('Actual:', updatedParametersField);
+    // Verify the update was successful by getting the work item again
+    console.log('Verifying update...');
+    const verifiedWorkItem = await workItemTrackingApi.getWorkItem(
+      testCaseId,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    
+    const updatedDataSourceField = verifiedWorkItem?.fields?.['Microsoft.VSTS.TCM.LocalDataSource'];
+    console.log('Updated LocalDataSource field:');
+    console.log(updatedDataSourceField);
+    
+  } catch (error) {
+    console.error('Error updating test case LocalDataSource:', error);
+    throw error;
+  }
+}
+
+/**
+ * Parse the LocalDataSource string into a structured object
+ */
+function parseLocalDataSource(dataSourceString: string): { [key: string]: string[] } {
+  const result: { [key: string]: string[] } = {};
+  
+  // Split the data source string into lines
+  const lines = dataSourceString.split('\n');
+  
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) continue;
+    
+    // Each line should have the format: |ParameterName|Value1,Value2,Value3|
+    const matches = line.match(/\|(.*?)\|(.*?)\|/);
+    if (matches && matches.length >= 3) {
+      const paramName = matches[1].trim();
+      const valuesStr = matches[2].trim();
+      
+      // Split the values by comma
+      const values = valuesStr.split(',').map(v => v.trim()).filter(v => v);
+      
+      if (paramName && values.length > 0) {
+        result[paramName] = values;
+      }
     }
+  }
+  
+  return result;
+}
+
+/**
+ * Format the data source object into the string format expected by Azure DevOps
+ */
+function formatLocalDataSource(dataSourceTable: { [key: string]: string[] }): string {
+  let result = '';
+  
+  for (const [paramName, values] of Object.entries(dataSourceTable)) {
+    if (values && values.length > 0) {
+      result += `|${paramName}|${values.join(',')}|\n`;
+    }
+  }
+  
+  return result;
+}
+
+// Run the function
+updateTestCaseLocalDataSource().catch((err: Error) => {
+  console.error('Error:', err);
+  process.exit(1);
+});
