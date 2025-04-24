@@ -1,1 +1,1 @@
-Microsoft.VSTS.TCM.LocalDataSource
+op: Operation.Replace,
