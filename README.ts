@@ -1,5 +1,19 @@
-Property 'length' does not exist on type 'string | number | true | Node | Node[]'.
-  Property 'length' does not exist on type 'number'.
+ // Handle different return types from xpath.select()
+      if (Array.isArray(nodes)) {
+        // Handle Node[] type
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i] as Node;
+          updateCount += this.updateNode(node, newValue, attribute);
+        }
+      } else if (nodes instanceof Node) {
+        // Handle single Node type
+        updateCount += this.updateNode(nodes, newValue, attribute);
+      } else if (typeof nodes === 'string' || typeof nodes === 'number' || typeof nodes === 'boolean') {
+        // Handle primitive return types (not updatable)
+        console.log(`XPath returned a ${typeof nodes} value, which cannot be updated.`);
+      }
+
+      console.log(`Updated ${updateCount} nodes matching: ${xpathExpression}`);
 
 import * as fs from 'fs';
 import * as path from 'path';
