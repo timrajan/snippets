@@ -1,17 +1,22 @@
-
-Type 'Document' is missing the following properties from type '{ new (): Document; prototype: Document; parseHTMLUnsafe(html: string)
-
 import * as fs from 'fs';
 import * as path from 'path';
 import { DOMParser, XMLSerializer } from 'xmldom';
 import * as xpath from 'xpath';
 
+// Define proper types for xmldom's Document
+type XmlDomDocument = Document & {
+  nodeType: number;
+  nodeName: string;
+  nodeValue: string | null;
+}
+
 /**
  * Class to read, update, and save XML files
  */
 class XMLNodeUpdater {
-  private xmlDoc: Document | null = null;
+  private xmlDoc: XmlDomDocument | null = null;
   private xmlPath: string = '';
+  private xmlContent: string = '';
 
   /**
    * Read an XML file from the specified path
@@ -21,14 +26,25 @@ class XMLNodeUpdater {
   public async readXMLFile(filePath: string): Promise<void> {
     try {
       this.xmlPath = filePath;
-      const xmlContent = await fs.promises.readFile(filePath, 'utf-8');
+      this.xmlContent = await fs.promises.readFile(filePath, 'utf-8');
       const parser = new DOMParser();
-      this.xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+      this.xmlDoc = parser.parseFromString(this.xmlContent, 'text/xml') as unknown as XmlDomDocument;
       console.log(`Successfully loaded XML from: ${filePath}`);
     } catch (error) {
       console.error(`Error reading XML file: ${error}`);
       throw error;
     }
+  }
+  
+  /**
+   * Get the XML content as a string
+   * @returns The XML content as a string
+   */
+  public getXMLString(): string {
+    if (!this.xmlContent) {
+      throw new Error('No XML content available. Call readXMLFile first.');
+    }
+    return this.xmlContent;
   }
 
   /**
@@ -115,6 +131,10 @@ async function example() {
     // Read the XML file
     await updater.readXMLFile(xmlFilePath);
     
+    // Get XML as string
+    const xmlString = updater.getXMLString();
+    console.log("Original XML as string (first 100 chars):", xmlString.substring(0, 100));
+    
     // Update nodes examples
     
     // Example 1: Update text content of elements matching an XPath
@@ -186,3 +206,33 @@ async function batchUpdateXMLFiles(
 //   '//product/price',
 //   '19.99'
 // );
+
+/**
+ * Utility function to read an XML file and return it as a string
+ * @param filePath Path to the XML file
+ * @returns Promise that resolves with the XML content as a string
+ */
+async function readXMLAsString(filePath: string): Promise<string> {
+  try {
+    const xmlContent = await fs.promises.readFile(filePath, 'utf-8');
+    console.log(`Successfully read XML from: ${filePath}`);
+    return xmlContent;
+  } catch (error) {
+    console.error(`Error reading XML file: ${error}`);
+    throw error;
+  }
+}
+
+// Example of reading XML as string
+async function exampleReadXMLAsString() {
+  try {
+    const xmlFilePath = path.join(__dirname, 'path', 'to', 'your-file.xml');
+    const xmlString = await readXMLAsString(xmlFilePath);
+    console.log('XML content as string:');
+    console.log(xmlString.substring(0, 200) + '...'); // Print first 200 chars
+    return xmlString;
+  } catch (error) {
+    console.error(`Error in example: ${error}`);
+    return '';
+  }
+}
