@@ -1,19 +1,53 @@
- // Handle different return types from xpath.select()
-      if (Array.isArray(nodes)) {
-        // Handle Node[] type
-        for (let i = 0; i < nodes.length; i++) {
-          const node = nodes[i] as Node;
-          updateCount += this.updateNode(node, newValue, attribute);
-        }
-      } else if (nodes instanceof Node) {
-        // Handle single Node type
-        updateCount += this.updateNode(nodes, newValue, attribute);
-      } else if (typeof nodes === 'string' || typeof nodes === 'number' || typeof nodes === 'boolean') {
-        // Handle primitive return types (not updatable)
-        console.log(`XPath returned a ${typeof nodes} value, which cannot be updated.`);
+/**
+   * Updates a single node with the provided value
+   * @param node The node to update
+   * @param newValue The new value to set
+   * @param attribute Optional attribute name to update
+   * @returns 1 if update was successful, 0 otherwise
+   */
+  private updateNode(node: Node, newValue: string, attribute?: string): number {
+    if (attribute) {
+      // Update attribute value
+      if (node.nodeType === 1) { // Element node
+        (node as Element).setAttribute(attribute, newValue);
+        return 1;
       }
+    } else {
+      // Update text content
+      if (node.nodeType === 1) { // Element node
+        node.textContent = newValue;
+        return 1;
+      } else if (node.nodeType === 2) { // Attribute node
+        (node as Attr).value = newValue;
+        return 1;
+      }
+    }
+    return 0;
+  }
 
-      console.log(`Updated ${updateCount} nodes matching: ${xpathExpression}`);
+  /**
+   * Save the modified XML back to file
+   * @param outputPath Optional path to save to (defaults to original path)
+   * @returns Promise that resolves when the file is saved
+   */
+  public async saveXML(outputPath?: string): Promise<void> {
+    if (!this.xmlDoc) {
+      throw new Error('No XML document loaded. Call readXMLFile first.');
+    }
+
+    try {
+      const serializer = new XMLSerializer();
+      const xmlString = serializer.serializeToString(this.xmlDoc);
+      const savePath = outputPath || this.xmlPath;
+      
+      await fs.promises.writeFile(savePath, xmlString, 'utf-8');
+      console.log(`Successfully saved XML to: ${savePath}`);
+    } catch (error) {
+      console.error(`Error saving XML file: ${error}`);
+      throw error;
+    }
+  }
+}
 
 import * as fs from 'fs';
 import * as path from 'path';
