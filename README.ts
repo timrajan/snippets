@@ -1,3 +1,6 @@
+Property 'length' does not exist on type 'string | number | true | Node | Node[]'.
+  Property 'length' does not exist on type 'number'.
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { DOMParser, XMLSerializer } from 'xmldom';
