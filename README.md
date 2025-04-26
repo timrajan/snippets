@@ -1,3 +1,6 @@
+
+Type 'Document' is missing the following properties from type '{ new (): Document; prototype: Document; parseHTMLUnsafe(html: string)
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { DOMParser, XMLSerializer } from 'xmldom';
