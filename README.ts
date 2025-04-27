@@ -1,3 +1,85 @@
+/**
+ * Checks if an XML document contains a node with a specific value
+ * @param xmlDoc The XML document to search in
+ * @param nodeName The name of the node to search for (optional)
+ * @param nodeValue The value to look for
+ * @returns boolean indicating if a node with the value exists
+ */
+function xmlHasNodeWithValue(
+  xmlDoc: XMLDocument, 
+  nodeValue: string, 
+  nodeName?: string
+): boolean {
+  // If a specific node name is provided
+  if (nodeName) {
+    const nodes = xmlDoc.getElementsByTagName(nodeName);
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].textContent === nodeValue) {
+        return true;
+      }
+    }
+    return false;
+  } 
+  // If we need to search all nodes
+  else {
+    // Helper function to recursively search all nodes
+    function searchNodes(node: Node): boolean {
+      // Check this node's value
+      if (node.nodeType === Node.TEXT_NODE && node.nodeValue?.trim() === nodeValue) {
+        return true;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE && node.textContent === nodeValue) {
+        return true;
+      }
+      
+      // Check child nodes
+      const childNodes = node.childNodes;
+      for (let i = 0; i < childNodes.length; i++) {
+        if (searchNodes(childNodes[i])) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
+    return searchNodes(xmlDoc);
+  }
+}
+
+// Usage example
+const xmlString = `
+  <root>
+    <person>
+      <name>John Doe</name>
+      <age>30</age>
+    </person>
+    <person>
+      <name>Jane Smith</name>
+      <age>25</age>
+    </person>
+  </root>
+`;
+
+const parser = new DOMParser();
+const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+// Check if there's a node with name "name" and value "John Doe"
+const hasJohn = xmlHasNodeWithValue(xmlDoc, "John Doe", "name");
+console.log("Has 'John Doe' as name:", hasJohn); // true
+
+// Check if there's a node with name "age" and value "40"
+const hasAge40 = xmlHasNodeWithValue(xmlDoc, "40", "age");
+console.log("Has age 40:", hasAge40); // false
+
+// Check if the value "Jane Smith" exists anywhere in the document
+const hasJane = xmlHasNodeWithValue(xmlDoc, "Jane Smith");
+console.log("Has 'Jane Smith' anywhere:", hasJane); // true
+
+
+
+
+
 function stringToXmlDocument(xmlString: string): XMLDocument {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlString, "text/xml");
