@@ -1,13 +1,12 @@
-Source branch 'refs/heads/master' not found
-
 const azdev = require('azure-devops-node-api');
-const GitApi = require('azure-devops-node-api/GitApi');
+const GitInterfaces = require('azure-devops-node-api/interfaces/GitInterfaces');
+const fs = require('fs');
 
-async function createBranch() {
+async function updateExcelFile() {
   try {
-    // Create a connection to Azure DevOps
+    // Connection details
     const orgUrl = 'https://dev.azure.com/yourOrganization';
-    const token = 'YOUR_PERSONAL_ACCESS_TOKEN'; // Create this in Azure DevOps
+    const token = 'YOUR_PERSONAL_ACCESS_TOKEN';
     
     // Create authorization handler
     const authHandler = azdev.getPersonalAccessTokenHandler(token);
@@ -16,11 +15,16 @@ async function createBranch() {
     // Get Git API client
     const gitClient = await connection.getGitApi();
     
-    // Parameters for branch creation
+    // Parameters
     const projectName = 'YourProjectName';
     const repoName = 'YourRepositoryName';
-    const sourceBranchName = 'refs/heads/main'; // Source branch (usually main or master)
-    const targetBranchName = 'refs/heads/new-feature-branch'; // New branch to create
+    const branchName = 'refs/heads/your-target-branch';
+    const filePath = 'path/to/your/file.xlsx'; // Path to Excel file in the repo
+    const localExcelFilePath = './your-updated-file.xlsx'; // Local Excel file to upload
+    
+    // Read the Excel file and convert to Base64
+    const fileBuffer = fs.readFileSync(localExcelFilePath);
+    const base64Content = fileBuffer.toString('base64');
     
     // Get the repository ID
     const repositories = await gitClient.getRepositories(projectName);
@@ -30,34 +34,63 @@ async function createBranch() {
       throw new Error(`Repository '${repoName}' not found`);
     }
     
-    // Get the source branch reference to obtain its object ID
-    const refs = await gitClient.getRefs(repository.id, projectName, sourceBranchName);
+    // Get the latest commit on the branch
+    const refs = await gitClient.getRefs(repository.id, projectName, branchName);
     
     if (!refs || refs.length === 0) {
-      throw new Error(`Source branch '${sourceBranchName}' not found`);
+      throw new Error(`Branch '${branchName}' not found`);
     }
     
-    const sourceObjectId = refs[0].objectId;
+    const latestCommitId = refs[0].objectId;
     
-    // Create the new branch reference
-    const newRef = {
-      name: targetBranchName,
-      oldObjectId: '0000000000000000000000000000000000000000', // Zero ID for new ref
-      newObjectId: sourceObjectId
+    // Check if the file already exists
+    let changeType = GitInterfaces.VersionControlChangeType.Edit;
+    try {
+      await gitClient.getItem(repository.id, filePath, projectName, undefined, undefined, latestCommitId);
+    } catch (error) {
+      // File does not exist, use Add instead of Edit
+      changeType = GitInterfaces.VersionControlChangeType.Add;
+    }
+    
+    // Create the push with a commit that updates the Excel file
+    const push = {
+      refUpdates: [
+        {
+          name: branchName,
+          oldObjectId: latestCommitId
+        }
+      ],
+      commits: [
+        {
+          comment: 'Update Excel file',
+          changes: [
+            {
+              changeType: changeType,
+              item: {
+                path: filePath
+              },
+              newContent: {
+                content: base64Content,
+                contentType: GitInterfaces.ItemContentType.Base64Encoded
+              }
+            }
+          ]
+        }
+      ]
     };
     
-    // Create the branch
-    const result = await gitClient.updateRefs([newRef], repository.id, projectName);
+    // Push the changes
+    const result = await gitClient.createPush(push, repository.id, projectName);
     
-    console.log('Branch created successfully:', result);
+    console.log('Excel file updated successfully:', result);
     return result;
   } catch (error) {
-    console.error('Error creating branch:', error);
+    console.error('Error updating Excel file:', error);
     throw error;
   }
 }
 
 // Execute the function
-createBranch().catch(error => {
+updateExcelFile().catch(error => {
   console.error('Script failed:', error);
 });
