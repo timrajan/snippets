@@ -1,3 +1,40 @@
+/**
+ * Function to remove Table1 nodes with Language="EN" from XML data
+ * @param xmlString - The XML string to process
+ * @returns The modified XML string with EN language nodes removed
+ */
+function removeEnglishLanguageNodes(xmlString: string): string {
+  // Parse the XML string into a DOM document
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  
+  // Find all Table1 nodes
+  const table1Nodes = xmlDoc.getElementsByTagName("Table1");
+  
+  // We need to use an array to store nodes to remove because removing them during iteration
+  // would affect the live NodeList and cause issues
+  const nodesToRemove: Element[] = [];
+  
+  // Identify Table1 nodes with Language="EN"
+  for (let i = 0; i < table1Nodes.length; i++) {
+    const table1Node = table1Nodes[i];
+    const languageNode = table1Node.getElementsByTagName("Language")[0];
+    
+    // Check if the Language node exists and its value is "EN"
+    if (languageNode && languageNode.textContent === "EN") {
+      nodesToRemove.push(table1Node);
+    }
+  }
+  
+  // Remove identified nodes
+  nodesToRemove.forEach(node => {
+    node.parentNode?.removeChild(node);
+  });
+  
+  // Serialize the modified document back to a string
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(xmlDoc);
+}
 
 Microsoft.VSTS.TCM.LocalDataSource
 
