@@ -1,3 +1,7 @@
+
+Microsoft.VSTS.TCM.LocalDataSource
+
+
 /**
  * Checks if an XML document contains a node with a specific value
  * @param xmlDoc The XML document to search in
