@@ -1,3 +1,22 @@
+function stringToXmlDocument(xmlString: string): XMLDocument {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  
+  // Check for parsing errors
+  const parserError = xmlDoc.querySelector('parsererror');
+  if (parserError) {
+    throw new Error(`XML parsing error: ${parserError.textContent}`);
+  }
+  
+  return xmlDoc;
+}
+
+
+
+
+
+
+
 /**
    * Updates a single node with the provided value
    * @param node The node to update
