@@ -1,3 +1,9 @@
+const bookType = ['xlsx', 'xlsm', 'xlsb', 'xls', 'csv'].includes(fileExtension) 
+                   ? fileExtension as XLSX.BookType 
+                   : 'xlsx' as XLSX.BookType;
+
+
+
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
