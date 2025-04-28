@@ -20,7 +20,7 @@ try {
       console.error('Error getting suggested reviewers:', error.message);
     }
 
-
+"TF401398: The pull request cannot be activated because the source and/or the target branch no longer exists, or the requested refs are not branches"
 
 
 const azdev = require('azure-devops-node-api');
