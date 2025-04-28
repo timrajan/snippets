@@ -1,216 +1,110 @@
-try {
-      const repositories = await gitApi.getRepositories(projectName);
-      const repository = repositories.find(repo => repo.name === 'YourRepositoryName');
-      
-      if (repository) {
-        console.log(`\nGetting suggested reviewers for repository: ${repository.name}`);
-        const suggestedReviewers = await gitApi.getSuggestions(repository.id, projectName);
-        
-        if (suggestedReviewers && suggestedReviewers.length > 0) {
-          console.log('Suggested reviewers:');
-          suggestedReviewers.forEach(suggestion => {
-            console.log(`- ${suggestion.displayName}`);
-            console.log(`  ID: ${suggestion.id}`);
-          });
-        } else {
-          console.log('No suggested reviewers found');
-        }
-      }
-    } catch (error) {
-      console.error('Error getting suggested reviewers:', error.message);
-    }
+import * as XLSX from 'xlsx';
+import * as fs from 'fs';
+import * as path from 'path';
 
-"TF401398: The pull request cannot be activated because the source and/or the target branch no longer exists, or the requested refs are not branches"
-
-
-const azdev = require('azure-devops-node-api');
-
-async function findUserIds() {
+/**
+ * Adds a new row to an Excel file
+ * @param filePath - Path to the Excel file
+ * @param sheetName - Name of the sheet to update
+ * @param rowValues - Object containing column-value pairs for the new row (e.g., { name: 'John', age: 30 })
+ * @returns Promise resolving to boolean indicating success
+ */
+export async function addRowToExcelFile(
+  filePath: string,
+  sheetName: string,
+  rowValues: Record<string, any>
+): Promise<boolean> {
   try {
-    // Connection details
-    const orgUrl = 'https://dev.azure.com/yourOrganization';
-    const token = 'YOUR_PERSONAL_ACCESS_TOKEN';
-    
-    // Create authorization handler
-    const authHandler = azdev.getPersonalAccessTokenHandler(token);
-    const connection = new azdev.WebApi(orgUrl, authHandler);
-    
-    // Get API clients
-    const coreApi = await connection.getCoreApi();
-    const identityApi = await connection.getIdentityApi();
-    
-    // Parameters
-    const projectName = 'YourProjectName';
-    
-    console.log('Looking up users in project:', projectName);
-    
-    // Method 1: Get team members
-    try {
-      // First get the teams in the project
-      const teams = await coreApi.getTeams(projectName);
-      console.log(`Found ${teams.length} teams in the project`);
-      
-      // For each team, get its members
-      for (const team of teams) {
-        console.log(`\nTeam: ${team.name}`);
-        const members = await coreApi.getTeamMembers(projectName, team.id);
-        
-        console.log('Team members:');
-        members.forEach(member => {
-          console.log(`- ${member.identity.displayName}`);
-          console.log(`  ID: ${member.identity.id}`);
-          console.log(`  Unique Name: ${member.identity.uniqueName} (usually email)`);
-        });
-      }
-    } catch (error) {
-      console.error('Error getting team members:', error.message);
+    // Validate inputs
+    if (!filePath || !sheetName) {
+      throw new Error('File path and sheet name are required');
     }
     
-    // Method 2: Search for specific users
-    try {
-      // If you know part of the user's name or email
-      const searchCriteria = 'displayName';  // Replace with partial name, email, etc.
-      const identities = await identityApi.readIdentities(null, null, searchCriteria);
-      
-      if (identities && identities.length > 0) {
-        console.log('\nFound users by search:');
-        identities.forEach(identity => {
-          console.log(`- ${identity.providerDisplayName || identity.displayName}`);
-          console.log(`  ID: ${identity.id}`);
-          console.log(`  Unique Name: ${identity.uniqueName || identity.signInAddress}`);
-        });
-      } else {
-        console.log(`No users found matching '${searchCriteria}'`);
-      }
-    } catch (error) {
-      console.error('Error searching for users:', error.message);
+    if (Object.keys(rowValues).length === 0) {
+      throw new Error('Row values are required');
     }
     
-    // Method 3: Get project administrators
-    try {
-      const securityApi = await connection.getSecurityApi();
-      const projectAdminGroup = await securityApi.queryGroups({
-        scopeIds: [projectName],
-        recursionLevel: "All"
-      });
-      
-      // Filter for Project Administrators
-      const adminGroup = projectAdminGroup.find(g => g.displayName === "Project Administrators");
-      
-      if (adminGroup) {
-        console.log('\nProject Administrators:');
-        const members = await securityApi.readMembers(adminGroup.descriptor);
-        
-        for (const memberId of members) {
-          // Get identity details for each member
-          const identity = await identityApi.readIdentity(memberId);
-          console.log(`- ${identity.displayName}`);
-          console.log(`  ID: ${identity.id}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error getting project administrators:', error.message);
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
     }
     
-    console.log('\nUse these IDs in your pull request reviewers list.');
+    // Read the Excel file
+    const workbook = XLSX.readFile(filePath);
+    
+    // Check if the specified sheet exists
+    if (!workbook.SheetNames.includes(sheetName)) {
+      throw new Error(`Sheet '${sheetName}' not found in the workbook`);
+    }
+    
+    // Get the worksheet
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert the worksheet to JSON for easier manipulation
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    
+    // Add the new row
+    jsonData.push(rowValues);
+    
+    // Convert the JSON data back to a worksheet
+    const updatedWorksheet = XLSX.utils.json_to_sheet(jsonData);
+    
+    // Update the workbook
+    workbook.Sheets[sheetName] = updatedWorksheet;
+    
+    // Write the updated workbook back to the file
+    XLSX.writeFile(workbook, filePath);
+    
+    return true;
   } catch (error) {
-    console.error('Error finding user IDs:', error);
+    console.error('Error adding row to Excel file:', error);
     throw error;
   }
 }
 
-// Execute the function
-findUserIds().catch(error => {
-  console.error('Script failed');
-});
+/**
+ * Example usage:
+ * 
+ * // Add a new employee record
+ * addRowToExcelFile(
+ *   'path/to/file.xlsx',
+ *   'Sheet1',
+ *   { 
+ *     id: 123,
+ *     name: 'John Doe',
+ *     department: 'Engineering',
+ *     salary: 75000,
+ *     startDate: '2025-04-28'
+ *   }
+ * );
+ * 
+ * // Add a simple product entry
+ * addRowToExcelFile(
+ *   'inventory.xlsx',
+ *   'Products',
+ *   { 
+ *     productId: 'PRD-789',
+ *     name: 'Wireless Headphones',
+ *     category: 'Electronics',
+ *     price: 89.99,
+ *     inStock: true
+ *   }
+ * );
+ */
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-const azdev = require('azure-devops-node-api');
-const GitInterfaces = require('azure-devops-node-api/interfaces/GitInterfaces');
-
-async function createPullRequest() {
-  try {
-    // Connection details
-    const orgUrl = 'https://dev.azure.com/yourOrganization';
-    const token = 'YOUR_PERSONAL_ACCESS_TOKEN';
-    
-    // Create authorization handler
-    const authHandler = azdev.getPersonalAccessTokenHandler(token);
-    const connection = new azdev.WebApi(orgUrl, authHandler);
-    
-    // Get Git API client
-    const gitClient = await connection.getGitApi();
-    
-    // Parameters
-    const projectName = 'YourProjectName';
-    const repoName = 'YourRepositoryName';
-    const sourceBranchName = 'refs/heads/your-feature-branch'; // The branch with your changes
-    const targetBranchName = 'refs/heads/master'; // The branch you want to merge into (e.g., master or main)
-    
-    // Get the repository ID
-    const repositories = await gitClient.getRepositories(projectName);
-    const repository = repositories.find(repo => repo.name === repoName);
-    
-    if (!repository) {
-      throw new Error(`Repository '${repoName}' not found`);
-    }
-    
-    console.log(`Found repository: ${repository.name} (${repository.id})`);
-    
-    // Create the pull request object
-    const pullRequestToCreate = {
-      sourceRefName: sourceBranchName,
-      targetRefName: targetBranchName,
-      title: 'Update Excel file',
-      description: 'This pull request updates the Excel file with new data.',
-      isDraft: false, // Set to true if you want to create a draft PR
-      
-      // Optional: Add reviewers
-      reviewers: [
-        // {
-        //   id: 'Reviewer-User-ID-GUID' // You would need to get this from elsewhere
-        // }
-      ]
-    };
-    
-    console.log('Creating pull request...');
-    
-    // Create the pull request
-    const createdPR = await gitClient.createPullRequest(
-      pullRequestToCreate,
-      repository.id,
-      projectName
-    );
-    
-    console.log('Pull request created successfully:');
-    console.log(`ID: ${createdPR.pullRequestId}`);
-    console.log(`Title: ${createdPR.title}`);
-    console.log(`URL: ${createdPR.url}`);
-    console.log(`Status: ${createdPR.status}`);
-    
-    return createdPR;
-  } catch (error) {
-    console.error('Error creating pull request:', error);
-    if (error.message) {
-      console.error('Error message:', error.message);
-    }
-    throw error;
+// Add a new employee
+addRowToExcelFile(
+  'employees.xlsx',
+  'EmployeeData',
+  { 
+    employeeId: 'EMP456',
+    name: 'Jane Smith',
+    department: 'Sales',
+    position: 'Account Executive',
+    salary: 72000,
+    hireDate: '2025-04-28'
   }
-}
-
-// Execute the function
-createPullRequest().catch(error => {
-  console.error('Script failed');
-});
+);
