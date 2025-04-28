@@ -1,3 +1,5 @@
+Property 'numFmt' does not exist on type 'ColInfo'
+
 const fileExtension = path.extname(filePath).substring(1).toLowerCase();
 const bookType = ['xlsx', 'xlsm', 'xlsb', 'xls', 'csv'].includes(fileExtension) 
                    ? fileExtension as XLSX.BookType 
