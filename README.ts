@@ -1,3 +1,28 @@
+try {
+      const repositories = await gitApi.getRepositories(projectName);
+      const repository = repositories.find(repo => repo.name === 'YourRepositoryName');
+      
+      if (repository) {
+        console.log(`\nGetting suggested reviewers for repository: ${repository.name}`);
+        const suggestedReviewers = await gitApi.getSuggestions(repository.id, projectName);
+        
+        if (suggestedReviewers && suggestedReviewers.length > 0) {
+          console.log('Suggested reviewers:');
+          suggestedReviewers.forEach(suggestion => {
+            console.log(`- ${suggestion.displayName}`);
+            console.log(`  ID: ${suggestion.id}`);
+          });
+        } else {
+          console.log('No suggested reviewers found');
+        }
+      }
+    } catch (error) {
+      console.error('Error getting suggested reviewers:', error.message);
+    }
+
+
+
+
 const azdev = require('azure-devops-node-api');
 
 async function findUserIds() {
