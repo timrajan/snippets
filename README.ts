@@ -1,3 +1,4 @@
+const fileExtension = path.extname(filePath).substring(1).toLowerCase();
 const bookType = ['xlsx', 'xlsm', 'xlsb', 'xls', 'csv'].includes(fileExtension) 
                    ? fileExtension as XLSX.BookType 
                    : 'xlsx' as XLSX.BookType;
