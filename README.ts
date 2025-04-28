@@ -1,8 +1,7 @@
 const azdev = require('azure-devops-node-api');
 const GitInterfaces = require('azure-devops-node-api/interfaces/GitInterfaces');
-const fs = require('fs');
 
-async function updateExcelFile() {
+async function createPullRequest() {
   try {
     // Connection details
     const orgUrl = 'https://dev.azure.com/yourOrganization';
@@ -18,13 +17,8 @@ async function updateExcelFile() {
     // Parameters
     const projectName = 'YourProjectName';
     const repoName = 'YourRepositoryName';
-    const branchName = 'refs/heads/your-target-branch';
-    const filePath = 'path/to/your/file.xlsx'; // Path to Excel file in the repo
-    const localExcelFilePath = './your-updated-file.xlsx'; // Local Excel file to upload
-    
-    // Read the Excel file and convert to Base64
-    const fileBuffer = fs.readFileSync(localExcelFilePath);
-    const base64Content = fileBuffer.toString('base64');
+    const sourceBranchName = 'refs/heads/your-feature-branch'; // The branch with your changes
+    const targetBranchName = 'refs/heads/master'; // The branch you want to merge into (e.g., master or main)
     
     // Get the repository ID
     const repositories = await gitClient.getRepositories(projectName);
@@ -34,63 +28,50 @@ async function updateExcelFile() {
       throw new Error(`Repository '${repoName}' not found`);
     }
     
-    // Get the latest commit on the branch
-    const refs = await gitClient.getRefs(repository.id, projectName, branchName);
+    console.log(`Found repository: ${repository.name} (${repository.id})`);
     
-    if (!refs || refs.length === 0) {
-      throw new Error(`Branch '${branchName}' not found`);
-    }
-    
-    const latestCommitId = refs[0].objectId;
-    
-    // Check if the file already exists
-    let changeType = GitInterfaces.VersionControlChangeType.Edit;
-    try {
-      await gitClient.getItem(repository.id, filePath, projectName, undefined, undefined, latestCommitId);
-    } catch (error) {
-      // File does not exist, use Add instead of Edit
-      changeType = GitInterfaces.VersionControlChangeType.Add;
-    }
-    
-    // Create the push with a commit that updates the Excel file
-    const push = {
-      refUpdates: [
-        {
-          name: branchName,
-          oldObjectId: latestCommitId
-        }
-      ],
-      commits: [
-        {
-          comment: 'Update Excel file',
-          changes: [
-            {
-              changeType: changeType,
-              item: {
-                path: filePath
-              },
-              newContent: {
-                content: base64Content,
-                contentType: GitInterfaces.ItemContentType.Base64Encoded
-              }
-            }
-          ]
-        }
+    // Create the pull request object
+    const pullRequestToCreate = {
+      sourceRefName: sourceBranchName,
+      targetRefName: targetBranchName,
+      title: 'Update Excel file',
+      description: 'This pull request updates the Excel file with new data.',
+      isDraft: false, // Set to true if you want to create a draft PR
+      
+      // Optional: Add reviewers
+      reviewers: [
+        // {
+        //   id: 'Reviewer-User-ID-GUID' // You would need to get this from elsewhere
+        // }
       ]
     };
     
-    // Push the changes
-    const result = await gitClient.createPush(push, repository.id, projectName);
+    console.log('Creating pull request...');
     
-    console.log('Excel file updated successfully:', result);
-    return result;
+    // Create the pull request
+    const createdPR = await gitClient.createPullRequest(
+      pullRequestToCreate,
+      repository.id,
+      projectName
+    );
+    
+    console.log('Pull request created successfully:');
+    console.log(`ID: ${createdPR.pullRequestId}`);
+    console.log(`Title: ${createdPR.title}`);
+    console.log(`URL: ${createdPR.url}`);
+    console.log(`Status: ${createdPR.status}`);
+    
+    return createdPR;
   } catch (error) {
-    console.error('Error updating Excel file:', error);
+    console.error('Error creating pull request:', error);
+    if (error.message) {
+      console.error('Error message:', error.message);
+    }
     throw error;
   }
 }
 
 // Execute the function
-updateExcelFile().catch(error => {
-  console.error('Script failed:', error);
+createPullRequest().catch(error => {
+  console.error('Script failed');
 });
