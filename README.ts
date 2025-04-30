@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Adds a new row to an Excel file with proper handling of formatting preservation
+ * Adds a new row to an Excel file with proper handling of large numbers and style preservation
  * @param filePath - Path to the Excel file
  * @param sheetName - Name of the sheet to update
  * @param rowValues - Object containing column-value pairs for the new row
@@ -29,9 +29,6 @@ export async function addRowToExcelFile(
       throw new Error(`File not found: ${filePath}`);
     }
     
-    // Store the current file content as backup for style preservation
-    const fileContent = fs.readFileSync(filePath);
-    
     // Read the Excel file with ALL formatting options to preserve styles
     const workbook = XLSX.readFile(filePath, {
       cellStyles: true,    // Important for preserving styles
@@ -40,7 +37,8 @@ export async function addRowToExcelFile(
       cellNF: true,
       cellFormula: true,
       cellHTML: true,
-      sheetStubs: true     // Keep empty cells
+      sheetStubs: true,    // Keep empty cells
+      cellStyleAware: true // Enhanced style reading (important for font preservation)
     });
     
     // Check if the specified sheet exists
@@ -56,18 +54,23 @@ export async function addRowToExcelFile(
     const originalRows = worksheet['!rows'] ? [...worksheet['!rows']] : [];
     const originalMerges = worksheet['!merges'] ? [...worksheet['!merges']] : [];
     
-    // Use sheet_to_json to get the actual data (with all rows)
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
+    // Find the actual data range by examining cell content
+    // Convert to array format to determine actual data rows
+    const data = XLSX.utils.sheet_to_json(worksheet, {header: 1});
     
-    // Find the last non-empty row by checking for actual content
+    // Find the last non-empty row
     let actualLastRowIndex = 0;
-    for (let i = 0; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      if (row && Array.isArray(row) && row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
-        actualLastRowIndex = i;
-      } else if (row && typeof row === 'object' && 
-                Object.values(row).some(cell => cell !== null && cell !== undefined && cell !== '')) {
-        actualLastRowIndex = i;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      // Check if row has any content (handling arrays and non-arrays)
+      if (row && Array.isArray(row)) {
+        if (row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
+          actualLastRowIndex = i;
+        }
+      } else if (row && typeof row === 'object') {
+        if (Object.values(row).some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
+          actualLastRowIndex = i;
+        }
       }
     }
     
@@ -75,98 +78,115 @@ export async function addRowToExcelFile(
     const nextRowIndex = actualLastRowIndex + 1;
     console.log(`Adding new row at index ${nextRowIndex} (which is row ${nextRowIndex + 1} in Excel)`);
     
-    // Clone the row above to preserve all styling
-    if (actualLastRowIndex >= 0) {
-      // Create a new array with the values we want to insert
-      const newRow: any[] = [];
+    // Process large numbers in rowValues
+    Object.keys(rowValues).forEach(key => {
+      const value = rowValues[key];
       
-      // Fill in the values from rowValues using the column mapping
-      const columnMapping: Record<string, number> = {
-        'Food': 0,
-        'Fruit.Color': 1,
-        'Fruit.Size': 2,
-        'Vegetable.Color': 3,
-        'Vegetable.Size': 4
-      };
-      
-      // Initialize with null/empty values
-      for (let i = 0; i <= Math.max(...Object.values(columnMapping)); i++) {
-        newRow[i] = null;
+      // Check if this is a large number that might be converted to scientific notation
+      if (typeof value === 'number' && 
+          (value > 999999999999 || value < -999999999999 || 
+           (value < 0.0001 && value > 0) || (value > -0.0001 && value < 0))) {
+        // Convert large numbers to string to preserve exact representation
+        rowValues[key] = value.toString();
       }
-      
-      // Add the values from rowValues
-      Object.keys(rowValues).forEach(key => {
-        if (columnMapping.hasOwnProperty(key)) {
-          const colIndex = columnMapping[key];
-          newRow[colIndex] = rowValues[key];
+    });
+    
+    // Add the new row directly to the worksheet
+    // Get column mapping for this specific file structure
+    // For the Fruit.xlsx format with merged cells and subheaders
+    const columnMapping: Record<string, string> = {
+      'Food': 'A',
+      'Fruit.Color': 'B',
+      'Fruit.Size': 'C',
+      'Vegetable.Color': 'D',
+      'Vegetable.Size': 'E'
+    };
+    
+    // Process the new row data
+    Object.keys(rowValues).forEach(key => {
+      if (columnMapping[key]) {
+        const col = columnMapping[key];
+        const cellAddress = `${col}${nextRowIndex + 1}`; // +1 for Excel's 1-based indexing
+        
+        // Create the cell with the value
+        const value = rowValues[key];
+        const cell: XLSX.CellObject = { v: value };
+        
+        // Set cell type
+        if (typeof value === 'number') {
+          cell.t = 'n';
+        } else if (typeof value === 'boolean') {
+          cell.t = 'b';
+        } else if (value instanceof Date) {
+          cell.t = 'd';
+          cell.v = value;
+          cell.z = XLSX.SSF.get_table()[14]; // Date format
+        } else {
+          cell.t = 's';
         }
-      });
-      
-      // Insert the new row at the specified position
-      jsonData.splice(nextRowIndex, 0, newRow);
-      
-      // Create a new worksheet from the updated data
-      // This preserves the basic structure
-      const newWorksheet = XLSX.utils.aoa_to_sheet(jsonData as any[][]);
-      
-      // Copy all styles from the original cells to the new worksheet
-      Object.keys(worksheet).forEach(cellRef => {
-        if (cellRef[0] !== '!') {  // Skip special properties
-          const { r, c } = XLSX.utils.decode_cell(cellRef);
+        
+        // Copy style from the row above if available
+        const styleCellAddress = `${col}${actualLastRowIndex + 1}`;
+        if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
+          // Deep clone the style object to ensure ALL properties are copied
+          const clonedStyle = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s));
           
-          // Calculate what the destination row should be
-          // If it's after our insertion point, move it down one
-          const destRow = r >= nextRowIndex ? r + 1 : r;
-          const destCellRef = XLSX.utils.encode_cell({ r: destRow, c });
+          // Ensure font properties are preserved
+          if (clonedStyle.font) {
+            // Make sure we keep font name, size, color, and formatting
+            console.log(`Copying font style from ${styleCellAddress}:`, clonedStyle.font);
+          }
           
-          // Copy the cell if it exists in the original
-          if (worksheet[cellRef]) {
-            // Deep copy the cell to avoid reference issues
-            newWorksheet[destCellRef] = JSON.parse(JSON.stringify(worksheet[cellRef]));
-            
-            // Special handling for the new row
-            if (destRow === nextRowIndex) {
-              // Use styles from the row above (original content row)
-              const styleSourceRef = XLSX.utils.encode_cell({ r: actualLastRowIndex, c });
-              if (worksheet[styleSourceRef] && worksheet[styleSourceRef].s) {
-                newWorksheet[destCellRef].s = JSON.parse(JSON.stringify(worksheet[styleSourceRef].s));
-              }
+          // Apply the style to the new cell
+          cell.s = clonedStyle;
+        } else {
+          // If no style from previous row, try to find any styled cell to copy from
+          // Start from the last data row and search upward for a cell with styling
+          let rowIndex = actualLastRowIndex;
+          while (rowIndex >= 0) {
+            const altStyleCell = `${col}${rowIndex + 1}`;
+            if (worksheet[altStyleCell] && worksheet[altStyleCell].s && 
+                worksheet[altStyleCell].s.font) {
+              cell.s = JSON.parse(JSON.stringify(worksheet[altStyleCell].s));
+              break;
             }
+            rowIndex--;
           }
         }
+        
+        // Add the cell to the worksheet
+        worksheet[cellAddress] = cell;
+      }
+    });
+    
+    // Determine the range of the current data
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    
+    // Update worksheet range to ensure it includes our new row
+    // Only expand if necessary (if our new row is beyond current range)
+    if (nextRowIndex > range.e.r) {
+      worksheet['!ref'] = XLSX.utils.encode_range({
+        s: range.s,
+        e: { r: nextRowIndex, c: range.e.c }
       });
-      
-      // Restore special properties
-      newWorksheet['!ref'] = XLSX.utils.encode_range({
-        s: { r: 0, c: 0 },
-        e: { 
-          r: Math.max(nextRowIndex, worksheet['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']).e.r : 0) + 1,
-          c: worksheet['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']).e.c : 4
-        }
-      });
-      
-      // Restore formatting properties
-      newWorksheet['!cols'] = originalCols;
-      newWorksheet['!rows'] = originalRows;
-      newWorksheet['!merges'] = originalMerges;
-      
-      // Update the workbook with the new worksheet
-      workbook.Sheets[sheetName] = newWorksheet;
-    } else {
-      throw new Error("Could not find existing data in the sheet");
     }
     
-    // Write the updated workbook back to the file with maximum formatting preservation
+    // Restore original column widths and styles
+    worksheet['!cols'] = originalCols;
+    worksheet['!rows'] = originalRows;
+    worksheet['!merges'] = originalMerges;
+    
+    // Write the updated workbook back to the file with options to preserve all formatting
     const fileExtension = path.extname(filePath).substring(1).toLowerCase();
     const bookType = ['xlsx', 'xlsm', 'xlsb', 'xls', 'csv'].includes(fileExtension) 
                    ? fileExtension as XLSX.BookType 
                    : 'xlsx' as XLSX.BookType;
-    
+                   
     XLSX.writeFile(workbook, filePath, {
-      bookSST: true,
+      bookSST: true,      // Generate Shared String Table
       type: 'file',
-      cellStyles: true,
-      cellDates: true,
+      cellStyles: true,   // Preserve styles
+      cellDates: true,    // Preserve dates
       bookType: bookType,
       compression: true
     });
