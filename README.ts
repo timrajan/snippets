@@ -1,4 +1,6 @@
- if (commentContent) {
+Argument of type '{ comments: { text: string; }[]; status: CommentThreadStatus; }' is not assignable to parameter of type 'GitPullRequestCommentThread'.
+
+if (commentContent) {
       // Create a thread with a comment
       const thread = {
         comments: [
