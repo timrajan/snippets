@@ -61,9 +61,15 @@ export async function addRowToExcelFile(
     let actualLastRowIndex = 0;
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      // Check if row has any content
-      if (row && row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
-        actualLastRowIndex = i;
+      // Check if row has any content (handling arrays and non-arrays)
+      if (row && Array.isArray(row)) {
+        if (row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
+          actualLastRowIndex = i;
+        }
+      } else if (row && typeof row === 'object') {
+        if (Object.values(row).some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
+          actualLastRowIndex = i;
+        }
       }
     }
     
