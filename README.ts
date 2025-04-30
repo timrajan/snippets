@@ -1,10 +1,11 @@
 import * as azdev from "azure-devops-node-api";
 import { IGitApi } from "azure-devops-node-api/GitApi";
-import { GitPullRequestCommentThread } from "azure-devops-node-api/interfaces/GitInterfaces";
-import { Comment } from "azure-devops-node-api/interfaces/GitInterfaces";
-import { CommentThreadStatus } from "azure-devops-node-api/interfaces/GitInterfaces";
-import { GitPullRequestReviewVote } from "azure-devops-node-api/interfaces/GitInterfaces";
-import { VoteResult } from "azure-devops-node-api/interfaces/GitInterfaces";
+import { 
+  GitPullRequestCommentThread,
+  Comment, 
+  CommentThreadStatus,
+  IdentityRefWithVote
+} from "azure-devops-node-api/interfaces/GitInterfaces";
 
 /**
  * Approves a pull request in Azure DevOps
@@ -33,17 +34,16 @@ async function approvePullRequest(
     // Get the Git API client
     const gitApi: IGitApi = await connection.getGitApi();
     
-    // Create the vote object (10 = approved)
-    const vote: GitPullRequestReviewVote = {
-      vote: VoteResult.Approved, // 10 = Approved
-      reviewerId: undefined, // Uses the authenticated user
-    };
+    // Set vote to 10 which represents "Approved"
+    // In the Azure DevOps API, 10 = Approved, 5 = Approved with suggestions, 0 = No vote, -5 = Waiting for author, -10 = Rejected
+    const voteValue = 10;
     
-    // Vote to approve the PR
-    await gitApi.createPullRequestReviewers(
-      [vote],
+    // Update the pull request reviewer (the current user) with an approval vote
+    await gitApi.updatePullRequestReviewer(
+      { vote: voteValue },
       repositoryId,
       pullRequestId,
+      "me", // Special identifier that represents the current authenticated user
       project
     );
     
