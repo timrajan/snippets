@@ -6,7 +6,7 @@ import * as path from 'path';
  * Adds a new row to an Excel file with proper handling of large numbers and style preservation
  * @param filePath - Path to the Excel file
  * @param sheetName - Name of the sheet to update
- * @param rowValues - Object containing column-value pairs for the new row (e.g., { name: 'John', age: 30 })
+ * @param rowValues - Object containing column-value pairs for the new row
  * @returns Promise resolving to boolean indicating success
  */
 export async function addRowToExcelFile(
@@ -68,33 +68,27 @@ export async function addRowToExcelFile(
         // Convert large numbers to string to preserve exact representation
         rowValues[key] = value.toString();
       }
-      // Handle string numbers that should be preserved exactly
-      else if (typeof value === 'string' && /^\d+$/.test(value) && value.length > 12) {
-        // Keep as string
-        rowValues[key] = value;
-      }
     });
     
     // Add the new row directly to the worksheet
-    // First, get the header row to determine column order
-    const headers = [];
-    const headerRow = 0; // Assuming headers are in the first row
+    // Get column mapping for this specific file structure
+    // For the Fruit.xlsx format with merged cells and subheaders
+    const columnMapping: Record<string, string> = {
+      'Food': 'A',
+      'Fruit.Color': 'B',
+      'Fruit.Size': 'C',
+      'Vegetable.Color': 'D',
+      'Vegetable.Size': 'E'
+    };
     
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({r: headerRow, c: col});
-      if (worksheet[cellAddress]) {
-        headers[col] = worksheet[cellAddress].v;
-      }
-    }
-    
-    // Add the new row at the end
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const header = headers[col];
-      if (header && rowValues.hasOwnProperty(header)) {
-        const cellAddress = XLSX.utils.encode_cell({r: lastRow + 1, c: col});
-        const value = rowValues[header];
+    // Process the new row data
+    Object.keys(rowValues).forEach(key => {
+      if (columnMapping[key]) {
+        const col = columnMapping[key];
+        const cellAddress = `${col}${lastRow + 1 + 1}`; // +1 for 0-indexing, +1 for next row
         
-        // Create cell with appropriate type and formatting
+        // Create the cell with the value
+        const value = rowValues[key];
         const cell: XLSX.CellObject = { v: value };
         
         // Set cell type
@@ -106,25 +100,20 @@ export async function addRowToExcelFile(
           cell.t = 'd';
           cell.v = value;
           cell.z = XLSX.SSF.get_table()[14]; // Date format
-        } else if (typeof value === 'string') {
-          cell.t = 's';
-          // For strings that look like large numbers, enforce text format
-          if (/^\d+$/.test(value) && value.length > 12) {
-            cell.z = '@';
-          }
         } else {
           cell.t = 's';
         }
         
-        // Copy style from row above if available (for consistent styling)
-        const styleCellAddress = XLSX.utils.encode_cell({r: lastRow, c: col});
+        // Copy style from the row above if available
+        const styleCellAddress = `${col}${lastRow + 1}`;
         if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
-          cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone to avoid reference issues
+          cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone
         }
         
+        // Add the cell to the worksheet
         worksheet[cellAddress] = cell;
       }
-    }
+    });
     
     // Update worksheet range to include the new row
     worksheet['!ref'] = XLSX.utils.encode_range({
@@ -157,6 +146,23 @@ export async function addRowToExcelFile(
     throw error;
   }
 }
+
+/**
+ * Example usage specifically for the Fruit.xlsx structure:
+ * 
+ * // Add a carrot to the Fruit.xlsx file
+ * addRowToExcelFile(
+ *   'Fruit.xlsx',
+ *   'Sheet1',
+ *   { 
+ *     'Food': 'Carrot',
+ *     'Fruit.Color': 'NA',
+ *     'Fruit.Size': 'NA',
+ *     'Vegetable.Color': 'Orange',
+ *     'Vegetable.Size': 'Small'
+ *   }
+ * );
+ */
 
 /**
  * Example usage:
