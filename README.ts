@@ -37,7 +37,8 @@ export async function addRowToExcelFile(
       cellNF: true,
       cellFormula: true,
       cellHTML: true,
-      sheetStubs: true     // Keep empty cells
+      sheetStubs: true,    // Keep empty cells
+      cellStyleAware: true // Enhanced style reading (important for font preservation)
     });
     
     // Check if the specified sheet exists
@@ -127,7 +128,30 @@ export async function addRowToExcelFile(
         // Copy style from the row above if available
         const styleCellAddress = `${col}${actualLastRowIndex + 1}`;
         if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
-          cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone
+          // Deep clone the style object to ensure ALL properties are copied
+          const clonedStyle = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s));
+          
+          // Ensure font properties are preserved
+          if (clonedStyle.font) {
+            // Make sure we keep font name, size, color, and formatting
+            console.log(`Copying font style from ${styleCellAddress}:`, clonedStyle.font);
+          }
+          
+          // Apply the style to the new cell
+          cell.s = clonedStyle;
+        } else {
+          // If no style from previous row, try to find any styled cell to copy from
+          // Start from the last data row and search upward for a cell with styling
+          let rowIndex = actualLastRowIndex;
+          while (rowIndex >= 0) {
+            const altStyleCell = `${col}${rowIndex + 1}`;
+            if (worksheet[altStyleCell] && worksheet[altStyleCell].s && 
+                worksheet[altStyleCell].s.font) {
+              cell.s = JSON.parse(JSON.stringify(worksheet[altStyleCell].s));
+              break;
+            }
+            rowIndex--;
+          }
         }
         
         // Add the cell to the worksheet
@@ -162,6 +186,7 @@ export async function addRowToExcelFile(
       bookSST: true,      // Generate Shared String Table
       type: 'file',
       cellStyles: true,   // Preserve styles
+      cellDates: true,    // Preserve dates
       bookType: bookType,
       compression: true
     });
