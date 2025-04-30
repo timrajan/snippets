@@ -1,238 +1,96 @@
-import * as XLSX from 'xlsx';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as azdev from "azure-devops-node-api";
+import { IGitApi } from "azure-devops-node-api/GitApi";
+import { GitPullRequestCommentThread } from "azure-devops-node-api/interfaces/GitInterfaces";
+import { Comment } from "azure-devops-node-api/interfaces/GitInterfaces";
+import { CommentThreadStatus } from "azure-devops-node-api/interfaces/GitInterfaces";
+import { GitPullRequestReviewVote } from "azure-devops-node-api/interfaces/GitInterfaces";
+import { VoteResult } from "azure-devops-node-api/interfaces/GitInterfaces";
 
 /**
- * Adds a new row to an Excel file with proper handling of large numbers and style preservation
- * @param filePath - Path to the Excel file
- * @param sheetName - Name of the sheet to update
- * @param rowValues - Object containing column-value pairs for the new row
- * @returns Promise resolving to boolean indicating success
+ * Approves a pull request in Azure DevOps
+ * 
+ * @param orgUrl - Organization URL (e.g., https://dev.azure.com/yourorg)
+ * @param personalAccessToken - Azure DevOps PAT with appropriate permissions
+ * @param project - Project name
+ * @param repositoryId - Repository ID
+ * @param pullRequestId - ID of the pull request to approve
+ * @param commentContent - Optional comment to add with the approval
+ * @returns Promise that resolves when the PR is approved
  */
-export async function addRowToExcelFile(
-  filePath: string,
-  sheetName: string,
-  rowValues: Record<string, any>
-): Promise<boolean> {
+async function approvePullRequest(
+  orgUrl: string,
+  personalAccessToken: string,
+  project: string,
+  repositoryId: string,
+  pullRequestId: number,
+  commentContent?: string
+): Promise<void> {
   try {
-    // Validate inputs
-    if (!filePath || !sheetName) {
-      throw new Error('File path and sheet name are required');
-    }
+    // Create a connection to Azure DevOps
+    const authHandler = azdev.getPersonalAccessTokenHandler(personalAccessToken);
+    const connection = new azdev.WebApi(orgUrl, authHandler);
     
-    if (Object.keys(rowValues).length === 0) {
-      throw new Error('Row values are required');
-    }
+    // Get the Git API client
+    const gitApi: IGitApi = await connection.getGitApi();
     
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`File not found: ${filePath}`);
-    }
-    
-    // Read the Excel file with ALL formatting options to preserve styles
-    const workbook = XLSX.readFile(filePath, {
-      cellStyles: true,    // Important for preserving styles
-      cellText: false,
-      cellDates: true,
-      cellNF: true,
-      cellFormula: true,
-      cellHTML: true,
-      sheetStubs: true     // Keep empty cells
-    });
-    
-    // Check if the specified sheet exists
-    if (!workbook.SheetNames.includes(sheetName)) {
-      throw new Error(`Sheet '${sheetName}' not found in the workbook`);
-    }
-    
-    // Get the worksheet
-    const worksheet = workbook.Sheets[sheetName];
-    
-    // Store original column widths, styles, and formatting
-    const originalCols = worksheet['!cols'] ? [...worksheet['!cols']] : [];
-    const originalRows = worksheet['!rows'] ? [...worksheet['!rows']] : [];
-    const originalMerges = worksheet['!merges'] ? [...worksheet['!merges']] : [];
-    
-    // Find the actual data range by examining cell content
-    // Convert to array format to determine actual data rows
-    const data = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-    
-    // Find the last non-empty row
-    let actualLastRowIndex = 0;
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      // Check if row has any content (handling arrays and non-arrays)
-      if (row && Array.isArray(row)) {
-        if (row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
-          actualLastRowIndex = i;
-        }
-      } else if (row && typeof row === 'object') {
-        if (Object.values(row).some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
-          actualLastRowIndex = i;
-        }
-      }
-    }
-    
-    // The next row index should be the lastNonEmptyRow + 1
-    const nextRowIndex = actualLastRowIndex + 1;
-    console.log(`Adding new row at index ${nextRowIndex} (which is row ${nextRowIndex + 1} in Excel)`);
-    
-    // Process large numbers in rowValues
-    Object.keys(rowValues).forEach(key => {
-      const value = rowValues[key];
-      
-      // Check if this is a large number that might be converted to scientific notation
-      if (typeof value === 'number' && 
-          (value > 999999999999 || value < -999999999999 || 
-           (value < 0.0001 && value > 0) || (value > -0.0001 && value < 0))) {
-        // Convert large numbers to string to preserve exact representation
-        rowValues[key] = value.toString();
-      }
-    });
-    
-    // Add the new row directly to the worksheet
-    // Get column mapping for this specific file structure
-    // For the Fruit.xlsx format with merged cells and subheaders
-    const columnMapping: Record<string, string> = {
-      'Food': 'A',
-      'Fruit.Color': 'B',
-      'Fruit.Size': 'C',
-      'Vegetable.Color': 'D',
-      'Vegetable.Size': 'E'
+    // Create the vote object (10 = approved)
+    const vote: GitPullRequestReviewVote = {
+      vote: VoteResult.Approved, // 10 = Approved
+      reviewerId: undefined, // Uses the authenticated user
     };
     
-    // Process the new row data
-    Object.keys(rowValues).forEach(key => {
-      if (columnMapping[key]) {
-        const col = columnMapping[key];
-        const cellAddress = `${col}${nextRowIndex + 1}`; // +1 for Excel's 1-based indexing
-        
-        // Create the cell with the value
-        const value = rowValues[key];
-        const cell: XLSX.CellObject = { v: value };
-        
-        // Set cell type
-        if (typeof value === 'number') {
-          cell.t = 'n';
-        } else if (typeof value === 'boolean') {
-          cell.t = 'b';
-        } else if (value instanceof Date) {
-          cell.t = 'd';
-          cell.v = value;
-          cell.z = XLSX.SSF.get_table()[14]; // Date format
-        } else {
-          cell.t = 's';
-        }
-        
-        // Copy style from the row above if available
-        const styleCellAddress = `${col}${actualLastRowIndex + 1}`;
-        if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
-          cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone
-        }
-        
-        // Add the cell to the worksheet
-        worksheet[cellAddress] = cell;
-      }
-    });
+    // Vote to approve the PR
+    await gitApi.createPullRequestReviewers(
+      [vote],
+      repositoryId,
+      pullRequestId,
+      project
+    );
     
-    // Determine the range of the current data
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    console.log(`Successfully approved PR #${pullRequestId}`);
     
-    // Update worksheet range to ensure it includes our new row
-    // Only expand if necessary (if our new row is beyond current range)
-    if (nextRowIndex > range.e.r) {
-      worksheet['!ref'] = XLSX.utils.encode_range({
-        s: range.s,
-        e: { r: nextRowIndex, c: range.e.c }
-      });
+    // Optionally add a comment
+    if (commentContent) {
+      const comment: Comment = {
+        content: commentContent,
+      };
+      
+      const commentThread: GitPullRequestCommentThread = {
+        comments: [comment],
+        status: CommentThreadStatus.Active,
+      };
+      
+      await gitApi.createThread(
+        commentThread,
+        repositoryId,
+        pullRequestId,
+        project
+      );
+      
+      console.log(`Added comment to PR #${pullRequestId}`);
     }
-    
-    // Restore original column widths and styles
-    worksheet['!cols'] = originalCols;
-    worksheet['!rows'] = originalRows;
-    worksheet['!merges'] = originalMerges;
-    
-    // Write the updated workbook back to the file with options to preserve all formatting
-    const fileExtension = path.extname(filePath).substring(1).toLowerCase();
-    const bookType = ['xlsx', 'xlsm', 'xlsb', 'xls', 'csv'].includes(fileExtension) 
-                   ? fileExtension as XLSX.BookType 
-                   : 'xlsx' as XLSX.BookType;
-                   
-    XLSX.writeFile(workbook, filePath, {
-      bookSST: true,      // Generate Shared String Table
-      type: 'file',
-      cellStyles: true,   // Preserve styles
-      bookType: bookType,
-      compression: true
-    });
-    
-    return true;
   } catch (error) {
-    console.error('Error adding row to Excel file:', error);
+    console.error("Error approving pull request:", error);
     throw error;
   }
 }
 
-/**
- * Example usage specifically for the Fruit.xlsx structure:
- * 
- * // Add a carrot to the Fruit.xlsx file
- * addRowToExcelFile(
- *   'Fruit.xlsx',
- *   'Sheet1',
- *   { 
- *     'Food': 'Carrot',
- *     'Fruit.Color': 'NA',
- *     'Fruit.Size': 'NA',
- *     'Vegetable.Color': 'Orange',
- *     'Vegetable.Size': 'Small'
- *   }
- * );
- */
+// Example usage
+async function main() {
+  const orgUrl = "https://dev.azure.com/yourorganization";
+  const pat = "your-personal-access-token";
+  const project = "YourProject";
+  const repoId = "your-repository-id";
+  const prId = 123; // Pull request ID
+  const comment = "LGTM! Approving this PR."; // Optional comment
+  
+  try {
+    await approvePullRequest(orgUrl, pat, project, repoId, prId, comment);
+    console.log("Pull request approved successfully");
+  } catch (error) {
+    console.error("Failed to approve pull request:", error);
+  }
+}
 
-/**
- * Example usage specifically for the Fruit.xlsx structure:
- * 
- * // Add a carrot to the Fruit.xlsx file
- * addRowToExcelFile(
- *   'Fruit.xlsx',
- *   'Sheet1',
- *   { 
- *     'Food': 'Carrot',
- *     'Fruit.Color': 'NA',
- *     'Fruit.Size': 'NA',
- *     'Vegetable.Color': 'Orange',
- *     'Vegetable.Size': 'Small'
- *   }
- * );
- */
-
-/**
- * Example usage:
- * 
- * // Add a new employee record
- * addRowToExcelFile(
- *   'path/to/file.xlsx',
- *   'Sheet1',
- *   { 
- *     id: 123,
- *     name: 'John Doe',
- *     department: 'Engineering',
- *     salary: 75000,
- *     startDate: '2025-04-28'
- *   }
- * );
- * 
- * // Add a simple product entry
- * addRowToExcelFile(
- *   'inventory.xlsx',
- *   'Products',
- *   { 
- *     productId: 'PRD-789',
- *     name: 'Wireless Headphones',
- *     category: 'Electronics',
- *     price: 89.99,
- *     inStock: true
- *   }
- * );
- */
+// Uncomment to run
+// main();
