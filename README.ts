@@ -37,8 +37,7 @@ export async function addRowToExcelFile(
       cellNF: true,
       cellFormula: true,
       cellHTML: true,
-      sheetStubs: true,    // Keep empty cells
-      cellStyleAware: true // Enhanced style reading (important for font preservation)
+      sheetStubs: true     // Keep empty cells
     });
     
     // Check if the specified sheet exists
@@ -186,7 +185,6 @@ export async function addRowToExcelFile(
       bookSST: true,      // Generate Shared String Table
       type: 'file',
       cellStyles: true,   // Preserve styles
-      cellDates: true,    // Preserve dates
       bookType: bookType,
       compression: true
     });
