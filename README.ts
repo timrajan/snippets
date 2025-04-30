@@ -61,15 +61,9 @@ export async function addRowToExcelFile(
     let actualLastRowIndex = 0;
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      // Check if row has any content (handling arrays and non-arrays)
-      if (row && Array.isArray(row)) {
-        if (row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
-          actualLastRowIndex = i;
-        }
-      } else if (row && typeof row === 'object') {
-        if (Object.values(row).some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
-          actualLastRowIndex = i;
-        }
+      // Check if row has any content
+      if (row && row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+        actualLastRowIndex = i;
       }
     }
     
@@ -127,30 +121,7 @@ export async function addRowToExcelFile(
         // Copy style from the row above if available
         const styleCellAddress = `${col}${actualLastRowIndex + 1}`;
         if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
-          // Deep clone the style object to ensure ALL properties are copied
-          const clonedStyle = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s));
-          
-          // Ensure font properties are preserved
-          if (clonedStyle.font) {
-            // Make sure we keep font name, size, color, and formatting
-            console.log(`Copying font style from ${styleCellAddress}:`, clonedStyle.font);
-          }
-          
-          // Apply the style to the new cell
-          cell.s = clonedStyle;
-        } else {
-          // If no style from previous row, try to find any styled cell to copy from
-          // Start from the last data row and search upward for a cell with styling
-          let rowIndex = actualLastRowIndex;
-          while (rowIndex >= 0) {
-            const altStyleCell = `${col}${rowIndex + 1}`;
-            if (worksheet[altStyleCell] && worksheet[altStyleCell].s && 
-                worksheet[altStyleCell].s.font) {
-              cell.s = JSON.parse(JSON.stringify(worksheet[altStyleCell].s));
-              break;
-            }
-            rowIndex--;
-          }
+          cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone
         }
         
         // Add the cell to the worksheet
