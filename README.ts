@@ -53,9 +53,23 @@ export async function addRowToExcelFile(
     const originalRows = worksheet['!rows'] ? [...worksheet['!rows']] : [];
     const originalMerges = worksheet['!merges'] ? [...worksheet['!merges']] : [];
     
-    // Determine range of the current data
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-    const lastRow = range.e.r;
+    // Find the actual data range by examining cell content
+    // Convert to array format to determine actual data rows
+    const data = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+    
+    // Find the last non-empty row
+    let actualLastRowIndex = 0;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      // Check if row has any content
+      if (row && row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+        actualLastRowIndex = i;
+      }
+    }
+    
+    // The next row index should be the lastNonEmptyRow + 1
+    const nextRowIndex = actualLastRowIndex + 1;
+    console.log(`Adding new row at index ${nextRowIndex} (which is row ${nextRowIndex + 1} in Excel)`);
     
     // Process large numbers in rowValues
     Object.keys(rowValues).forEach(key => {
@@ -85,7 +99,7 @@ export async function addRowToExcelFile(
     Object.keys(rowValues).forEach(key => {
       if (columnMapping[key]) {
         const col = columnMapping[key];
-        const cellAddress = `${col}${lastRow + 1 + 1}`; // +1 for 0-indexing, +1 for next row
+        const cellAddress = `${col}${nextRowIndex + 1}`; // +1 for Excel's 1-based indexing
         
         // Create the cell with the value
         const value = rowValues[key];
@@ -105,7 +119,7 @@ export async function addRowToExcelFile(
         }
         
         // Copy style from the row above if available
-        const styleCellAddress = `${col}${lastRow + 1}`;
+        const styleCellAddress = `${col}${actualLastRowIndex + 1}`;
         if (worksheet[styleCellAddress] && worksheet[styleCellAddress].s) {
           cell.s = JSON.parse(JSON.stringify(worksheet[styleCellAddress].s)); // Deep clone
         }
@@ -115,11 +129,17 @@ export async function addRowToExcelFile(
       }
     });
     
-    // Update worksheet range to include the new row
-    worksheet['!ref'] = XLSX.utils.encode_range({
-      s: range.s,
-      e: { r: lastRow + 1, c: range.e.c }
-    });
+    // Determine the range of the current data
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    
+    // Update worksheet range to ensure it includes our new row
+    // Only expand if necessary (if our new row is beyond current range)
+    if (nextRowIndex > range.e.r) {
+      worksheet['!ref'] = XLSX.utils.encode_range({
+        s: range.s,
+        e: { r: nextRowIndex, c: range.e.c }
+      });
+    }
     
     // Restore original column widths and styles
     worksheet['!cols'] = originalCols;
@@ -146,6 +166,23 @@ export async function addRowToExcelFile(
     throw error;
   }
 }
+
+/**
+ * Example usage specifically for the Fruit.xlsx structure:
+ * 
+ * // Add a carrot to the Fruit.xlsx file
+ * addRowToExcelFile(
+ *   'Fruit.xlsx',
+ *   'Sheet1',
+ *   { 
+ *     'Food': 'Carrot',
+ *     'Fruit.Color': 'NA',
+ *     'Fruit.Size': 'NA',
+ *     'Vegetable.Color': 'Orange',
+ *     'Vegetable.Size': 'Small'
+ *   }
+ * );
+ */
 
 /**
  * Example usage specifically for the Fruit.xlsx structure:
