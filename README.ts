@@ -1,9 +1,1 @@
-await gitApi.createThread(
-  {
-    comments: [{ content: commentContent }],
-    status: CommentThreadStatus.Active
-  },
-  repositoryId,
-  pullRequestId,
-  project
-);
+"Error: Failed request: (413)\n    at RestClient.<anonymous> (C:\\git\\DDSATOOAutomation\\puppeteer\\node_modules\\typed-rest-client\\RestClient.js:204:31)\n    at Generator.next (<anonymous>)\n    at fulfilled (C:\\git\\DDSATOOAutomation\\puppeteer\\node_modules\\typed-rest-client\\RestClient.js:7:58)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
