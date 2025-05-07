@@ -1,16 +1,12 @@
 /**
- * Get all test cases from all test suites in a test plan
+ * Get all test suites from a specific test plan
+ * Handles pagination to retrieve all suites
  * @param config Azure DevOps configuration
  * @param planId Test plan ID
- * @returns Map of suite ID to test cases
+ * @returns All test suites in the test plan
  */
-async function getAllTestCasesFromPlan(config: Config, planId: number) {
+async function getAllTestSuitesFromPlan(config: Config, planId: number) {
   try {
-    // First get all test suites in the plan
-    const testSuites = await getAllTestSuitesFromPlan(config, planId);
-    
-    console.log(`Fetching test cases for ${testSuites.length} suites in plan ID ${planId}...`);
-    
     // Create axios instance with Basic authentication
     const axiosInstance = axios.create({
       headers: {
@@ -20,37 +16,43 @@ async function getAllTestCasesFromPlan(config: Config, planId: number) {
       }
     });
     
-    // Map to store test cases for each suite
-    const testCasesBySuite = new Map();
+    console.log(`Fetching all test suites for plan ID ${planId}...`);
     
-    // For each suite, get its test cases
-    for (const suite of testSuites) {
-      try {
-        console.log(`Fetching test cases for suite ID ${suite.id} (${suite.name})...`);
+    let allTestSuites = [];
+    let skip = 0;
+    const top = 100; // Number of suites to fetch per request
+    let hasMoreResults = true;
+    let page = 1;
+    
+    // Loop to handle pagination
+    while (hasMoreResults) {
+      console.log(`Fetching page ${page} of test suites (skip: ${skip}, top: ${top})...`);
+      
+      // Construct the URL for the API request with pagination parameters
+      const url = `${config.orgUrl}/${config.project}/_apis/test/Plans/${planId}/suites?$skip=${skip}&$top=${top}&api-version=7.1`;
+      
+      // Make the REST API call
+      const response = await axiosInstance.get(url);
+      
+      const suites = response.data.value || [];
+      
+      if (suites.length > 0) {
+        allTestSuites = allTestSuites.concat(suites);
+        console.log(`Retrieved ${suites.length} test suites in page ${page}`);
         
-        // Construct the URL for the API request
-        const url = `${config.orgUrl}/${config.project}/_apis/test/Plans/${planId}/suites/${suite.id}/testcases?api-version=7.1`;
-        
-        // Make the REST API call
-        const response = await axiosInstance.get(url);
-        
-        const testCases = response.data.value || [];
-        console.log(`Found ${testCases.length} test cases in suite ID ${suite.id}`);
-        
-        // Store the test cases for this suite
-        testCasesBySuite.set(suite.id, {
-          suite: suite,
-          testCases: testCases
-        });
-      } catch (error) {
-        console.error(`Error fetching test cases for suite ID ${suite.id}:`, error);
-        // Continue with other suites even if one fails
+        // Prepare for next page
+        skip += top;
+        page++;
+      } else {
+        // No more suites to fetch
+        hasMoreResults = false;
       }
     }
     
-    return testCasesBySuite;
+    console.log(`Retrieved a total of ${allTestSuites.length} test suites for plan ID ${planId}`);
+    return allTestSuites;
   } catch (error) {
-    console.error(`Error fetching all test cases from plan ID ${planId}:`, error);
+    console.error(`Error fetching test suites for plan ID ${planId}:`, error);
     throw error;
   }
 }
