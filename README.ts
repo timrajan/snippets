@@ -1,6 +1,12 @@
 getaddrinfo ENOTFOUND dev.azure.com
 
-
+// Add proxy authentication if provided
+      if (config.proxy.auth) {
+        axiosConfig.proxy.auth = {
+          username: config.proxy.auth.username,
+          password: config.proxy.auth.password
+        };
+      }
 
 /**
  * Get all test suites from a specific test plan
