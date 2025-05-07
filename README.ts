@@ -1,3 +1,7 @@
+    console.error('Error fetching test cases:', (error as Error).message);
+
+
+
 /**
  * Get all test suites from a specific test plan
  * Handles pagination to retrieve all suites
