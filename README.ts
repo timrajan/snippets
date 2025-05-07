@@ -1,34 +1,56 @@
-let allTestPlans = [];
-let continuationToken = undefined;
-let page = 1;
-
-// Loop to handle pagination
-    do {
-      console.log(`Fetching page ${page} of test plans...`);
-      
-      // Get a page of test plans
-      // The API accepts a continuationToken for pagination
-      const testPlansPage = await testPlanApi.getTestPlans(
-        config.project,         // project
-        undefined,              // owner
-        continuationToken,      // continuationToken
-        true                    // includePlanDetails
-      );
-      
-      if (testPlansPage && testPlansPage.length > 0) {
-        allTestPlans = allTestPlans.concat(testPlansPage);
-        console.log(`Retrieved ${testPlansPage.length} test plans in page ${page}`);
-        
-        // Check if there's a continuation token in the response headers
-        // This is typically returned in the response headers as 'x-ms-continuationtoken'
-        continuationToken = connection.getResponseContinuationToken();
-        
-        // Increment page counter
-        page++;
-      } else {
-        // No more test plans
-        continuationToken = undefined;
-      }
-    } while (continuationToken);
+/**
+ * Get all test cases from all test suites in a test plan
+ * @param config Azure DevOps configuration
+ * @param planId Test plan ID
+ * @returns Map of suite ID to test cases
+ */
+async function getAllTestCasesFromPlan(config: Config, planId: number) {
+  try {
+    // First get all test suites in the plan
+    const testSuites = await getAllTestSuitesFromPlan(config, planId);
     
-    console.log(`Retrieved a total of ${allTestPlans.length} test plans`);
+    console.log(`Fetching test cases for ${testSuites.length} suites in plan ID ${planId}...`);
+    
+    // Create axios instance with Basic authentication
+    const axiosInstance = axios.create({
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`:${config.token}`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    // Map to store test cases for each suite
+    const testCasesBySuite = new Map();
+    
+    // For each suite, get its test cases
+    for (const suite of testSuites) {
+      try {
+        console.log(`Fetching test cases for suite ID ${suite.id} (${suite.name})...`);
+        
+        // Construct the URL for the API request
+        const url = `${config.orgUrl}/${config.project}/_apis/test/Plans/${planId}/suites/${suite.id}/testcases?api-version=7.1`;
+        
+        // Make the REST API call
+        const response = await axiosInstance.get(url);
+        
+        const testCases = response.data.value || [];
+        console.log(`Found ${testCases.length} test cases in suite ID ${suite.id}`);
+        
+        // Store the test cases for this suite
+        testCasesBySuite.set(suite.id, {
+          suite: suite,
+          testCases: testCases
+        });
+      } catch (error) {
+        console.error(`Error fetching test cases for suite ID ${suite.id}:`, error);
+        // Continue with other suites even if one fails
+      }
+    }
+    
+    return testCasesBySuite;
+  } catch (error) {
+    console.error(`Error fetching all test cases from plan ID ${planId}:`, error);
+    throw error;
+  }
+}
