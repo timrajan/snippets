@@ -1,70 +1,31 @@
-https://stackoverflow.com/questions/55981040/how-to-use-axios-with-a-proxy-server-to-make-an-https-call
-
-getaddrinfo ENOTFOUND dev.azure.com
-
-// Add proxy authentication if provided
-      if (config.proxy.auth) {
-        axiosConfig.proxy.auth = {
-          username: config.proxy.auth.username,
-          password: config.proxy.auth.password
-        };
-      }
-
 /**
- * Get all test suites from a specific test plan
- * Handles pagination to retrieve all suites
- * @param config Azure DevOps configuration
- * @param planId Test plan ID
- * @returns All test suites in the test plan
+ * Gets all XML tag names as a string array
+ * @param xmlString The XML string to parse
+ * @returns A string array containing all tag names in the XML
  */
-async function getAllTestSuitesFromPlan(config: Config, planId: number) {
-  try {
-    // Create axios instance with Basic authentication
-    const axiosInstance = axios.create({
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`:${config.token}`).toString('base64')}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-    
-    console.log(`Fetching all test suites for plan ID ${planId}...`);
-    
-    let allTestSuites = [];
-    let skip = 0;
-    const top = 100; // Number of suites to fetch per request
-    let hasMoreResults = true;
-    let page = 1;
-    
-    // Loop to handle pagination
-    while (hasMoreResults) {
-      console.log(`Fetching page ${page} of test suites (skip: ${skip}, top: ${top})...`);
-      
-      // Construct the URL for the API request with pagination parameters
-      const url = `${config.orgUrl}/${config.project}/_apis/test/Plans/${planId}/suites?$skip=${skip}&$top=${top}&api-version=7.1`;
-      
-      // Make the REST API call
-      const response = await axiosInstance.get(url);
-      
-      const suites = response.data.value || [];
-      
-      if (suites.length > 0) {
-        allTestSuites = allTestSuites.concat(suites);
-        console.log(`Retrieved ${suites.length} test suites in page ${page}`);
-        
-        // Prepare for next page
-        skip += top;
-        page++;
-      } else {
-        // No more suites to fetch
-        hasMoreResults = false;
-      }
+function getAllXmlTagNames(xmlString: string): string[] {
+  // Parse the XML string into a DOM Document
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  
+  // Array to store tag names
+  const tagNames: string[] = [];
+  
+  // Recursive function to traverse the XML tree
+  function traverseNodes(node: Node) {
+    // If this is an element node, add its tag name to our array
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      tagNames.push(node.nodeName);
     }
     
-    console.log(`Retrieved a total of ${allTestSuites.length} test suites for plan ID ${planId}`);
-    return allTestSuites;
-  } catch (error) {
-    console.error(`Error fetching test suites for plan ID ${planId}:`, error);
-    throw error;
+    // Process child nodes
+    for (let i = 0; node.childNodes && i < node.childNodes.length; i++) {
+      traverseNodes(node.childNodes[i]);
+    }
   }
+  
+  // Start traversal from the document element
+  traverseNodes(xmlDoc.documentElement);
+  
+  return tagNames;
 }
