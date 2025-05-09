@@ -1,14 +1,31 @@
-var itemParams = workitem.Fields["Microsoft.VSTS.TCM.Parameters"];
-    var itemParamsElement = XElement.Parse((string)itemParams);
-
-    var paramDataSource = workitem.Fields["Microsoft.VSTS.TCM.LocalDataSource"];
-    var xElement = XElement.Parse(paramDataSource.ToString());
-
-    //Assuming we have a table named "Table1" in the workitem
-    descendants = xElement.Descendants("Table1");
-
-    foreach (var xe in itemParamsElement.Descendants("param"))
-    {
-      var name = xe.Attribute("name").Value;
-      dt.Columns.Add(name, typeof(string));
+function extractSequenceNames(xmlContent: string): string[] {
+  // Parse the XML string into a DOM document
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+  
+  // Find all sequence elements
+  const sequences = xmlDoc.getElementsByTagName("xs:sequence");
+  
+  // Array to store the extracted names
+  const names: string[] = [];
+  
+  // Iterate through each sequence element
+  for (let i = 0; i < sequences.length; i++) {
+    const sequence = sequences[i];
+    
+    // Get all child elements of the sequence
+    const children = sequence.children;
+    
+    // Extract the name attribute from each element in the sequence
+    for (let j = 0; j < children.length; j++) {
+      const element = children[j];
+      const nameAttr = element.getAttribute("name");
+      if (nameAttr) {
+        // Remove any single quotes that might be part of the name
+        names.push(nameAttr.replace(/'/g, ""));
+      }
     }
+  }
+  
+  return names;
+}
