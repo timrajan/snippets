@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sky -->
+  <rect x="0" y="0" width="800" height="250" fill="#87CEEB" />
+  
+  <!-- Sun -->
+  <circle cx="700" cy="80" r="40" fill="#FFD700" />
+  <g opacity="0.3">
+    <line x1="700" y1="20" x2="700" y2="0" stroke="#FFD700" stroke-width="4"/>
+    <line x1="700" y1="160" x2="700" y2="140" stroke="#FFD700" stroke-width="4"/>
+    <line x1="640" y1="80" x2="620" y2="80" stroke="#FFD700" stroke-width="4"/>
+    <line x1="780" y1="80" x2="760" y2="80" stroke="#FFD700" stroke-width="4"/>
+    <line x1="656" y1="36" x2="642" y2="22" stroke="#FFD700" stroke-width="4"/>
+    <line x1="758" y1="138" x2="744" y2="124" stroke="#FFD700" stroke-width="4"/>
+    <line x1="656" y1="124" x2="642" y2="138" stroke="#FFD700" stroke-width="4"/>
+    <line x1="758" y1="22" x2="744" y2="36" stroke="#FFD700" stroke-width="4"/>
+  </g>
+  
+  <!-- Ground -->
+  <rect x="0" y="250" width="800" height="350" fill="#8B4513" />
+  <rect x="0" y="250" width="800" height="40" fill="#228B22" />
+  
+  <!-- Lake -->
+  <ellipse cx="180" cy="330" rx="150" ry="60" fill="#4682B4" />
+  <path d="M150 310 Q 180 300, 210 310 Q 240 320, 270 310" fill="none" stroke="#ADD8E6" stroke-width="2"/>
+  <path d="M120 330 Q 150 320, 180 330 Q 210 340, 240 330" fill="none" stroke="#ADD8E6" stroke-width="2"/>
+  <path d="M90 340 Q 120 330, 150 340 Q 180 350, 210 340" fill="none" stroke="#ADD8E6" stroke-width="2"/>
+  
+  <!-- Stable -->
+  <rect x="500" y="280" width="250" height="170" fill="#8B4513" />
+  <polygon points="500,280 625,200 750,280" fill="#A0522D" />
+  <rect x="520" y="320" width="60" height="130" fill="#4B3621" />
+  <rect x="670" y="320" width="60" height="130" fill="#4B3621" />
+  <!-- Water trough in stable - bigger -->
+  <rect x="575" y="370" width="100" height="40" fill="#4682B4" /> <!-- Water trough -->
+  <rect x="575" y="365" width="100" height="5" fill="#8B4513" /> <!-- Water trough rim -->
+  <rect x="575" y="410" width="100" height="5" fill="#8B4513" /> <!-- Water trough bottom -->
+  <rect x="575" y="365" width="5" height="50" fill="#8B4513" /> <!-- Water trough left side -->
+  <rect x="670" y="365" width="5" height="50" fill="#8B4513" /> <!-- Water trough right side -->
+  <path d="M580 375 Q 625 385, 670 375" fill="none" stroke="#ADD8E6" stroke-width="2"/> <!-- Water ripples -->
+  <path d="M580 385 Q 625 395, 670 385" fill="none" stroke="#ADD8E6" stroke-width="2"/> <!-- Water ripples -->
+  
+  <!-- Path from lake to stable -->
+  <path d="M280 330 Q 390 370, 500 350" fill="none" stroke="#D2B48C" stroke-width="15"/>
+  
+  <!-- People at lake -->
+  <!-- Person 1 with bucket -->
+  <circle cx="230" cy="300" r="10" fill="#FFE4C4" /> <!-- Head -->
+  <line x1="230" y1="310" x2="230" y2="335" stroke="#000080" stroke-width="5"/> <!-- Body -->
+  <line x1="230" y1="320" x2="210" y2="330" stroke="#000080" stroke-width="3"/> <!-- Left arm -->
+  <line x1="230" y1="320" x2="250" y2="330" stroke="#000080" stroke-width="3"/> <!-- Right arm -->
+  <line x1="230" y1="335" x2="220" y2="355" stroke="#000080" stroke-width="3"/> <!-- Left leg -->
+  <line x1="230" y1="335" x2="240" y2="355" stroke="#000080" stroke-width="3"/> <!-- Right leg -->
+  <!-- Large bucket -->
+  <path d="M215 325 L215 345 C 215 355, 245 355, 245 345 L245 325" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M215 325 C 215 320, 245 320, 245 325" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M230 325 L230 345" fill="none" stroke="#8B4513" stroke-width="1"/> <!-- Bucket reinforcement -->
+  <ellipse cx="230" cy="345" rx="15" ry="5" fill="#4682B4" /> <!-- Water in bucket -->
+  
+  <!-- Person 2 walking on path -->
+  <circle cx="350" cy="340" r="10" fill="#F5DEB3" /> <!-- Head -->
+  <line x1="350" y1="350" x2="350" y2="375" stroke="#800000" stroke-width="5"/> <!-- Body -->
+  <line x1="350" y1="360" x2="335" y2="370" stroke="#800000" stroke-width="3"/> <!-- Left arm -->
+  <line x1="350" y1="360" x2="365" y2="370" stroke="#800000" stroke-width="3"/> <!-- Right arm -->
+  <line x1="350" y1="375" x2="340" y2="395" stroke="#800000" stroke-width="3"/> <!-- Left leg -->
+  <line x1="350" y1="375" x2="360" y2="395" stroke="#800000" stroke-width="3"/> <!-- Right leg -->
+  <!-- Large bucket -->
+  <path d="M335 365 L335 385 C 335 395, 365 395, 365 385 L365 365" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M335 365 C 335 360, 365 360, 365 365" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M350 365 L350 385" fill="none" stroke="#8B4513" stroke-width="1"/> <!-- Bucket reinforcement -->
+  <ellipse cx="350" cy="385" rx="15" ry="5" fill="#4682B4" /> <!-- Water in bucket -->
+  
+  <!-- Person 3 at stable door -->
+  <circle cx="500" cy="350" r="10" fill="#D2B48C" /> <!-- Head -->
+  <line x1="500" y1="360" x2="500" y2="385" stroke="#006400" stroke-width="5"/> <!-- Body -->
+  <line x1="500" y1="370" x2="485" y2="380" stroke="#006400" stroke-width="3"/> <!-- Left arm -->
+  <line x1="500" y1="370" x2="515" y2="380" stroke="#006400" stroke-width="3"/> <!-- Right arm -->
+  <line x1="500" y1="385" x2="490" y2="405" stroke="#006400" stroke-width="3"/> <!-- Left leg -->
+  <line x1="500" y1="385" x2="510" y2="405" stroke="#006400" stroke-width="3"/> <!-- Right leg -->
+  <!-- Large bucket -->
+  <path d="M485 375 L485 395 C 485 405, 515 405, 515 395 L515 375" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M485 375 C 485 370, 515 370, 515 375" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <path d="M500 375 L500 395" fill="none" stroke="#8B4513" stroke-width="1"/> <!-- Bucket reinforcement -->
+  <ellipse cx="500" cy="395" rx="15" ry="5" fill="#4682B4" /> <!-- Water in bucket -->
+  
+  <!-- Horses in stable -->
+  <!-- Horse 1 - standing -->
+  <path d="M550 400 C 545 380, 560 380, 565 385 C 570 375, 575 375, 580 380 C 585 375, 590 375, 595 380" fill="#8B4513" stroke="#8B4513" stroke-width="2"/> <!-- Body -->
+  <circle cx="550" cy="385" r="8" fill="#8B4513" /> <!-- Head -->
+  <line x1="550" y1="385" x2="545" y2="380" stroke="#8B4513" stroke-width="2"/> <!-- Ear -->
+  <line x1="550" y1="385" x2="555" y2="380" stroke="#8B4513" stroke-width="2"/> <!-- Ear -->
+  <line x1="545" y1="390" x2="540" y2="395" stroke="#8B4513" stroke-width="1"/> <!-- Eye -->
+  <line x1="595" y1="380" x2="595" y2="415" stroke="#8B4513" stroke-width="3"/> <!-- Front leg -->
+  <line x1="590" y1="380" x2="590" y2="415" stroke="#8B4513" stroke-width="3"/> <!-- Front leg -->
+  <line x1="560" y1="400" x2="560" y2="415" stroke="#8B4513" stroke-width="3"/> <!-- Back leg -->
+  <line x1="565" y1="400" x2="565" y2="415" stroke="#8B4513" stroke-width="3"/> <!-- Back leg -->
+  
+  <!-- Horse 2 - lying down -->
+  <ellipse cx="670" cy="415" rx="30" ry="15" fill="#F4A460" /> <!-- Body -->
+  <circle cx="645" cy="405" r="8" fill="#F4A460" /> <!-- Head -->
+  <line x1="645" y1="405" x2="640" y2="400" stroke="#F4A460" stroke-width="2"/> <!-- Ear -->
+  <line x1="645" y1="405" x2="650" y2="400" stroke="#F4A460" stroke-width="2"/> <!-- Ear -->
+  <line x1="640" y1="407" x2="635" y2="407" stroke="#000000" stroke-width="1"/> <!-- Eye -->
+  <line x1="670" y1="415" x2="685" y2="420" stroke="#F4A460" stroke-width="3"/> <!-- Folded leg -->
+  <line x1="670" y1="415" x2="665" y2="425" stroke="#F4A460" stroke-width="3"/> <!-- Folded leg -->
+  
+  <!-- Birds in sky -->
+  <path d="M100 80 C 110 70, 120 80, 130 70" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M150 100 C 160 90, 170 100, 180 90" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M200 60 C 210 50, 220 60, 230 50" fill="none" stroke="#000000" stroke-width="1"/>
+</svg>
