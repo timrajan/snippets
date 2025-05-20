@@ -1,17 +1,15 @@
-import * as fs from 'fs';
-
-function deleteXmlFileSync(filePath: string): void {
-  if (!filePath.endsWith('.xml')) {
-    throw new Error('File does not have .xml extension');
-  }
-  
-  fs.unlinkSync(filePath);
-}
-
-// Example usage
-try {
-  deleteXmlFileSync('./path/to/your/file.xml');
-  console.log('XML file deleted successfully');
-} catch (error) {
-  console.error('Failed to delete XML file:', error);
-}
+const rawData = fs.readFileSync(filePath, 'utf8');
+    
+    // Parse the JSON data
+    const jsonData = JSON.parse(rawData);
+    
+    // Loop through each key-value pair
+    for (const [key, value] of Object.entries(jsonData)) {
+      console.log(`Key: ${key}, Value:`, value);
+      
+      // If you need to process nested objects recursively
+      if (value !== null && typeof value === 'object') {
+        console.log('Object value - contains nested properties:');
+        processNestedObject(value, `  ${key}.`);
+      }
+    }
