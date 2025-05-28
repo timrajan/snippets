@@ -1,63 +1,34 @@
-(method) IGitApi.getItem(repositoryId: string, path: string, project?: string, scopePath?: string, recursionLevel?: GitInterfaces.VersionControlRecursionType, includeContentMetadata?: boolean, latestProcessedChange?: boolean, download?: boolean, versionDescriptor?: GitInterfaces.GitVersionDescriptor, includeContent?: boolean, resolveLfs?: boolean, sanitize?: boolean): Promise<GitInterfaces.GitItem>
-Type 'string' is not assignable to type 'GitVersionType'.
+type TaggedTestFunction = (tags: string[], name: string, fn: () => void) => void;
 
+declare global {
+  var taggedDescribe: TaggedTestFunction;
+  var taggedIt: TaggedTestFunction;
+}
 
-/**
-   * Get Excel file using gitAPI and save to local path
-   */
-  async getExcelFileAndSave(
-    gitAPI: any,
-    repositoryId: string,
-    project: string,
-    filePath: string,
-    branchName: string,
-    localSavePath: string,
-    createDirectories: boolean = true
-  ): Promise<{ content: Buffer; commitId: string; savedPath: string }> {
-    try {
-      // Get the file content from Azure DevOps
-      const response = await gitAPI.getItem(
-        repositoryId,
-        filePath,
-        project,
-        {
-          version: branchName,
-          versionType: 'branch',
-          includeContent: true
-        }
-      );
+const tags = process.env.JEST_TAGS ? process.env.JEST_TAGS.split(',') : [];
 
-      if (!response.content) {
-        throw new Error('File content not found');
-      }
+function shouldRunTest(testTags: string[]): boolean {
+  if (tags.length === 0) return true;
+  return tags.every(tag => testTags.includes(tag));
+}
 
-      const buffer = Buffer.from(response.content, 'base64');
-      
-      // Create directories if they don't exist
-      if (createDirectories) {
-        const directory = path.dirname(localSavePath);
-        if (!fs.existsSync(directory)) {
-          fs.mkdirSync(directory, { recursive: true });
-          console.log(`📁 Created directory: ${directory}`);
-        }
-      }
-
-      // Save the file to local path
-      fs.writeFileSync(localSavePath, buffer);
-      console.log(`💾 Excel file saved to: ${localSavePath}`);
-
-      return {
-        content: buffer,
-        commitId: response.commitId,
-        savedPath: localSavePath
-      };
-    } catch (error) {
-      if (error.statusCode === 404) {
-        throw new Error(`File '${filePath}' not found in branch '${branchName}'`);
-      }
-      if (error.code === 'ENOENT' || error.code === 'EACCES') {
-        throw new Error(`Failed to save file to '${localSavePath}': ${error.message}`);
-      }
-      throw new Error(`Failed to get and save file: ${error.message || error}`);
-    }
+global.taggedDescribe = function(testTags: string[], name: string, fn: () => void) {
+  if (shouldRunTest(testTags)) {
+    return describe(name, fn);
+  } else {
+    return describe.skip(name, fn);
   }
+};
+
+global.taggedIt = function(testTags: string[], name: string, fn: () => void) {
+  if (shouldRunTest(testTags)) {
+    return it(name, fn);
+  } else {
+    return it.skip(name, fn);
+  }
+};
+
+export {};
+
+
+test-tags.ts
