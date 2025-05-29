@@ -57,7 +57,14 @@ global.taggedIt = function(testTags: string[], name: string, fn: () => void | Pr
 };
 
 // Override global it() and describe() to skip untagged tests when filtering
-if (tags.length > 0) {
+// BUT only when NOT in debug mode (IDE debugging typically sets NODE_ENV or other flags)
+const isDebugging = process.env.NODE_ENV === 'test' || 
+                   process.argv.includes('--inspect') || 
+                   process.argv.includes('--inspect-brk') ||
+                   !!process.env.VSCODE_PID ||
+                   process.argv.some(arg => arg.endsWith('.test.ts') || arg.endsWith('.test.js'));
+
+if (tags.length > 0 && !isDebugging) {
   console.log('🔍 Filtering mode: untagged tests will be skipped');
   
   global.it = function(name: string, fn?: any, timeout?: number) {
@@ -79,6 +86,10 @@ if (tags.length > 0) {
   global.describe.skip = originalDescribe.skip;
   global.describe.only = originalDescribe.only;
   global.describe.each = originalDescribe.each;
+} else if (tags.length > 0) {
+  console.log('🐛 Debug/single file mode: keeping untagged tests for debugging');
+} else {
+  console.log('🌍 No filtering active - all tests will run');
 }
 
 export {};
