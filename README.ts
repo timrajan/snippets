@@ -1,3 +1,109 @@
+const stepId = stepIdMatch ? parseInt(stepIdMatch[1]) : null;
+stepId: stepId,
+
+
+import * as xml2js from 'xml2js';
+
+async function extractTestStepsWithXmlParser(workItem) {
+    const steps = [];
+    
+    const stepsField = workItem.fields?.['Microsoft.VSTS.TCM.Steps'];
+    
+    if (stepsField) {
+        try {
+            const parser = new xml2js.Parser();
+            const result = await parser.parseStringPromise(stepsField);
+            
+            // Navigate through the XML structure
+            const stepElements = result?.steps?.step;
+            
+            if (stepElements && Array.isArray(stepElements)) {
+                stepElements.forEach((step, index) => {
+                    const stepId = step.$.id ? parseInt(step.$.id) : null;
+                    
+                    // Extract action and expected result from parameterizedString elements
+                    let action = '';
+                    let expectedResult = '';
+                    
+                    if (step.parameterizedString && Array.isArray(step.parameterizedString)) {
+                        if (step.parameterizedString[0] && step.parameterizedString[0]._) {
+                            action = step.parameterizedString[0]._.trim();
+                        }
+                        if (step.parameterizedString[1] && step.parameterizedString[1]._) {
+                            expectedResult = step.parameterizedString[1]._.trim();
+                        }
+                    }
+                    
+                    steps.push({
+                        stepId: stepId,
+                        stepNumber: index + 1,
+                        action: action,
+                        expectedResult: expectedResult
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error parsing test steps XML:', error);
+            // Fallback to regex parsing if XML parsing fails
+            return extractTestStepsWithRegex(workItem);
+        }
+    }
+    
+    return steps;
+}
+
+// Alternative regex-based extraction (more reliable for malformed XML)
+function extractTestStepsWithRegex(workItem) {
+    const steps = [];
+    const stepsField = workItem.fields?.['Microsoft.VSTS.TCM.Steps'];
+    
+    if (stepsField) {
+        // More comprehensive regex to capture step ID and content
+        const stepPattern = /<step\s+id="(\d+)"[^>]*>(.*?)<\/step>/gs;
+        let match;
+        
+        while ((match = stepPattern.exec(stepsField)) !== null) {
+            const stepId = parseInt(match[1]);
+            const stepContent = match[2];
+            
+            // Extract parameterized strings from step content
+            const paramStrings = stepContent.match(/<parameterizedString[^>]*isformatted="true"[^>]*>(.*?)<\/parameterizedString>/gs);
+            
+            let action = '';
+            let expectedResult = '';
+            
+            if (paramStrings) {
+                // Clean up the first parameterized string (action)
+                if (paramStrings[0]) {
+                    action = paramStrings[0]
+                        .replace(/<parameterizedString[^>]*isformatted="true"[^>]*>/, '')
+                        .replace(/<\/parameterizedString>/, '')
+                        .trim();
+                }
+                
+                // Clean up the second parameterized string (expected result)
+                if (paramStrings[1]) {
+                    expectedResult = paramStrings[1]
+                        .replace(/<parameterizedString[^>]*isformatted="true"[^>]*>/, '')
+                        .replace(/<\/parameterizedString>/, '')
+                        .trim();
+                }
+            }
+            
+            steps.push({
+                stepId: stepId,
+                stepNumber: steps.length + 1,
+                action: action,
+                expectedResult: expectedResult
+            });
+        }
+    }
+    
+    return steps;
+}
+    
+
+
 import * as azdev from "azure-devops-node-api";
 
 async function getTestCaseSteps(organizationUrl, testCaseId, personalAccessToken) {
