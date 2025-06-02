@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+
 /**
  * Creates a text file with the provided strings
  * @param filename - Name of the file to create (with or without .txt extension)
