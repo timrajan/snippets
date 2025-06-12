@@ -1,31 +1,35 @@
-findFolderPath = async(folderName: string): Promise<string> =>{
-        
-        const projectRoot =this.getProjectRoot()
-        function searchRecursively(currentPath: string) {
-            try {
-                const items = fs.readdirSync(currentPath, { withFileTypes: true });
-                items
-                .filter(item => item.isDirectory())
-                .forEach(dir => {
-                    const fullPath = path.join(currentPath, dir.name);
+findFolderPath = async (folderName: string): Promise<string> => {
+    const projectRoot = this.getProjectRoot();
+    
+    function searchRecursively(currentPath: string): string {
+        try {
+            const items = fs.readdirSync(currentPath, { withFileTypes: true });
+            
+            for (const item of items) {
+                if (item.isDirectory()) {
+                    const fullPath = path.join(currentPath, item.name);
+                    
+                    // Check if this is the folder we're looking for
+                    if (item.name === folderName) {
+                        return fullPath;
+                    }
+                    
+                    // Recursively search in subdirectories
                     try {
-                        const stats = fs.statSync(fullPath);
-                        if (stats.isDirectory()) {
-                            if (dir.name === folderName) {
-                                return fullPath;
-                            }
-                            searchRecursively(fullPath);
+                        const result = searchRecursively(fullPath);
+                        if (result) {
+                            return result;
                         }
                     } catch (error) {
-                        // Skip files/folders we can't access
-                        
+                        // Skip folders we can't access
                     }
-                });
-            } catch (error) {
-                // Skip directories we can't read
+                }
             }
-            return ""
+        } catch (error) {
+            // Skip directories we can't read
         }
-        const foundPath= searchRecursively(projectRoot);
-        return foundPath;
+        return "";
     }
+    
+    return searchRecursively(projectRoot);
+};
