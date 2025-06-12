@@ -1,42 +1,31 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-function findFolderFromRoot(folderName: string): string[] {
-    const foundPaths: string[] = [];
-    
-    // Get root directory
-    const root = path.parse(process.cwd()).root; // 'C:\' on Windows, '/' on Unix
-    
-    function searchRecursively(currentPath: string) {
-        try {
-            const items = fs.readdirSync(currentPath);
-            
-            for (const item of items) {
-                const fullPath = path.join(currentPath, item);
-                
-                try {
-                    const stats = fs.statSync(fullPath);
-                    
-                    if (stats.isDirectory()) {
-                        if (item === folderName) {
-                            foundPaths.push(fullPath);
+findFolderPath = async(folderName: string): Promise<string> =>{
+        
+        const projectRoot =this.getProjectRoot()
+        function searchRecursively(currentPath: string) {
+            try {
+                const items = fs.readdirSync(currentPath, { withFileTypes: true });
+                items
+                .filter(item => item.isDirectory())
+                .forEach(dir => {
+                    const fullPath = path.join(currentPath, dir.name);
+                    try {
+                        const stats = fs.statSync(fullPath);
+                        if (stats.isDirectory()) {
+                            if (dir.name === folderName) {
+                                return fullPath;
+                            }
+                            searchRecursively(fullPath);
                         }
-                        searchRecursively(fullPath);
+                    } catch (error) {
+                        // Skip files/folders we can't access
+                        
                     }
-                } catch (error) {
-                    // Skip files/folders we can't access
-                    continue;
-                }
+                });
+            } catch (error) {
+                // Skip directories we can't read
             }
-        } catch (error) {
-            // Skip directories we can't read
+            return ""
         }
+        const foundPath= searchRecursively(projectRoot);
+        return foundPath;
     }
-    
-    searchRecursively(root);
-    return foundPaths;
-}
-
-// Usage
-const paths = findFolderFromRoot('node_modules');
-console.log('Found paths:', paths);
