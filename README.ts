@@ -1,3 +1,7 @@
+// Method 6: Most strict - only digits 0-9, no decimals, no negatives
+const isOnlyDigits = (str: string): boolean => /^[0-9]+$/.test(str);
+
+
 import * as fs from 'fs';
 
 interface CSVProcessor {
