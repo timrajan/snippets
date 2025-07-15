@@ -4,3 +4,5 @@ const workItem = await workItemApi.getWorkItem(workItemId, null, null, "System.T
 // Extract tags
 const tags = workItem.fields["System.Tags"];
 console.log("Tags:", tags);
+
+return new TSError(diagnosticText, diagnosticCodes, diagnostics);
