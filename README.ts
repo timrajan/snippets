@@ -1,17 +1,16 @@
-async function extractTextFromShadowCell(cellHandle: ElementHandle<Element>): Promise<string> {
-  const text = await cellHandle.evaluate((cell) => {
-    const shadowRoot = (cell as any).shadowRoot;
-    if (!shadowRoot) return '';
-    
-    // Direct path to the text content
-    const textDiv = shadowRoot.querySelector('span[role="cell"] div.cell-content slot div');
-    if (textDiv) {
-      return textDiv.textContent?.trim() || '';
-    }
-    
-    // Fallback: get any text from shadow DOM
-    return shadowRoot.textContent?.trim() || '';
-  });
-  
-  return text;
-}
+// Monitor ongoing requests
+page.on('request', request => {
+  console.log('→ Request:', request.url());
+});
+
+page.on('response', response => {
+  console.log('← Response:', response.url(), response.status());
+});
+
+page.on('requestfinished', request => {
+  console.log('✓ Finished:', request.url());
+});
+
+page.on('requestfailed', request => {
+  console.log('✗ Failed:', request.url());
+});
