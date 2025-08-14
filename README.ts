@@ -1,16 +1,5 @@
-// Monitor ongoing requests
-page.on('request', request => {
-  console.log('→ Request:', request.url());
-});
+# Check NODE_OPTIONS
+echo %NODE_OPTIONS%
 
-page.on('response', response => {
-  console.log('← Response:', response.url(), response.status());
-});
-
-page.on('requestfinished', request => {
-  console.log('✓ Finished:', request.url());
-});
-
-page.on('requestfailed', request => {
-  console.log('✗ Failed:', request.url());
-});
+# Check memory limit
+node -e "console.log('Heap limit:', Math.round(require('v8').getHeapStatistics().heap_size_limit / 1024 / 1024), 'MB')"
