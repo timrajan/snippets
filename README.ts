@@ -93,7 +93,21 @@ class NetworkLogger {
     this.page.removeAllListeners('response');
     this.page.removeAllListeners('requestfailed');
 
-    const logFile = filename || `network-log-${Date.now()}.txt`;
+    let logFile: string;
+    
+    if (filename) {
+      // Add timestamp to provided filename
+      const timestamp = new Date().toISOString();
+      const filenameParts = filename.split('.');
+      const name = filenameParts[0];
+      const extension = filenameParts[1] || 'txt';
+      logFile = `${name}-${timestamp}.${extension}`;
+    } else {
+      // Default filename with timestamp
+      const timestamp = new Date().toISOString();
+      logFile = `network-log-${timestamp}.txt`;
+    }
+
     const content = this.generateNetworkReport();
 
     fs.writeFileSync(logFile, content);
@@ -306,23 +320,3 @@ class NetworkLogger {
 }
 
 export default NetworkLogger;
-
-
-
-
-import NetworkLogger from './network-logger';
-
-// In your test
-const networkLogger = new NetworkLogger();
-
-// Start logging
-networkLogger.startLog(page);
-
-// Do your test actions
-await page.goto('https://example.com');
-await page.click('#some-button');
-
-// Stop logging and save to file
-await networkLogger.stopLog(); // Creates network-log-[timestamp].txt
-// OR specify filename
-await networkLogger.stopLog('my-test-results.txt');
