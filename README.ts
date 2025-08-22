@@ -1,14 +1,29 @@
-// Get FFmpeg path without TypeScript interference
-function getFFmpegPath(): string {
-  try {
-    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg') as any;
-    console.log('📹 Using @ffmpeg-installer/ffmpeg:', ffmpegInstaller.path);
-    return ffmpegInstaller.path;
-  } catch (error: any) {
-    console.warn('⚠️  @ffmpeg-installer/ffmpeg not available:', error.message);
-    console.log('📹 Using system FFmpeg');
-    return 'ffmpeg';
-  }
-}
+const clearAllCache = async (page) => {
+  // Get CDP session
+  const client = await page.target().createCDPSession();
+  
+  // Clear various types of cache and storage
+  await Promise.all([
+    client.send('Network.clearBrowserCache'),
+    client.send('Network.clearBrowserCookies'),
+    client.send('Storage.clearDataForOrigin', {
+      origin: await page.url(),
+      storageTypes: 'all'
+    }),
+    page.evaluate(() => {
+      // Clear web storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear service worker caches
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+    })
+  ]);
+};
 
-const ffmpegPath = getFFmpegPath();
+// Usage
+await clearAllCache(page);
