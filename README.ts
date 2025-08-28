@@ -1,38 +1,26 @@
- connect ECONNREFUSED 127.0.0.1:51843
-
-        Symbol(kTarget): WebSocket {
-          "_autoPong": true,
-          "_binaryType": "nodebuffer",
-          "_bufferedAmount": 0,
-          "_closeCode": 1006,
-          "_closeFrameReceived": false,
-          "_closeFrameSent": false,
-          "_closeMessage": [Object],
-          "_closeTimer": null,
-          "_errorEmitted": true,
-          "_events": Object {
-            "error": [Function onError],
-            "open": [Function onOpen],
-          },
-          "_eventsCount": 2,
-          "_extensions": Object {},
-          "_isServer": false,
-          "_maxListeners": undefined,
-          "_originalHostOrSocketPath": "127.0.0.1:51843",
-          "_originalIpc": false,
-          "_originalSecure": false,
-          "_paused": false,
-          "_protocol": "",
-          "_readyState": 3,
-          "_receiver": null,
-          "_redirects": 0,
-          "_req": null,
-          "_sender": null,
-          "_socket": null,
-          "_url": "ws://127.0.0.1:51843/devtools/browser/0396f273",
-          Symbol(kCapture): false,
-        },
-        Symbol(kType): "error",
-        Symbol(kError): [Error: connect ECONNREFUSED 127.0.0.1:51843],
-        Symbol(kMessage): "connect ECONNREFUSED 127.0.0.1:51843",
-      }
+{
+  "name": "sharepoint-excel-reader",
+  "version": "1.0.0",
+  "description": "Read Excel data from SharePoint using TypeScript",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rimraf dist"
+  },
+  "keywords": ["sharepoint", "excel", "typescript", "nodejs"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@azure/msal-node": "^2.6.6",
+    "axios": "^1.6.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "rimraf": "^5.0.5"
+  }
+}
