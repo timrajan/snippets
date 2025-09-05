@@ -1,20 +1,42 @@
-Subject: Request for Azure App Registration - SharePoint Excel Reader
+pg_ctl -D C:\PostgreSQL\data -l C:\PostgreSQL\logs\server.log start
 
-Hi [IT Team],
 
-I need to create a Node.js application that reads Excel files from our SharePoint site. 
-This requires an Azure App Registration with the following minimal permissions:
+Add C:\PostgreSQL\bin to your system PATH
+Set PGDATA=C:\PostgreSQL\data environment variable
 
-- Sites.Read.All (to access SharePoint sites)  
-- Files.Read.All (to read Excel files)
 
-Could you please create an app registration and provide:
-- CLIENT_ID (Application ID)
-- CLIENT_SECRET  
-- Confirm TENANT_ID: [your-tenant-id-you-found]
+Create a User Password:
 
-This is for [business purpose - e.g., automated reporting, data analysis, etc.]
 
-The application will only READ data, not modify anything.
+cmd
+psql -U postgres
+ALTER USER postgres PASSWORD 'yourpassword';
+\q
 
-Thanks!
+
+Running as Windows Service (Recommended)
+Register PostgreSQL as a Windows service so it starts automatically:
+
+
+cmd
+pg_ctl register -N postgresql -D C:\PostgreSQL\data
+
+
+To start/stop the service:
+
+
+cmd
+net start postgresql
+net stop postgresql
+
+
+Stop server:
+
+
+cmd
+pg_ctl -D C:\PostgreSQL\data stop
+Check if server is running:
+
+
+cmd
+pg_ctl -D C:\PostgreSQL\data status
