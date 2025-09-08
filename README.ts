@@ -1,3 +1,5 @@
+"error": "Invalid regular expression: /\\b[([6-9]|[1-9]\\d+)\\b/: Unmatched ')'",
+
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
