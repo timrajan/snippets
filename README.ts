@@ -977,6 +977,54 @@ $$ LANGUAGE plpgsql;
         console.log(`   Total formulas: ${totalFormulas}`);
         console.log(`   Complexity score: ${this.complexityScore}/${this.maxComplexity}`);
         
+        // Detailed column breakdown per sheet
+        Object.entries(analysis).forEach(([sheetName, data]) => {
+            console.log(`\n📋 Sheet: ${sheetName}`);
+            console.log(`   Columns detected: ${Object.keys(data.columns || {}).length}`);
+            console.log(`   Formulas found: ${(data.formulas || []).length}`);
+            console.log(`   Data rows: ${(data.sampleData || []).length}`);
+            
+            // Show all detected columns
+            if (data.columns && Object.keys(data.columns).length > 0) {
+                console.log(`   📊 Column Details:`);
+                Object.values(data.columns).forEach((col, index) => {
+                    const typeInfo = col.hasFormula ? `${col.type} (Formula)` : col.type;
+                    const dataCount = col.nonEmptyCount || col.samples.length;
+                    const samples = dataCount > 0 ? ` [${dataCount} non-empty values]` : ' [no data]';
+                    const formulaInfo = col.hasFormula ? ' 🧮' : '';
+                    console.log(`      ${index + 1}. ${col.letter}: ${col.originalName} → ${col.name} (${typeInfo})${samples}${formulaInfo}`);
+                });
+                
+                // Show summary of column types
+                const regularColumns = Object.values(data.columns).filter(col => !col.hasFormula).length;
+                const formulaColumns = Object.values(data.columns).filter(col => col.hasFormula).length;
+                const emptyColumns = Object.values(data.columns).filter(col => (col.nonEmptyCount || col.samples.length) === 0).length;
+                
+                console.log(`   📈 Column Summary: ${regularColumns} data columns, ${formulaColumns} formula columns, ${emptyColumns} header-only columns`);
+            } else {
+                console.log(`   ⚠️  No columns detected in this sheet`);
+            }
+            
+            // Show template data
+            if (data.templateRows && data.templateRows.length > 0) {
+                console.log(`   📋 Template data (rows 1-3):`);
+                data.templateRows.forEach((row, index) => {
+                    const rowData = Object.entries(row).map(([col, data]) => `${col}=${data.value}`).join(', ');
+                    if (rowData) {
+                        console.log(`      Row ${index + 1}: ${rowData}`);
+                    }
+                });
+            }
+            
+            // Show formulas
+            if (data.formulas && data.formulas.length > 0) {
+                console.log(`   🧮 Formulas found:`);
+                data.formulas.forEach((f, index) => {
+                    console.log(`      ${index + 1}. ${f.address} (${f.column}): ${f.formula}`);
+                });
+            }
+        });
+        
         // Error summary
         console.log(`\n🚨 Issues Found:`);
         console.log(`   Errors: ${this.errors.length}`);
