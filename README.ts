@@ -75,7 +75,7 @@ class ExcelToPostgreSQLConverter {
             templateRows.push(templateRow);
         }
 
-        // Extract headers from rows 4-5
+        // Extract headers from row 4 only (exact column names)
         for (let col = range.s.c; col <= range.e.c; col++) {
             const headerRow4Address = XLSX.utils.encode_cell({r: 3, c: col});
             const headerRow5Address = XLSX.utils.encode_cell({r: 4, c: col});
@@ -84,15 +84,14 @@ class ExcelToPostgreSQLConverter {
             const cellRow5 = worksheet[headerRow5Address];
 
             if (cellRow4 && cellRow4.v) {
-                const headerName = cellRow5 && cellRow5.v
-                    ? `${cellRow4.v}_${cellRow5.v}`
-                    : cellRow4.v.toString();
+                // Use exact column name from Row 4 only
+                const exactColumnName = cellRow4.v.toString();
 
                 headers.push({
                     index: col,
                     letter: String.fromCharCode(65 + col),
-                    name: this.sanitizeColumnName(headerName),
-                    originalName: headerName,
+                    name: exactColumnName,  // Use exact name from Row 4
+                    originalName: exactColumnName,
                     row4: cellRow4.v,
                     row5: cellRow5 ? cellRow5.v : null
                 });
