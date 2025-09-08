@@ -278,8 +278,150 @@ class ExcelToPostgreSQLConverter {
             return 'TEXT';
         }
         
-        return 'TEXT';
+    generateSQL(analysis) {
+        let sql = '';
+        
+        // Add header comment
+        sql += `-- Generated PostgreSQL schema from Excel analysis\n`;
+        sql += `-- Created at: ${new Date().toISOString()}\n\n`;
+        
+        // Add Excel function equivalents
+        sql += this.generateExcelFunctions();
+        
+        Object.entries(analysis).forEach(([sheetName, data]) => {
+            const tableName = this.sanitizeColumnName(sheetName);
+            
+            sql += `-- ==========================================\n`;
+            sql += `-- Table for sheet: ${sheetName}\n`;
+            sql += `-- ==========================================\n\n`;
+            
+            // Create table
+            sql += this.generateCreateTable(tableName, data.columns);
+            
+            // Create trigger function for formulas
+            if (data.formulas && data.formulas.length > 0) {
+                sql += this.generateTriggerFunction(tableName, data.formulas, data.headers, data.templateRows);
+                sql += this.generateTrigger(tableName);
+            }
+            
+            // Generate sample inserts
+            sql += this.generateSampleInserts(tableName, data.columns, data.sampleData);
+            
+            sql += `-- View results\n`;
+            sql += `SELECT * FROM ${tableName};\n\n`;
+        });
+        
+        return sql;
     }
+
+    generateCreateTable(tableName, columns) {
+        let sql = `CREATE TABLE ${tableName} (\n`;
+        sql += `    id SERIAL PRIMARY KEY,\n`;
+        
+        // Add regular columns (non-formula)
+        Object.values(columns).forEach(col => {
+            if (!col.hasFormula) {
+                sql += `    ${col.name} ${col.type},\n`;
+            }
+        });
+        
+        // Add formula columns
+        Object.values(columns).forEach(col => {
+            if (col.hasFormula) {
+                sql += `    ${col.name} TEXT, -- Calculated field\n`;
+            }
+        });
+        
+        sql += `    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n`;
+        sql += `);\n\n`;
+        
+        return sql;
+    }
+
+    generateTrigger(tableName) {
+        return `CREATE TRIGGER ${tableName}_formula_trigger
+    BEFORE INSERT OR UPDATE ON ${tableName}
+    FOR EACH ROW
+    EXECUTE FUNCTION calculate_${tableName}_formulas();
+
+`;
+    }
+
+    generateSampleInserts(tableName, columns, sampleData) {
+        let sql = `-- Sample data inserts\n`;
+        
+        const nonFormulaColumns = Object.values(columns)
+            .filter(col => !col.hasFormula)
+            .map(col => col.name);
+        
+        if (nonFormulaColumns.length === 0) {
+            return sql + `-- No non-formula columns to insert\n\n`;
+        }
+        
+        sampleData.slice(0, 5).forEach((row, index) => {
+            const values = nonFormulaColumns.map(colName => {
+                const value = row[colName];
+                if (value === null || value === undefined) {
+                    return 'NULL';
+                }
+                if (typeof value === 'string') {
+                    return `'${value.replace(/'/g, "''")}'`;
+                }
+                if (value instanceof Date) {
+                    return `'${value.toISOString()}'`;
+                }
+                return value.toString();
+            });
+            
+            sql += `INSERT INTO ${tableName} (${nonFormulaColumns.join(', ')}) VALUES (${values.join(', ')});\n`;
+        });
+        
+        return sql + '\n';
+    }
+
+    saveSQL(sql, outputPath) {
+        const fs = require('fs');
+        fs.writeFileSync(outputPath, sql, 'utf8');
+        console.log(`✅ SQL saved to: ${outputPath}`);
+    }
+
+    printSummary(analysis) {
+        console.log('\n📊 CONVERSION SUMMARY');
+        console.log('='.repeat(50));
+        
+        Object.entries(analysis).forEach(([sheetName, data]) => {
+            console.log(`\n📋 Sheet: ${sheetName}`);
+            console.log(`   Columns: ${Object.keys(data.columns).length}`);
+            console.log(`   Formulas: ${data.formulas.length}`);
+            console.log(`   Sample rows: ${data.sampleData.length}`);
+            console.log(`   Template rows: ${data.templateRows.length}`);
+            
+            // Show template data
+            if (data.templateRows.length > 0) {
+                console.log('   Template data (rows 1-3):');
+                data.templateRows.forEach((row, index) => {
+                    const rowData = Object.entries(row).map(([col, data]) => `${col}=${data.value}`).join(', ');
+                    console.log(`     Row ${index + 1}: ${rowData}`);
+                });
+            }
+            
+            // Show headers
+            console.log('   Headers (rows 4-5):');
+            data.headers.forEach(header => {
+                const headerInfo = header.row5 ? `${header.row4} + ${header.row5}` : header.row4;
+                console.log(`     ${header.letter}: ${headerInfo} → ${header.name}`);
+            });
+            
+            if (data.formulas.length > 0) {
+                console.log('   Formula columns:');
+                data.formulas.forEach(f => {
+                    console.log(`     - ${f.column} (Row ${f.row}): ${f.formula}`);
+                });
+            }
+        });
+        console.log('\n✅ Conversion completed successfully!');
+    }
+}
 
     convertExcelFormula(formula, headers) {
         let pgFormula = formula;
