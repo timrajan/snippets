@@ -484,7 +484,8 @@ $$ LANGUAGE plpgsql;
                 return value.toString();
             });
 
-            sql += `INSERT INTO ${tableName} (${nonFormulaColumns.join(', ')}) VALUES (${values.join(', ')});\n`;
+            const quotedColumns = nonFormulaColumns.map(col => `"${col}"`);
+            sql += `INSERT INTO ${tableName} (${quotedColumns.join(', ')}) VALUES (${values.join(', ')});\n`;
         });
 
         return sql + '\n';
