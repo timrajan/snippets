@@ -17,3 +17,6 @@ BEGIN
     RETURN count_result;
 END;
 $$ LANGUAGE plpgsql;
+
+
+IF_FUNC(ISBLANK(email), '', IF(COUNTIF(G1:G4, email) > 0, INDEX_FUNC(S1:S4, MATCH_FUNC(email, G1:G4, 0))))
