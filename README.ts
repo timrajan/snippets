@@ -189,6 +189,21 @@ class ExcelToPostgreSQLConverter {
         try {
             pgFormula = this.convertExcelIFFunction(pgFormula);
 
+            pgFormula = pgFormula.replace(
+                /INDEX_FUNC\s*\(\s*([A-Z]+)\$?1:\1\$?[0-9]+\s*,\s*([^)]+)\s*\)/gi,
+                (match, rangeColumn, position) => {
+                    // Find the actual column header name
+                    const rangeHeader = headers.find(
+                        (h) => h.letter === rangeColumn,
+                    );
+                    const rangeColumnName = rangeHeader
+                        ? rangeHeader.name
+                        : rangeColumn;
+
+                    return `INDEX_FUNC('${rangeColumnName}', ${position.trim()})`;
+                },
+            );
+
             // Convert COUNTIF to use actual column name and criteria
             pgFormula = pgFormula.replace(
                 /COUNTIF\s*\(\s*([A-Z]+)\$?1:\1\$?[0-9]+\s*,\s*([A-Z]+)[0-9]+\s*\)/gi,
@@ -399,12 +414,24 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- INDEX_FUNC: Return value from array at specified position
-CREATE OR REPLACE FUNCTION INDEX_FUNC(input_array TEXT[], position INTEGER)
+CREATE OR REPLACE FUNCTION INDEX_FUNC(column_name TEXT, position INTEGER)
 RETURNS TEXT AS $$
+DECLARE
+    result_value TEXT;
+    sql_query TEXT;
 BEGIN
-    IF input_array IS NULL OR position IS NULL OR position < 1 THEN RETURN NULL; END IF;
-    IF position > array_length(input_array, 1) THEN RETURN NULL; END IF;
-    RETURN input_array[position];
+    IF column_name IS NULL OR position IS NULL OR position < 1 THEN RETURN NULL; END IF;
+
+    -- Build dynamic query to get the nth value from the specified column
+    sql_query := format('SELECT %I FROM %I ORDER BY id LIMIT 1 OFFSET %s',
+                       column_name, TG_TABLE_NAME, position - 1);
+
+    -- Execute query
+    EXECUTE sql_query INTO result_value;
+
+    RETURN result_value;
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
