@@ -189,31 +189,27 @@ class ExcelToPostgreSQLConverter {
         try {
             pgFormula = this.convertExcelIFFunction(pgFormula);
 
-            // Generic range conversion - handles any column like A1:A4, G1:G4, S1:S4, etc.
-            const rangePattern = /([A-Z]+)(\$?)1:\1(\$?)([2-9])/g;
+            // Convert COUNTIF to use actual column name and criteria
             pgFormula = pgFormula.replace(
-                rangePattern,
-                (match, column, dollar1, dollar2, endRow) => {
-                    const endRowNum = parseInt(endRow);
-                    const values = [];
+                /COUNTIF\s*\(\s*([A-Z]+)\$?1:\1\$?[0-9]+\s*,\s*([A-Z]+)[0-9]+\s*\)/gi,
+                (match, rangeColumn, criteriaColumn) => {
+                    // Find the actual column header name for the range column
+                    const rangeHeader = headers.find(
+                        (h) => h.letter === rangeColumn,
+                    );
+                    const rangeColumnName = rangeHeader
+                        ? rangeHeader.name
+                        : rangeColumn;
 
-                    // Get values from template rows (row 1 to endRow)
-                    for (let i = 0; i < endRowNum; i++) {
-                        const val =
-                            templateRows[i] && templateRows[i][column]
-                                ? templateRows[i][column].value
-                                : null;
+                    // Find the actual column header name for the criteria column
+                    const criteriaHeader = headers.find(
+                        (h) => h.letter === criteriaColumn,
+                    );
+                    const criteriaColumnName = criteriaHeader
+                        ? criteriaHeader.name
+                        : criteriaColumn;
 
-                        if (val === null || val === undefined) {
-                            values.push('NULL');
-                        } else if (typeof val === 'string') {
-                            values.push(`'${val.replace(/'/g, "''")}'`);
-                        } else {
-                            values.push(val.toString());
-                        }
-                    }
-
-                    return `ARRAY[${values.join(', ')}]`;
+                    return `COUNTIF('${rangeColumnName}', NEW."${criteriaColumnName}")`;
                 },
             );
 
@@ -455,23 +451,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Simple COUNTIF: Count how many values in an array match the criteria
-CREATE OR REPLACE FUNCTION COUNTIF(input_array TEXT[], criteria TEXT)
+
+-- Generic COUNTIF function that works with any column name
+CREATE OR REPLACE FUNCTION COUNTIF(column_name TEXT, criteria TEXT)
 RETURNS INTEGER AS $$
 DECLARE
     count_result INTEGER := 0;
-    i INTEGER;
+    sql_query TEXT;
 BEGIN
-    IF input_array IS NULL OR criteria IS NULL THEN RETURN 0; END IF;
+    IF column_name IS NULL OR criteria IS NULL THEN RETURN 0; END IF;
 
-    -- Loop through array and count exact matches
-    FOR i IN 1..array_length(input_array, 1) LOOP
-        IF input_array[i] = criteria THEN
-            count_result := count_result + 1;
-        END IF;
-    END LOOP;
+    -- Build dynamic query using the provided column name
+    sql_query := format('SELECT COUNT(*) FROM %I WHERE %I = $1 AND id != $2',
+                       TG_TABLE_NAME, column_name);
 
-    RETURN count_result;
+    -- Execute with parameters
+    EXECUTE sql_query USING criteria, NEW.id INTO count_result;
+
+    RETURN COALESCE(count_result, 0);
+EXCEPTION WHEN OTHERS THEN
+    RETURN 0;
 END;
 $$ LANGUAGE plpgsql;
 
