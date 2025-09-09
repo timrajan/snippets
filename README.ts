@@ -190,6 +190,21 @@ class ExcelToPostgreSQLConverter {
             pgFormula = this.convertExcelIFFunction(pgFormula);
 
             pgFormula = pgFormula.replace(
+                /MATCH_FUNC\s*\(\s*([^,]+)\s*,\s*([A-Z]+)\$?1:\1\$?[0-9]+\s*,\s*([^)]+)\s*\)/gi,
+                (match, lookupValue, rangeColumn, matchType) => {
+                    // Find the actual column header name
+                    const rangeHeader = headers.find(
+                        (h) => h.letter === rangeColumn,
+                    );
+                    const rangeColumnName = rangeHeader
+                        ? rangeHeader.name
+                        : rangeColumn;
+
+                    return `MATCH_FUNC('${rangeColumnName}', ${lookupValue.trim()}, ${matchType.trim()})`;
+                },
+            );
+
+            pgFormula = pgFormula.replace(
                 /INDEX_FUNC\s*\(\s*([A-Z]+)\$?1:\1\$?[0-9]+\s*,\s*([^)]+)\s*\)/gi,
                 (match, rangeColumn, position) => {
                     // Find the actual column header name
@@ -445,16 +460,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- MATCH_FUNC: Find position of value in array
-CREATE OR REPLACE FUNCTION MATCH_FUNC(lookup_value TEXT, lookup_array TEXT[], match_type INTEGER DEFAULT 1)
+
+-- MATCH_FUNC: Find position of value in a column
+CREATE OR REPLACE FUNCTION MATCH_FUNC(column_name TEXT, lookup_value TEXT, match_type INTEGER DEFAULT 1)
 RETURNS INTEGER AS $$
 DECLARE
-    i INTEGER;
+    result_position INTEGER;
+    sql_query TEXT;
 BEGIN
-    IF lookup_value IS NULL OR lookup_array IS NULL THEN RETURN NULL; END IF;
-    FOR i IN 1..array_length(lookup_array, 1) LOOP
-        IF lookup_array[i] = lookup_value THEN RETURN i; END IF;
-    END LOOP;
+    IF column_name IS NULL OR lookup_value IS NULL THEN RETURN NULL; END IF;
+
+    -- Build dynamic query to find the position of the value in the specified column
+    -- Using ROW_NUMBER() to get the position
+    sql_query := format('
+        SELECT position FROM (
+            SELECT ROW_NUMBER() OVER (ORDER BY id) as position, %I as col_value
+            FROM %I
+        ) t WHERE t.col_value = $1 LIMIT 1',
+        column_name, TG_TABLE_NAME);
+
+    -- Execute query
+    EXECUTE sql_query USING lookup_value INTO result_position;
+
+    RETURN result_position;
+EXCEPTION WHEN OTHERS THEN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
