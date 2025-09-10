@@ -1,3 +1,27 @@
+-- INDEX_FUNC: Return value from array at specified position
+CREATE OR REPLACE FUNCTION INDEX_FUNC(column_name TEXT, position INTEGER)
+RETURNS TEXT AS $$
+DECLARE
+    result_value TEXT;
+    sql_query TEXT;
+BEGIN
+    IF column_name IS NULL OR position IS NULL OR position < 1 THEN RETURN NULL; END IF;
+
+    -- Build dynamic query to get the nth value from the specified column
+    sql_query := format('SELECT %I FROM %I ORDER BY id LIMIT 1 OFFSET %s',
+                       column_name, TG_TABLE_NAME, position - 1);
+
+    -- Execute query
+    EXECUTE sql_query INTO result_value;
+
+    RETURN result_value;
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 const XLSX = require('xlsx');
 const fs = require('fs');
 
