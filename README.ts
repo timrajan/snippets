@@ -1,12 +1,14 @@
 -- MATCH_FUNC: Find position of value in a column
-CREATE OR REPLACE FUNCTION MATCH_FUNC(column_name TEXT, lookup_value TEXT, match_type INTEGER DEFAULT 1)
+CREATE OR REPLACE FUNCTION MATCH_FUNC(table_name TEXT, column_name TEXT, lookup_value TEXT, match_type INTEGER DEFAULT 1)
 RETURNS INTEGER AS $$
 DECLARE
     result_position INTEGER;
     sql_query TEXT;
 BEGIN
-    IF column_name IS NULL OR lookup_value IS NULL THEN RETURN NULL; END IF;
-
+    IF table_name IS NULL OR column_name IS NULL OR lookup_value IS NULL THEN 
+        RETURN NULL; 
+    END IF;
+    
     -- Build dynamic query to find the position of the value in the specified column
     -- Using ROW_NUMBER() to get the position
     sql_query := format('
@@ -14,12 +16,34 @@ BEGIN
             SELECT ROW_NUMBER() OVER (ORDER BY id) as position, %I as col_value
             FROM %I
         ) t WHERE t.col_value = $1 LIMIT 1',
-        column_name, TG_TABLE_NAME);
-
+        column_name, table_name);
+    
     -- Execute query
     EXECUTE sql_query USING lookup_value INTO result_position;
-
     RETURN result_position;
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION INDEX_FUNC(table_name TEXT, column_name TEXT, position INTEGER)
+RETURNS TEXT AS $$
+DECLARE
+    result_value TEXT;
+    sql_query TEXT;
+BEGIN
+    IF table_name IS NULL OR column_name IS NULL OR position IS NULL OR position < 1 THEN 
+        RETURN NULL; 
+    END IF;
+    
+    -- Build dynamic query to get the nth value from the specified column
+    sql_query := format('SELECT %I FROM %I ORDER BY id LIMIT 1 OFFSET %s',
+                       column_name, table_name, position - 1);
+    
+    -- Execute query
+    EXECUTE sql_query INTO result_value;
+    RETURN result_value;
 EXCEPTION WHEN OTHERS THEN
     RETURN NULL;
 END;
