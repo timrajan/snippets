@@ -1,23 +1,24 @@
-CREATE OR REPLACE FUNCTION INDEX_FUNC(table_name TEXT, column_name TEXT, position INTEGER)
-RETURNS TEXT AS $$
+-- Generic COUNTIF function that works with any column name
+CREATE OR REPLACE FUNCTION COUNTIF(table_name TEXT, column_name TEXT, criteria TEXT)
+RETURNS INTEGER AS $$
 DECLARE
-    result_value TEXT;
+    count_result INTEGER := 0;
     sql_query TEXT;
 BEGIN
-    RAISE NOTICE 'INDEX_FUNC1';
-    IF table_name IS NULL OR column_name IS NULL OR position IS NULL OR position < 1 THEN 
-        RETURN NULL; 
-    END IF;
-    RAISE NOTICE 'INDEX_FUNC2';
-    -- Build dynamic query to get the nth value from the specified column
-    sql_query := format('SELECT %I FROM %I ORDER BY id LIMIT 1 OFFSET %s',
-                       column_name, table_name, position - 1);
-    RAISE NOTICE 'INDEX_FUNC3';
-    -- Execute query
-    EXECUTE sql_query INTO result_value;
-    RAISE NOTICE 'INDEX_FUNC4';
-    RETURN result_value;
+    IF column_name IS NULL OR criteria IS NULL THEN RETURN 0; END IF;
+    RAISE NOTICE 'COUNTIF1';
+    -- Build dynamic query using the provided column name
+    -- SELECT COUNT(*) FROM isftestdata WHERE mygovidemailaddress = $1 AND id != $2
+    sql_query := format('SELECT COUNT(*) FROM %I WHERE %I = $1 AND id != $2',
+                       table_name, column_name);
+    RAISE NOTICE '%',sql_query;                   
+    RAISE NOTICE 'COUNTIF2';
+    -- Execute with parameters
+    EXECUTE sql_query USING criteria, NEW.id INTO count_result;
+
+    RETURN COALESCE(count_result, 0);
 EXCEPTION WHEN OTHERS THEN
-    RETURN NULL;
+    RAISE NOTICE 'ERROR OCCURED IN COUNTIF: %', SQLERRM;
+    RETURN 0;
 END;
 $$ LANGUAGE plpgsql;
