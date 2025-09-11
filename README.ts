@@ -1,8 +1,9 @@
--- CODE: Get ASCII value of first character
-CREATE OR REPLACE FUNCTION CODE(input_text TEXT)
+-- Simple version - returns position in result set
+CREATE OR REPLACE FUNCTION EXCEL_ROW()
 RETURNS INTEGER AS $$
 BEGIN
-    IF input_text IS NULL OR LENGTH(input_text) = 0 THEN RETURN NULL; END IF;
-    RETURN ASCII(LEFT(input_text, 1));
+    -- This would need to be used within a window function context
+    -- PostgreSQL doesn't have a direct equivalent
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
