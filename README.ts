@@ -1,17 +1,14 @@
-CREATE OR REPLACE FUNCTION EXCEL_ROW(table_name TEXT)
+CREATE OR REPLACE FUNCTION EXCEL_ROW(table_name TEXT, current_id INTEGER)
 RETURNS INTEGER AS $$
 DECLARE
     current_row_num INTEGER;
-    result INTEGER := 0;
     sql_query TEXT;
 BEGIN
-    -- Get the row number of the current row being inserted/updated
-    sql_query := format('SELECT COUNT(*) + 1 INTO current_row_num FROM % WHERE id < NEW.id;',table_name);
+    -- Get the row number of the specified row
+    sql_query := format('SELECT COUNT(*) + 1 FROM %I WHERE id < $1', table_name);
     RAISE NOTICE 'Query: %', sql_query;
-    EXECUTE sql_query INTO result;
-    -- Use current_row_num in your formula
-    -- NEW.formula_column := current_row_num * NEW.some_value;  -- Example formula
+    EXECUTE sql_query USING current_id INTO current_row_num;
     
-    RETURN result;
+    RETURN current_row_num;
 END;
 $$ LANGUAGE plpgsql;
