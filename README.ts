@@ -9,3 +9,13 @@ BEGIN
     RETURN next_row_num;
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- IF_FUNC: Excel-style IF function
+CREATE OR REPLACE FUNCTION IF_FUNC(condition BOOLEAN, value_if_true TEXT, value_if_false TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    IF condition IS NULL THEN RETURN value_if_false; END IF;
+    IF condition THEN RETURN value_if_true; ELSE RETURN value_if_false; END IF;
+END;
+$$ LANGUAGE plpgsql;
