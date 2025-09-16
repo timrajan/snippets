@@ -1,155 +1,78 @@
-using Microsoft.AspNetCore.Mvc;
-using StudentAPI.DTOs;
-using StudentAPI.Models;
-using StudentAPI.Services;
+using System.ComponentModel.DataAnnotations;
 
-namespace StudentAPI.Controllers
+namespace StudentAPI.Models
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class StudentsController : ControllerBase
+    public class Student
     {
-        private readonly IStudentService _studentService;
+        public int Id { get; set; }
 
-        public StudentsController(IStudentService studentService)
-        {
-            _studentService = studentService;
-        }
+        [Required]
+        [MaxLength(100)]
+        public string FirstName { get; set; } = string.Empty;
 
-        // ... (keep all existing endpoints)
+        [Required]
+        [MaxLength(100)]
+        public string LastName { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Create a new student using custom PostgreSQL functions/triggers
-        /// </summary>
-        /// <param name="createStudentDto">Student creation details</param>
-        /// <returns>Created student</returns>
-        [HttpPost("custom-sql")]
-        public async Task<ActionResult<ApiResponse<StudentResponseDto>>> CreateStudentWithCustomSql([FromBody] CreateStudentDto createStudentDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState.Values
-                        .SelectMany(v => v.Errors)
-                        .Select(e => e.ErrorMessage)
-                        .ToList();
+        [Required]
+        [EmailAddress]
+        [MaxLength(200)]
+        public string Email { get; set; } = string.Empty;
 
-                    return BadRequest(new ApiResponse<StudentResponseDto>
-                    {
-                        Success = false,
-                        Message = "Validation failed",
-                        Errors = errors
-                    });
-                }
+        [Phone]
+        [MaxLength(20)]
+        public string? PhoneNumber { get; set; }
 
-                // Validate age (must be at least 16)
-                var age = DateTime.UtcNow.Year - createStudentDto.DateOfBirth.Year;
-                if (DateTime.UtcNow.DayOfYear < createStudentDto.DateOfBirth.DayOfYear) age--;
-                
-                if (age < 16)
-                {
-                    return BadRequest(new ApiResponse<StudentResponseDto>
-                    {
-                        Success = false,
-                        Message = "Student must be at least 16 years old",
-                        Errors = new List<string> { "Invalid date of birth" }
-                    });
-                }
+        [Required]
+        public DateTime DateOfBirth { get; set; }
 
-                var student = await _studentService.CreateStudentWithCustomSqlAsync(createStudentDto);
+        [Required]
+        [MaxLength(100)]
+        public string Major { get; set; } = string.Empty;
 
-                return CreatedAtAction(
-                    nameof(GetStudent),
-                    new { id = student.Id },
-                    new ApiResponse<StudentResponseDto>
-                    {
-                        Success = true,
-                        Message = "Student created successfully using custom SQL",
-                        Data = student
-                    });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<StudentResponseDto>
-                {
-                    Success = false,
-                    Message = "An error occurred while creating the student with custom SQL",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
+        [Range(0.0, 4.0)]
+        public decimal GPA { get; set; } = 0.0m;
 
-        // All your existing endpoints remain the same...
-        [HttpGet]
-        public async Task<ActionResult<ApiResponse<PaginatedResponse<StudentResponseDto>>>> GetStudents(
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10,
-            [FromQuery] StudentStatus? status = null,
-            [FromQuery] string? major = null)
-        {
-            // Implementation remains the same
-            try
-            {
-                if (pageNumber < 1) pageNumber = 1;
-                if (pageSize < 1) pageSize = 10;
-                if (pageSize > 50) pageSize = 50;
+        public StudentStatus Status { get; set; } = StudentStatus.Active;
 
-                var result = await _studentService.GetAllStudentsAsync(pageNumber, pageSize, status, major);
+        public DateTime EnrollmentDate { get; set; } = DateTime.UtcNow;
 
-                return Ok(new ApiResponse<PaginatedResponse<StudentResponseDto>>
-                {
-                    Success = true,
-                    Message = "Students retrieved successfully",
-                    Data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<PaginatedResponse<StudentResponseDto>>
-                {
-                    Success = false,
-                    Message = "An error occurred while retrieving students",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
+        public DateTime? GraduationDate { get; set; }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<StudentResponseDto>>> GetStudent(int id)
-        {
-            // Implementation remains the same...
-            try
-            {
-                var student = await _studentService.GetStudentByIdAsync(id);
+        [MaxLength(500)]
+        public string? Address { get; set; }
 
-                if (student == null)
-                {
-                    return NotFound(new ApiResponse<StudentResponseDto>
-                    {
-                        Success = false,
-                        Message = $"Student with ID {id} not found"
-                    });
-                }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-                return Ok(new ApiResponse<StudentResponseDto>
-                {
-                    Success = true,
-                    Message = "Student retrieved successfully",
-                    Data = student
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ApiResponse<StudentResponseDto>
-                {
-                    Success = false,
-                    Message = "An error occurred while retrieving the student",
-                    Errors = new List<string> { ex.Message }
-                });
-            }
-        }
+        public DateTime? UpdatedAt { get; set; }
 
-        // ... include all other existing methods
+        // Computed properties (calculated in C#)
+        public int Age => DateTime.UtcNow.Year - DateOfBirth.Year - 
+                         (DateTime.UtcNow.DayOfYear < DateOfBirth.DayOfYear ? 1 : 0);
+
+        public string FullName => $"{FirstName} {LastName}";
+
+        // Computed columns (populated by PostgreSQL database)
+        // Add these properties to match your PostgreSQL computed columns
+        public string? StudentLevel { get; set; }        // e.g., "Freshman", "Sophomore" 
+        public string? AcademicStanding { get; set; }    // e.g., "Good Standing", "Probation"
+        public int? YearsEnrolled { get; set; }          // Number of years enrolled
+        public decimal? CompletionPercentage { get; set; } // Progress percentage
+        public string? AgeGroup { get; set; }            // e.g., "Young Adult", "Adult"
+        public string? GPALevel { get; set; }            // e.g., "Excellent", "Good"
+        public bool? IsNearGraduation { get; set; }      // True if close to graduation
+        public string? CurrentSemester { get; set; }     // e.g., "Fall 2024"
+        
+        // Add any other computed columns that your PostgreSQL creates
+        // Just tell me the column names and I'll add them here
+    }
+
+    public enum StudentStatus
+    {
+        Active = 1,
+        Inactive = 2,
+        Graduated = 3,
+        Suspended = 4,
+        Transferred = 5
     }
 }
