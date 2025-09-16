@@ -1,0 +1,3 @@
+ [Required]
+ [MaxLength(100)]
+ public int imsidentityid { get; set; } = string.Empty;
