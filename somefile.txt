@@ -1,3 +1,2 @@
-Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
-      An unhandled exception has occurred while executing the request.
-      System.InvalidOperationException: No route matches the supplied values.
+var lastStudent = await _context.Students
+    .FirstOrDefaultAsync(s => s.email == email);
