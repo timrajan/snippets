@@ -1,7 +1,1 @@
-fail: Microsoft.EntityFrameworkCore.Query[10100]
-      An exception occurred while iterating over the results of a query for context type 'Management.Data.AppDbContext'.
-      System.InvalidCastException: Column 'name' is null.
-         at Npgsql.ThrowHelper.ThrowInvalidCastException_NoValue(FieldDescription field)
-         at Npgsql.NpgsqlDataReader.DbNullValueOrThrow[T](Int32 ordinal)
-         at Npgsql.NpgsqlDataReader.GetFieldValueCore[T](Int32 ordinal)
-         at Npgsql.NpgsqlDataReader.GetString(Int32 ordinal)
+Executed DbCommand (9ms) [Parameters=[@__createStudentDto_email_0='?'], CommandType='Text', CommandTimeout='30']
