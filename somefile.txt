@@ -1,2 +1,1 @@
-var lastStudent = await _context.Students
-    .FirstOrDefaultAsync(s => s.email == email);
+The LINQ expression 'DbSet<Client>()\r\n    .Where(c => c.tags.Contains(\r\n        value: __tag_0, \r\n        comparisonType: CurrentCultureIgnoreCase))' could not be translated. Additional information: Translation of method 'string.Contains' failed
