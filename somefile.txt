@@ -1,4 +1,5 @@
-"Default": "Trace",
+"LogLevel": {
+      "Default": "Trace",
       "Microsoft": "Trace",
       "Microsoft.EntityFrameworkCore": "Trace",
       "Microsoft.EntityFrameworkCore.Database": "Trace",
@@ -14,4 +15,7 @@
       "Microsoft.AspNetCore.Authentication": "Trace",
       "Microsoft.AspNetCore.Authorization": "Trace",
       "System": "Trace",
-      "System.Net.Http.HttpClie
+      "System.Net.Http.HttpClient": "Trace",
+      "Npgsql": "Trace"
+    }
+  },
