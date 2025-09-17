@@ -1,3 +1,8 @@
+   var lastStudent = await _context.testdata
+         .FirstOrDefaultAsync(s => s.emailaddress.ToLower() == createStudentDto.myemailaddress.ToLower()
+         );
+
+
 using Microsoft.EntityFrameworkCore;
 using StudentAPI.Data;
 using StudentAPI.Services; // Add this using statement
