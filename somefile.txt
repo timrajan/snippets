@@ -1,1 +1,17 @@
-Executed DbCommand (9ms) [Parameters=[@__createStudentDto_email_0='?'], CommandType='Text', CommandTimeout='30']
+"Default": "Trace",
+      "Microsoft": "Trace",
+      "Microsoft.EntityFrameworkCore": "Trace",
+      "Microsoft.EntityFrameworkCore.Database": "Trace",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Trace",
+      "Microsoft.EntityFrameworkCore.Database.Transaction": "Trace",
+      "Microsoft.EntityFrameworkCore.Database.Connection": "Trace",
+      "Microsoft.EntityFrameworkCore.Query": "Trace",
+      "Microsoft.EntityFrameworkCore.Update": "Trace",
+      "Microsoft.EntityFrameworkCore.Infrastructure": "Trace",
+      "Microsoft.AspNetCore": "Trace",
+      "Microsoft.AspNetCore.Hosting": "Trace",
+      "Microsoft.AspNetCore.Routing": "Trace",
+      "Microsoft.AspNetCore.Authentication": "Trace",
+      "Microsoft.AspNetCore.Authorization": "Trace",
+      "System": "Trace",
+      "System.Net.Http.HttpClie
