@@ -1,2 +1,3 @@
- An exception occurred while iterating over the results of a query for context type 'StudentManagement.Data.AppDbContext'.
-      System.InvalidCastException: Column 'middlename' is null.
+Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      System.InvalidOperationException: No route matches the supplied values.
