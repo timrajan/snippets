@@ -1,1 +1,10 @@
-The LINQ expression 'DbSet<Client>()\r\n    .Where(c => c.tags.Contains(\r\n        value: __tag_0, \r\n        comparisonType: CurrentCultureIgnoreCase))' could not be translated. Additional information: Translation of method 'string.Contains' failed
+Go to Microsoft Download Page:
+
+Open browser and go to: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
+Look for "ASP.NET Core Runtime 8.0.x"
+Find "Hosting Bundle" section
+Click "Download x64" under Windows Hosting Bundle
+
+Direct Download Link:
+
+Hosting Bundle: dotnet-hosting-8.0.x-win.exe (around 60-80 MB)
