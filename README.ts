@@ -1,64 +1,84 @@
-<PackageReference Include="Microsoft.TeamFoundation.DistributedTask.WebApi" Version="19.225.1" />
-<PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
-
-// Add this line to your existing service registrations
-builder.Services.AddScoped<IAzureDevOpsBuildService, AzureDevOpsBuildService>();
-
-
- // Services/AzureDevOpsBuildService.cs
-using Microsoft.TeamFoundation.Build.WebApi;
-using Microsoft.VisualStudio.Services.Common;
-using Microsoft.VisualStudio.Services.WebApi;
-
-public interface IAzureDevOpsBuildService
+public class YourExistingController : ControllerBase
 {
-    Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters);
-}
+    private readonly YourExistingDbContext _context; // Your existing context
+    private readonly IAzureDevOpsBuildService _buildService; // ADD THIS
+    // Your other existing dependencies...
 
-public class AzureDevOpsBuildService : IAzureDevOpsBuildService
-{
-    private readonly string _organizationUrl;
-    private readonly string _personalAccessToken;
-    private readonly string _projectName;
-    private readonly ILogger<AzureDevOpsBuildService> _logger;
-
-    public AzureDevOpsBuildService(IConfiguration configuration, ILogger<AzureDevOpsBuildService> logger)
+    public YourExistingController(
+        YourExistingDbContext context,
+        IAzureDevOpsBuildService buildService, // ADD THIS
+        // Your other existing dependencies...
+    )
     {
-        _organizationUrl = configuration["AzureDevOps:OrganizationUrl"];
-        _personalAccessToken = configuration["AzureDevOps:PersonalAccessToken"];
-        _projectName = configuration["AzureDevOps:ProjectName"];
-        _logger = logger;
+        _context = context;
+        _buildService = buildService; // ADD THIS
+        // Your existing assignments...
     }
 
-    public async Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters)
+    // YOUR EXISTING ENDPOINT - Just modify this
+    [HttpPost("your-existing-endpoint")] // Keep your existing route
+    public async Task<IActionResult> YourExistingMethod([FromBody] YourExistingRequestModel request)
     {
         try
         {
-            _logger.LogInformation("Triggering build for pipeline {PipelineId}", pipelineId);
-
-            var credentials = new VssBasicCredential(string.Empty, _personalAccessToken);
-            var connection = new VssConnection(new Uri(_organizationUrl), credentials);
+            // YOUR EXISTING LOGIC FIRST
+            // Do whatever you were already doing with the 9 parameters...
             
-            await connection.ConnectAsync();
-            var buildClient = connection.GetClient<BuildHttpClient>();
+            // Your existing business logic here...
+            // Save to database, validate, etc.
 
-            var buildDefinition = new DefinitionReference { Id = pipelineId };
-            var build = new Build
+            // ADD THIS NEW SECTION - Azure DevOps Build Trigger
+            const int PIPELINE_ID = 123; // Replace with your actual pipeline ID
+            
+            var buildParameters = new Dictionary<string, string>
             {
-                Definition = buildDefinition,
-                SourceBranch = "refs/heads/main",
-                Parameters = Newtonsoft.Json.JsonConvert.SerializeObject(parameters)
+                { "environment", request.Environment }, // Your dropdown parameter (parameter 1)
+                { "parameter1", request.Parameter1 ?? "" }, // Text field parameter 2
+                { "parameter2", request.Parameter2 ?? "" }, // Text field parameter 3
+                { "parameter3", request.Parameter3 ?? "" }, // Text field parameter 4
+                { "parameter4", request.Parameter4 ?? "" }, // Text field parameter 5
+                { "parameter5", request.Parameter5 ?? "" }, // Text field parameter 6
+                { "parameter6", request.Parameter6 ?? "" }, // Text field parameter 7
+                { "parameter7", request.Parameter7 ?? "" }, // Text field parameter 8
+                { "parameter8", request.Parameter8 ?? "" }  // Text field parameter 9
             };
 
-            var queuedBuild = await buildClient.QueueBuildAsync(build, _projectName);
-            
-            _logger.LogInformation("Build queued successfully. Build ID: {BuildId}", queuedBuild.Id);
-            return queuedBuild;
+            // Trigger the Azure DevOps build
+            var build = await _buildService.TriggerBuildAsync(PIPELINE_ID, buildParameters);
+
+            // OPTIONAL: Update your existing entity with build info
+            // If you have an entity you want to update with build details:
+            /*
+            var yourExistingEntity = await _context.YourEntities.FindAsync(request.Id);
+            if (yourExistingEntity != null)
+            {
+                yourExistingEntity.BuildId = build.Id;
+                yourExistingEntity.BuildNumber = build.BuildNumber;
+                yourExistingEntity.BuildStatus = "Queued";
+                await _context.SaveChangesAsync();
+            }
+            */
+
+            // YOUR EXISTING RESPONSE - just add build info
+            return Ok(new 
+            { 
+                // Your existing response properties...
+                Message = "Process completed and build triggered successfully",
+                
+                // Add build information to your existing response
+                BuildInfo = new
+                {
+                    BuildId = build.Id,
+                    BuildNumber = build.BuildNumber,
+                    Status = build.Status.ToString(),
+                    QueueTime = build.QueueTime
+                }
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to trigger build for pipeline {PipelineId}", pipelineId);
-            throw;
+            // Your existing error handling...
+            return StatusCode(500, new { Error = "Process failed", Details = ex.Message });
         }
     }
 }
