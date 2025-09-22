@@ -1,7 +1,8 @@
 <PackageReference Include="Microsoft.TeamFoundation.DistributedTask.WebApi" Version="19.225.1" />
 <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
 
-
+// Add this line to your existing service registrations
+builder.Services.AddScoped<IAzureDevOpsBuildService, AzureDevOpsBuildService>();
 
 
  // Services/AzureDevOpsBuildService.cs
