@@ -1,3 +1,5 @@
+System.Collections.Generic.Dictionary`2[System.String,System.String]
+
 public interface IAzureDevOpsBuildService
 {
     Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters);
