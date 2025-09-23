@@ -1,3 +1,5 @@
+evidenceTokenLifeTime =\"30\"
+
 var cleanedParameters = new Dictionary<string, string>();
         
         foreach (var param in parameters)
