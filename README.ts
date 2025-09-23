@@ -1,3 +1,27 @@
+var cleanedParameters = new Dictionary<string, string>();
+        
+        foreach (var param in parameters)
+        {
+            var cleanValue = param.Value ?? "";
+            
+            // Log original value
+            _logger.LogInformation("📥 Original '{Key}': '{Value}'", param.Key, cleanValue);
+            
+            // Escape backslashes and quotes properly for JSON
+            var escapedValue = cleanValue
+                .Replace("\\", "\\\\")  // Escape backslashes first
+                .Replace("\"", "\\\"")  // Escape quotes
+                .Replace("\r", "\\r")   // Escape carriage returns
+                .Replace("\n", "\\n")   // Escape newlines
+                .Replace("\t", "\\t");  // Escape tabs
+            
+            cleanedParameters.Add(param.Key, escapedValue);
+            
+            // Log escaped value
+            _logger.LogInformation("📤 Escaped '{Key}': '{Value}'", param.Key, escapedValue);
+        }
+
+
 public async Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters)
 {
     try
