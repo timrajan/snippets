@@ -13,3 +13,6 @@
     ],
     "errors": []
 }
+
+
+http://localhost/cm/api/cm/allcmtag?tag=mytag
