@@ -1,5 +1,11 @@
 System.Collections.Generic.Dictionary`2[System.String,System.String]
 
+foreach (KeyValuePair<string, string> item in myDict)
+{
+    Console.WriteLine($"Key: {item.Key}, Value: {item.Value}");
+}
+
+
 public interface IAzureDevOpsBuildService
 {
     Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters);
