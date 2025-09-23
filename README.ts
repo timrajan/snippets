@@ -1,88 +1,105 @@
-// Define the response interface
-interface Person {
-  firstname: string;
-  middlename: string;
-  lastname: string;
-  dob: string;
-  email: string;
+public interface IAzureDevOpsBuildService
+{
+    Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters);
+    Task<Build> TriggerBuildAndWaitAsync(int pipelineId, Dictionary<string, string> parameters, int timeoutMinutes = 30);
+    Task<Build> GetBuildStatusAsync(int buildId);
 }
 
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data: Person[];
-  errors: string[];
-}
+public class AzureDevOpsBuildService : IAzureDevOpsBuildService
+{
+    private readonly string _organizationUrl = "https://dev.azure.com/myorg";
+    private readonly string _personalAccessToken = "your-pat-token";
+    private readonly string _projectName = "your-project";
+    private readonly ILogger<AzureDevOpsBuildService> _logger;
 
-// Function to fetch email from the API
-async function getEmailFromApi(tag: string): Promise<string | null> {
-  try {
-    const response = await fetch(`http://localhost/cm/api/cm/allcmtag?tag=${tag}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    public AzureDevOpsBuildService(ILogger<AzureDevOpsBuildService> logger)
+    {
+        _logger = logger;
     }
-    
-    const apiResponse: ApiResponse = await response.json();
-    
-    // Check if the API call was successful
-    if (!apiResponse.success) {
-      console.error('API returned error:', apiResponse.message);
-      return null;
-    }
-    
-    // Check if data exists and has at least one person
-    if (apiResponse.data && apiResponse.data.length > 0) {
-      return apiResponse.data[0].email; // Return the first person's email
-    }
-    
-    console.log('No data found');
-    return null;
-    
-  } catch (error) {
-    console.error('Error fetching email:', error);
-    return null;
-  }
-}
 
-// Function to get all emails if there are multiple people
-async function getAllEmailsFromApi(tag: string): Promise<string[]> {
-  try {
-    const response = await fetch(`http://localhost/cm/api/cm/allcmtag?tag=${tag}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const apiResponse: ApiResponse = await response.json();
-    
-    if (!apiResponse.success) {
-      console.error('API returned error:', apiResponse.message);
-      return [];
-    }
-    
-    if (apiResponse.data && apiResponse.data.length > 0) {
-      return apiResponse.data.map(person => person.email);
-    }
-    
-    return [];
-    
-  } catch (error) {
-    console.error('Error fetching emails:', error);
-    return [];
-  }
-}
+    public async Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters)
+    {
+        try
+        {
+            _logger.LogInformation("Triggering build for pipeline {PipelineId}", pipelineId);
 
-// Usage examples
-async function main() {
-  // Get single email (first person's email)
-  const email = await getEmailFromApi('mytag');
-  console.log('Email:', email);
-  
-  // Get all emails if multiple people exist
-  const allEmails = await getAllEmailsFromApi('mytag');
-  console.log('All emails:', allEmails);
-}
+            var credentials = new VssBasicCredential(string.Empty, _personalAccessToken);
+            var connection = new VssConnection(new Uri(_organizationUrl), credentials);
+            
+            await connection.ConnectAsync();
+            var buildClient = connection.GetClient<BuildHttpClient>();
 
-// Call the function
-main();
+            var buildDefinition = new DefinitionReference { Id = pipelineId };
+            var build = new Build
+            {
+                Definition = buildDefinition,
+                SourceBranch = "refs/heads/main",
+                Parameters = Newtonsoft.Json.JsonConvert.SerializeObject(parameters)
+            };
+
+            var queuedBuild = await buildClient.QueueBuildAsync(build, _projectName);
+            
+            _logger.LogInformation("Build queued successfully. Build ID: {BuildId}", queuedBuild.Id);
+            return queuedBuild;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to trigger build for pipeline {PipelineId}", pipelineId);
+            throw;
+        }
+    }
+
+    public async Task<Build> TriggerBuildAndWaitAsync(int pipelineId, Dictionary<string, string> parameters, int timeoutMinutes = 30)
+    {
+        // First trigger the build
+        var build = await TriggerBuildAsync(pipelineId, parameters);
+        
+        // Then wait for completion
+        return await WaitForBuildCompletionAsync(build.Id, timeoutMinutes);
+    }
+
+    public async Task<Build> GetBuildStatusAsync(int buildId)
+    {
+        var credentials = new VssBasicCredential(string.Empty, _personalAccessToken);
+        var connection = new VssConnection(new Uri(_organizationUrl), credentials);
+        var buildClient = connection.GetClient<BuildHttpClient>();
+        
+        return await buildClient.GetBuildAsync(_projectName, buildId);
+    }
+
+    private async Task<Build> WaitForBuildCompletionAsync(int buildId, int timeoutMinutes)
+    {
+        var credentials = new VssBasicCredential(string.Empty, _personalAccessToken);
+        var connection = new VssConnection(new Uri(_organizationUrl), credentials);
+        var buildClient = connection.GetClient<BuildHttpClient>();
+        
+        var timeout = DateTime.UtcNow.AddMinutes(timeoutMinutes);
+        var checkInterval = TimeSpan.FromSeconds(15); // Check every 15 seconds
+        
+        _logger.LogInformation("Waiting for build {BuildId} to complete (timeout: {TimeoutMinutes} minutes)", buildId, timeoutMinutes);
+        
+        while (DateTime.UtcNow < timeout)
+        {
+            var currentBuild = await buildClient.GetBuildAsync(_projectName, buildId);
+            
+            _logger.LogInformation("Build {BuildId} status: {Status}", buildId, currentBuild.Status);
+            
+            if (currentBuild.Status == BuildStatus.Completed)
+            {
+                _logger.LogInformation("✅ Build {BuildId} completed with result: {Result}", 
+                    buildId, currentBuild.Result);
+                return currentBuild;
+            }
+            
+            if (currentBuild.Status == BuildStatus.Cancelling || currentBuild.Status == BuildStatus.Postponed)
+            {
+                _logger.LogWarning("Build {BuildId} was cancelled or postponed", buildId);
+                return currentBuild;
+            }
+            
+            await Task.Delay(checkInterval);
+        }
+        
+        throw new TimeoutException($"Build {buildId} did not complete within {timeoutMinutes} minutes");
+    }
+}
