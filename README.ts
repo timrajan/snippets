@@ -1,2 +1,1 @@
-// Unix timestamp in milliseconds
-string uniqueId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+_configuration.GetConnectionString("DefaultConnection");
