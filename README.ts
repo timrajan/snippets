@@ -1,9 +1,22 @@
-    public async Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters)
-    {
-        try
+ // Configure proxy with authentication
+        var proxy = new WebProxy("http://your-proxy-address:port")
         {
-            using var httpClient = new HttpClient();
+            Credentials = CredentialCache.DefaultNetworkCredentials,
+            UseDefaultCredentials = true
+        };
 
+        var handler = new HttpClientHandler
+        {
+            Proxy = proxy,
+            UseProxy = true,
+            PreAuthenticate = true,
+            UseDefaultCredentials = true
+        };
+
+        using var httpClient = new HttpClient(handler);
+        
+        // Set timeout
+        httpClient.Timeout = TimeSpan.FromMinutes(5);
 
 
 
