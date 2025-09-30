@@ -5,11 +5,8 @@ netsh winhttp import proxy source=ie
 
 <configuration>
   <system.net>
-    <defaultProxy useDefaultCredentials="true" enabled="true">
-      <proxy 
-        proxyaddress="http://your-proxy-address:port" 
-        bypassonlocal="true" 
-        usesystemdefault="false" />
+    <defaultProxy useDefaultCredentials="true">
+      <proxy usesystemdefault="true" />
     </defaultProxy>
   </system.net>
 </configuration>
