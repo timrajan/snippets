@@ -9,7 +9,7 @@ Get-NetFirewallApplicationFilter | Where-Object {$_.Program -like "*w3wp.exe*"}
 
 # If blocked, create allow rule
 New-NetFirewallRule -DisplayName "IIS Worker Process Outbound" -Direction Outbound -Program "C:\Windows\System32\inetsrv\w3wp.exe" -Action Allow
-
+New-NetFirewallRule -DisplayName "Allow IIS to Azure DevOps" -Direction Outbound -Program "C:\Windows\System32\inetsrv\w3wp.exe" -Action Allow -RemoteAddress Internet -Protocol TCP -RemotePort 443
 <configuration>
   <!-- Add this section if it doesn't exist -->
   <system.net>
