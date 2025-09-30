@@ -1,3 +1,9 @@
+netsh winhttp set proxy proxy-server="http://your-proxy-address:port" bypass-list="<local>"
+
+
+
+
+
 netsh winhttp show proxy
 Test-NetConnection dev.azure.com -Port 443 -InformationLevel Detailed
 
