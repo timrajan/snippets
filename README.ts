@@ -1,16 +1,8 @@
-netsh winhttp set proxy proxy-server="http://your-proxy-address:port" bypass-list="<local>"
-
-  # As Administrator
-netsh winhttp import proxy source=ie
-
-<configuration>
-  <system.net>
-    <defaultProxy useDefaultCredentials="true">
-      <proxy usesystemdefault="true" />
-    </defaultProxy>
-  </system.net>
-</configuration>
-
+    public async Task<Build> TriggerBuildAsync(int pipelineId, Dictionary<string, string> parameters)
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
 
 
 
