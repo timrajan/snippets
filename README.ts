@@ -4,7 +4,19 @@ Exception:
 System.Net.Http.HttpRequestException: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (dev.azure.com:443)
  ---> System.Net.Sockets.SocketException (10060): A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.
 
-
+<configuration>
+  <!-- Add this section if it doesn't exist -->
+  <system.net>
+    <defaultProxy useDefaultCredentials="true">
+      <proxy usesystemdefault="true" />
+    </defaultProxy>
+    <settings>
+      <servicePointManager expect100Continue="false" />
+    </settings>
+  </system.net>
+  
+  <!-- Existing sections like connectionStrings, system.web, etc. -->
+</configuration>
    
 
 
