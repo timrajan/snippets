@@ -1,5 +1,7 @@
 netsh winhttp show proxy
+Test-NetConnection dev.azure.com -Port 443 -InformationLevel Detailed
 
+netstat -ano | findstr "443"
 ❌ Failed to trigger build
 
 Exception: 
