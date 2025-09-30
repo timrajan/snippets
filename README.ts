@@ -1,3 +1,5 @@
+netsh winhttp show proxy
+
 ❌ Failed to trigger build
 
 Exception: 
