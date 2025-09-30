@@ -4,6 +4,12 @@ Exception:
 System.Net.Http.HttpRequestException: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (dev.azure.com:443)
  ---> System.Net.Sockets.SocketException (10060): A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.
 
+  # Check if w3wp.exe (IIS worker process) is blocked
+Get-NetFirewallApplicationFilter | Where-Object {$_.Program -like "*w3wp.exe*"}
+
+# If blocked, create allow rule
+New-NetFirewallRule -DisplayName "IIS Worker Process Outbound" -Direction Outbound -Program "C:\Windows\System32\inetsrv\w3wp.exe" -Action Allow
+
 <configuration>
   <!-- Add this section if it doesn't exist -->
   <system.net>
