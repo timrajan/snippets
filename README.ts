@@ -1,5 +1,16 @@
 netsh winhttp set proxy proxy-server="http://your-proxy-address:port" bypass-list="<local>"
 
+<configuration>
+  <system.net>
+    <defaultProxy useDefaultCredentials="true" enabled="true">
+      <proxy 
+        proxyaddress="http://your-proxy-address:port" 
+        bypassonlocal="true" 
+        usesystemdefault="false" />
+    </defaultProxy>
+  </system.net>
+</configuration>
+
 
 
 
