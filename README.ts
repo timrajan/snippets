@@ -1,3 +1,13 @@
+❌ Failed to trigger build
+
+Exception: 
+System.Net.Http.HttpRequestException: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (dev.azure.com:443)
+ ---> System.Net.Sockets.SocketException (10060): A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.
+
+
+   
+
+
 Slide 1: Title Slide
 Title: Test Data Engineering System: Automating Test Data Creation
 Subtitle: Reducing 5 Days to 5 Minutes
