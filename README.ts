@@ -1,99 +1,23 @@
-// Helper function to convert RGB/RGBA to Hex
-function rgbToHex(rgb) {
-  // Check if it's already a hex color or other format
-  if (!rgb.startsWith('rgb')) {
-    return rgb;
-  }
-  
-  // Extract RGB values
-  const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-  if (!match) return rgb;
-  
-  const r = parseInt(match[1]);
-  const g = parseInt(match[2]);
-  const b = parseInt(match[3]);
-  const a = match[4] ? parseFloat(match[4]) : null;
-  
-  // Convert to hex
-  const toHex = (n) => {
-    const hex = n.toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  };
-  
-  const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  
-  // If there's alpha, include it
-  if (a !== null && a < 1) {
-    const alphaHex = toHex(Math.round(a * 255));
-    return `${hexColor}${alphaHex} (${Math.round(a * 100)}% opacity)`;
-  }
-  
-  return hexColor;
-}
-
-// Extract all style information from the currently inspected element
-function extractElementStyles() {
-  // Get the currently selected element in DevTools
-  const element = $0; // $0 refers to the currently selected element in Chrome DevTools
-  
-  if (!element) {
-    console.log('No element selected. Please select an element in the Elements tab first.');
-    return;
-  }
-  
-  let output = [];
-  
-  // Basic element information
-  output.push('=== ELEMENT INFORMATION ===');
-  output.push(`Tag: ${element.tagName}`);
-  output.push(`ID: ${element.id || 'none'}`);
-  output.push(`Classes: ${element.className || 'none'}`);
-  output.push('');
-  
-  // HTML
-  output.push('=== HTML ===');
-  output.push(element.outerHTML);
-  output.push('');
-  
-  // Computed styles
-  output.push('=== COMPUTED STYLES ===');
-  const computedStyles = window.getComputedStyle(element);
-  for (let i = 0; i < computedStyles.length; i++) {
-    const prop = computedStyles[i];
-    const value = computedStyles.getPropertyValue(prop);
-    const convertedValue = rgbToHex(value);
-    output.push(`${prop}: ${convertedValue}`);
-  }
-  output.push('');
-  
-  // Inline styles
-  output.push('=== INLINE STYLES ===');
-  if (element.style.length > 0) {
-    for (let i = 0; i < element.style.length; i++) {
-      const prop = element.style[i];
-      const value = element.style.getPropertyValue(prop);
-      const convertedValue = rgbToHex(value);
-      output.push(`${prop}: ${convertedValue}`);
-    }
-  } else {
-    output.push('No inline styles');
-  }
-  output.push('');
-  
-  // Combine all output
-  const result = output.join('\n');
-  
-  // Copy to clipboard
-  navigator.clipboard.writeText(result).then(() => {
-    console.log('✅ Element styles copied to clipboard! Paste into Notepad.');
-    console.log('\nPreview:');
-    console.log(result);
-  }).catch(err => {
-    console.error('Failed to copy to clipboard:', err);
-    console.log('\nHere\'s the output (copy manually):');
-    console.log(result);
-  });
-}
-
-// Run the function
-extractElementStyles();
+silly audit bulk request failed [object Object]
+1575 http fetch GET 403 https://abc.com/artifactory/api/npm/npm-registry-remote/ansi-regex/-/ansi-regex-6.2.2.tgz 134ms (cache skip)
+1576 http fetch POST 403 https://abc.com/artifactory/api/npm/npm-registry-remote/-/npm/v1/security/audits/quick 21ms (cache skip)
+1577 verbose audit error HttpErrorGeneral: 403 Forbidden - POST https://abc.com/artifactory/api/npm/npm-registry-remote/-/npm/v1/security/audits/quick
+1577 verbose audit error     at C:\Program Files\nodejs\node_modules\npm\node_modules\npm-registry-fetch\lib\check-response.js:103:15
+1577 verbose audit error     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+1577 verbose audit error     at async [getReport] (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:336:21)
+1577 verbose audit error     at async AuditReport.run (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:106:19) {
+1577 verbose audit error   headers: [Object: null prototype] {
+1577 verbose audit error     date: [ 'Fri, 03 Oct 2025 02:27:12 GMT' ],
+1577 verbose audit error     'content-type': [ 'application/json;charset=ISO-8859-1' ],
+1577 verbose audit error     'content-length': [ '152' ],
+1577 verbose audit error     connection: [ 'keep-alive' ],
+1577 verbose audit error     'www-authenticate': [ 'Basic realm="Artifactory Realm"' ],
+1577 verbose audit error     'x-fetch-attempts': [ '1' ],
+1577 verbose audit error     'x-local-cache-status': [ 'skip' ]
+1577 verbose audit error   },
+1577 verbose audit error   statusCode: 403,
+1577 verbose audit error   code: 'E403',
+1577 verbose audit error   method: 'POST',
+1577 verbose audit error   uri: 'https://abc.com/artifactory/api/npm/npm-registry-remote/-/npm/v1/security/audits/quick',
+1577 verbose audit error   body: { errors: [ [Object] ] },
+1577 verbose audit error   pkgid: 'quick'
