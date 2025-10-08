@@ -1,48 +1,286 @@
-Problem Statement:
-Your automated shakedown test suite is experiencing critical reliability issues with a 50% failure rate, significantly undermining confidence in your deployment pipeline and extending testing cycles to 4 hours.
-Root Causes:
+import puppeteer, { Browser, Page } from 'puppeteer';
 
-Timeout Issues: Scripts are failing due to inadequate wait strategies or overly aggressive timeout thresholds
-Page Loading Errors: Inconsistent page load performance causing test failures
-Data Dependency Issues: Tests are likely interdependent or relying on unstable test data states
+interface StyleExtractionResult {
+  elementInfo: {
+    tag: string;
+    id: string;
+    classes: string;
+  };
+  html: string;
+  computedStyles: Record<string, string>;
+  inlineStyles: Record<string, string>;
+  formattedOutput: string;
+}
 
-Business Impact:
+/**
+ * Helper function to convert RGB/RGBA to Hex
+ */
+function rgbToHex(rgb: string): string {
+  // Check if it's already a hex color or other format
+  if (!rgb.startsWith('rgb')) {
+    return rgb;
+  }
 
-4-hour test execution severely delays release cycles
-50% failure rate creates noise that masks real issues
-Team productivity loss due to false positives and test maintenance overhead
-Reduced confidence in automated testing, potentially leading to manual verification bottlenecks
+  // Extract RGB values
+  const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (!match) return rgb;
 
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  const a = match[4] ? parseFloat(match[4]) : null;
 
------
+  // Convert to hex
+  const toHex = (n: number): string => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
 
- Timeout Optimization
+  const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 
-Identified pages with extended loading times during test execution
-Increased timeout values strategically to accommodate realistic application response times
-Eliminated false test failures caused by premature timeouts
+  // If there's alpha, include it
+  if (a !== null && a < 1) {
+    const alphaHex = toHex(Math.round(a * 255));
+    return `${hexColor}${alphaHex} (${Math.round(a * 100)}% opacity)`;
+  }
 
-2. Test Independence & Statefulness
+  return hexColor;
+}
 
-Converted tests to stateless architecture - each test now runs independently without relying on data or state from previous tests
-Eliminated data transfer dependencies between test cases, ensuring reliable execution regardless of test order
-Improved test isolation to prevent cascading failures
+/**
+ * Extract all style information from an element on a webpage
+ * @param url - The URL of the webpage
+ * @param selector - CSS selector to target the element (e.g., 'div.header', '#main-content')
+ * @param options - Optional configuration
+ * @returns Style extraction result
+ */
+export async function extractElementStyles(
+  url: string,
+  selector: string,
+  options?: {
+    headless?: boolean;
+    outputFile?: string;
+    screenshotPath?: string;
+    pdfPath?: string;
+    selective?: boolean;
+    styleListFile?: string;
+  }
+): Promise<StyleExtractionResult> {
+  const browser: Browser = await puppeteer.launch({
+    headless: options?.headless ?? true,
+  });
 
-3. Identifier Maintenance
+  try {
+    const page: Page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
 
-Updated outdated element identifiers with current application selectors
-Ensured test scripts align with the latest UI changes and application structure
-Reduced test failures due to element identification issues
+    // Wait for the element to be present
+    await page.waitForSelector(selector, { timeout: 10000 });
 
+    // Read selective style list if needed
+    let selectiveStyles: string[] | null = null;
+    if (options?.selective) {
+      const fs = await import('fs/promises');
+      const styleListPath = options.styleListFile || 'getstyles.txt';
+      try {
+        const content = await fs.readFile(styleListPath, 'utf-8');
+        selectiveStyles = content
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && !line.startsWith('#'));
+        console.log(`✅ Loaded ${selectiveStyles.length} styles from ${styleListPath}`);
+      } catch (err) {
+        console.warn(`⚠️  Could not read ${styleListPath}, extracting all styles`);
+        selectiveStyles = null;
+      }
+    }
 
+    // Extract styles from the page
+    const result = await page.evaluate((sel, rgbToHexStr, styleFilter) => {
+      // Recreate the rgbToHex function in the browser context
+      const rgbToHexFunc = new Function('return ' + rgbToHexStr)();
 
--------
+      const element = document.querySelector(sel);
 
-Before: 3-4 hours per test suite execution
-After: 17-20 minutes per test suite execution
-Performance Gain: ~90% reduction in execution time
+      if (!element) {
+        throw new Error(`Element not found: ${sel}`);
+      }
 
-Speed & Efficiency: 12x faster test execution enables rapid development cycles and frequent testing
-Developer Productivity: Quick feedback loop (20 minutes vs 4 hours)
+      const output: string[] = [];
 
+      // Basic element information
+      output.push('=== ELEMENT INFORMATION ===');
+      output.push(`Tag: ${element.tagName}`);
+      output.push(`ID: ${element.id || 'none'}`);
+      output.push(`Classes: ${element.className || 'none'}`);
+      output.push('');
 
+      // HTML
+      output.push('=== HTML ===');
+      output.push(element.outerHTML);
+      output.push('');
+
+      // Computed styles
+      output.push('=== COMPUTED STYLES ===');
+      const computedStyles = window.getComputedStyle(element);
+      const computedStylesObj: Record<string, string> = {};
+
+      // Filter styles if selective mode is enabled
+      const shouldIncludeStyle = (prop: string) => {
+        if (!styleFilter || styleFilter.length === 0) return true;
+        return styleFilter.includes(prop);
+      };
+
+      for (let i = 0; i < computedStyles.length; i++) {
+        const prop = computedStyles[i];
+        if (!shouldIncludeStyle(prop)) continue;
+
+        const value = computedStyles.getPropertyValue(prop);
+        const convertedValue = rgbToHexFunc(value);
+        computedStylesObj[prop] = convertedValue;
+        output.push(`${prop}: ${convertedValue}`);
+      }
+      output.push('');
+
+      // Inline styles
+      output.push('=== INLINE STYLES ===');
+      const inlineStylesObj: Record<string, string> = {};
+      const htmlElement = element as HTMLElement;
+
+      if (htmlElement.style.length > 0) {
+        for (let i = 0; i < htmlElement.style.length; i++) {
+          const prop = htmlElement.style[i];
+          if (!shouldIncludeStyle(prop)) continue;
+
+          const value = htmlElement.style.getPropertyValue(prop);
+          const convertedValue = rgbToHexFunc(value);
+          inlineStylesObj[prop] = convertedValue;
+          output.push(`${prop}: ${convertedValue}`);
+        }
+      } else {
+        output.push('No inline styles');
+      }
+      output.push('');
+
+      return {
+        elementInfo: {
+          tag: element.tagName,
+          id: element.id || 'none',
+          classes: element.className || 'none',
+        },
+        html: element.outerHTML,
+        computedStyles: computedStylesObj,
+        inlineStyles: inlineStylesObj,
+        formattedOutput: output.join('\n'),
+      };
+    }, selector, rgbToHex.toString(), selectiveStyles);
+
+    // Optionally save to file
+    if (options?.outputFile) {
+      const fs = await import('fs/promises');
+      await fs.writeFile(options.outputFile, result.formattedOutput, 'utf-8');
+      console.log(`✅ Styles saved to ${options.outputFile}`);
+    }
+
+    // Optionally take screenshot
+    if (options?.screenshotPath) {
+      await page.screenshot({ path: options.screenshotPath as `${string}.png` | `${string}.jpeg` | `${string}.webp`, fullPage: true });
+      console.log(`✅ Screenshot saved to ${options.screenshotPath}`);
+    }
+
+    // Optionally generate PDF of the extracted styles
+    if (options?.pdfPath) {
+      // Create an HTML page with the extracted styles
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      padding: 40px;
+      line-height: 1.6;
+      color: #333;
+    }
+    h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    pre {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <pre>${result.formattedOutput.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+</body>
+</html>
+      `;
+
+      await page.setContent(htmlContent);
+      await page.pdf({ path: options.pdfPath as `${string}.pdf`, format: 'A4', printBackground: true });
+      console.log(`✅ PDF saved to ${options.pdfPath}`);
+    }
+
+    console.log('✅ Element styles extracted successfully!');
+    console.log('\nPreview:');
+    console.log(result.formattedOutput);
+
+    return result;
+  } finally {
+    await browser.close();
+  }
+}
+
+// CLI usage example
+if (require.main === module) {
+  const args = process.argv.slice(2);
+
+  if (args.length < 2) {
+    console.log('Usage: ts-node getStyling.ts <url> <selector> [outputFile] [--headful] [--screenshot=path] [--pdf=path] [--selective] [--stylelist=path]');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --headful');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --screenshot=page.png');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --pdf=page.pdf');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --selective');
+    console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --selective --stylelist=mystyles.txt');
+    process.exit(1);
+  }
+
+  const headful = args.includes('--headful');
+  const selective = args.includes('--selective');
+  const screenshotArg = args.find(arg => arg.startsWith('--screenshot='));
+  const screenshotPath = screenshotArg ? screenshotArg.split('=')[1] : undefined;
+  const pdfArg = args.find(arg => arg.startsWith('--pdf='));
+  const pdfPath = pdfArg ? pdfArg.split('=')[1] : undefined;
+  const styleListArg = args.find(arg => arg.startsWith('--stylelist='));
+  const styleListFile = styleListArg ? styleListArg.split('=')[1] : undefined;
+  const filteredArgs = args.filter(arg =>
+    arg !== '--headful' &&
+    arg !== '--selective' &&
+    !arg.startsWith('--screenshot=') &&
+    !arg.startsWith('--pdf=') &&
+    !arg.startsWith('--stylelist=')
+  );
+  const [url, selector, outputFile] = filteredArgs;
+
+  extractElementStyles(url, selector, {
+    outputFile,
+    headless: !headful,
+    screenshotPath,
+    pdfPath,
+    selective,
+    styleListFile
+  })
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Error:', error.message);
+      process.exit(1);
+    });
+}
