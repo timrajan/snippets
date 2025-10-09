@@ -1,5 +1,5 @@
-  const elementHandle = await page.evaluateHandle(() => {
-    function deepQuerySelector(root, selector) {
+ await page.evaluate(() => {
+    function deepQuerySelector(root: any, selector: string): any {
       let element = root.querySelector(selector);
       if (element) return element;
 
@@ -13,14 +13,12 @@
       }
       return null;
     }
-    return deepQuerySelector(document, 'button.submit');
-  });
 
-  // Cast to ElementHandle<Element> first
-  const element = elementHandle.asElement();
-  if (element) {
-    await element.click();
-  }
+    const element = deepQuerySelector(document, 'button.submit');
+    if (element) {
+      element.click();  // This MUST be inside page.evaluate()
+    }
+  });
 
 
 import puppeteer, { Browser, Page } from 'puppeteer';
