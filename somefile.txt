@@ -64,6 +64,7 @@ export async function extractElementStyles(
     pdfPath?: string;
     selective?: boolean;
     styleListFile?: string;
+    deepSearch?: boolean;
   }
 ): Promise<StyleExtractionResult> {
   const browser: Browser = await puppeteer.launch({
@@ -74,8 +75,14 @@ export async function extractElementStyles(
     const page: Page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Wait for the element to be present
-    await page.waitForSelector(selector, { timeout: 10000 });
+    // Wait for the element to be present (skip for deep search as it will search in shadow DOM)
+    if (!options?.deepSearch) {
+      await page.waitForSelector(selector, { timeout: 10000 });
+    } else {
+      console.log('🔍 Deep search enabled - searching through shadow DOM...');
+      // Give page time to render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
 
     // Read selective style list if needed
     let selectiveStyles: string[] | null = null;
@@ -96,14 +103,35 @@ export async function extractElementStyles(
     }
 
     // Extract styles from the page
-    const result = await page.evaluate((sel, rgbToHexStr, styleFilter) => {
+    const result = await page.evaluate((sel, rgbToHexStr, styleFilter, useDeepSearch) => {
       // Recreate the rgbToHex function in the browser context
       const rgbToHexFunc = new Function('return ' + rgbToHexStr)();
 
-      const element = document.querySelector(sel);
+      // Deep search function to find elements in shadow DOM
+      function deepQuerySelector(root: Document | ShadowRoot, selector: string): Element | null {
+        // Try to find in current root
+        let element = root.querySelector(selector);
+        if (element) return element;
+
+        // Search in all shadow roots recursively
+        const allElements = root.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i];
+          if (el.shadowRoot) {
+            element = deepQuerySelector(el.shadowRoot, selector);
+            if (element) return element;
+          }
+        }
+
+        return null;
+      }
+
+      const element = useDeepSearch
+        ? deepQuerySelector(document, sel)
+        : document.querySelector(sel);
 
       if (!element) {
-        throw new Error(`Element not found: ${sel}`);
+        throw new Error(`Element not found: ${sel}${useDeepSearch ? ' (searched in shadow DOM)' : ''}`);
       }
 
       const output: string[] = [];
@@ -173,7 +201,7 @@ export async function extractElementStyles(
         inlineStyles: inlineStylesObj,
         formattedOutput: output.join('\n'),
       };
-    }, selector, rgbToHex.toString(), selectiveStyles);
+    }, selector, rgbToHex.toString(), selectiveStyles, options?.deepSearch ?? false);
 
     // Optionally save to file
     if (options?.outputFile) {
@@ -243,18 +271,20 @@ if (require.main === module) {
   const args = process.argv.slice(2);
 
   if (args.length < 2) {
-    console.log('Usage: ts-node getStyling.ts <url> <selector> [outputFile] [--headful] [--screenshot=path] [--pdf=path] [--selective] [--stylelist=path]');
+    console.log('Usage: ts-node getStyling.ts <url> <selector> [outputFile] [--headful] [--screenshot=path] [--pdf=path] [--selective] [--stylelist=path] [--deep-search]');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --headful');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --screenshot=page.png');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --pdf=page.pdf');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --selective');
     console.log('Example: ts-node getStyling.ts https://example.com "div.header" output.txt --selective --stylelist=mystyles.txt');
+    console.log('Example: ts-node getStyling.ts https://example.com "button.submit" output.txt --deep-search');
     process.exit(1);
   }
 
   const headful = args.includes('--headful');
   const selective = args.includes('--selective');
+  const deepSearch = args.includes('--deep-search');
   const screenshotArg = args.find(arg => arg.startsWith('--screenshot='));
   const screenshotPath = screenshotArg ? screenshotArg.split('=')[1] : undefined;
   const pdfArg = args.find(arg => arg.startsWith('--pdf='));
@@ -264,6 +294,7 @@ if (require.main === module) {
   const filteredArgs = args.filter(arg =>
     arg !== '--headful' &&
     arg !== '--selective' &&
+    arg !== '--deep-search' &&
     !arg.startsWith('--screenshot=') &&
     !arg.startsWith('--pdf=') &&
     !arg.startsWith('--stylelist=')
@@ -276,7 +307,8 @@ if (require.main === module) {
     screenshotPath,
     pdfPath,
     selective,
-    styleListFile
+    styleListFile,
+    deepSearch
   })
     .then(() => process.exit(0))
     .catch((error) => {
