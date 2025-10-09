@@ -1,5 +1,5 @@
- const element = await page.evaluate(() => {
-    function deepQuerySelector(root: Document | ShadowRoot, selector: string): Element | null {
+const elementHandle = await page.evaluateHandle(() => {
+    function deepQuerySelector(root, selector) {
       let element = root.querySelector(selector);
       if (element) return element;
 
@@ -13,11 +13,10 @@
       }
       return null;
     }
-
-    // Now you can use document
     return deepQuerySelector(document, 'button.submit');
   });
 
+  await elementHandle.asElement()?.click();
 
 
 
