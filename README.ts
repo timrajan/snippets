@@ -1,3 +1,9 @@
+System.InvalidOperationException: Unable to resolve service for type 'Ops.Services.DataService' while attempting to activate 'Ops.Controllers.HomeController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.ThrowHelperUnableToResolveService(Type type, Type requiredBy)
+   at lambda_method2(Closure, IServiceProvider, Object[])
+
+
+
 The whole workflow works in this manner. 
 
 SIGN IN AND SIGN OUT
