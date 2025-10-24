@@ -1,7 +1,8 @@
-var connectionString = _configuration.GetConnectionString("DefaultConnection");
+# Navigate to PostgreSQL bin folder or add it to PATH
+cd "C:\Program Files\PostgreSQL\14\bin"
 
-// In Program.cs (for .NET 6+)
-var builder = WebApplication.CreateBuilder(args);
+# Stop the server
+pg_ctl stop -D "C:\Program Files\PostgreSQL\14\data"
 
-// Configuration is automatically loaded, but you can verify:
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+# Force stop
+pg_ctl stop -D "C:\Program Files\PostgreSQL\14\data" -m immediate
