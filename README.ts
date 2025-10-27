@@ -1,3 +1,7 @@
+ERROR:  column "abc" cannot be cast automatically to type bigint
+HINT:  You might need to specify "USING abc::bigint".
+
+
 # Navigate to PostgreSQL bin folder or add it to PATH
 cd "C:\Program Files\PostgreSQL\14\bin"
 
