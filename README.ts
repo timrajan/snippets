@@ -1,3 +1,8 @@
+StatusCode: 401, ReasonPhrase: 'Unauthorized', Version: 1.1, Content: System.Net.Http.HttpConnectionResponseContent, Headers:
+{
+  Cache-Control: no-cache, no-store, must-revalidate
+
+
 public (bool Success, string Message) TriggerBuildPipeline(StudyRecord record)
 {
     try
