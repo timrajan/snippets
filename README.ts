@@ -1,5 +1,12 @@
-  System.InvalidOperationException: The entity type 'student' requires a primary key to be defined. If you intended to use a keyless entity type, call 'HasNoKey' in 'OnModelCreating'. For more information on keyless entity types, see https://go.microsoft.com/fwlink/?linkid=2141943.
-
+dbug: Microsoft.AspNetCore.Server.Kestrel.BadRequests[17]
+      Connection id "" bad request data: "Request headers too long."
+      Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Request headers too long.
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.<TakeMessageHeaders>g__TrimAndTakeMessageHeaders|45_0(SequenceReader`1& reader, Boolean trailers)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TakeMessageHeaders(SequenceReader`1& reader, Boolean trailers)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.ParseRequest(SequenceReader`1& reader)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TryParseRequest(ReadResult result, Boolean& endConnection)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequestsAsync[TContext](IHttpApplication`1 application)
 
 ERROR:  column "abc" cannot be cast automatically to type bigint
 HINT:  You might need to specify "USING abc::bigint".
