@@ -1,3 +1,8 @@
+ALTER TABLE your_table_name 
+ALTER COLUMN abc TYPE bigint 
+USING abc::bigint;
+
+
 ERROR:  column "abc" cannot be cast automatically to type bigint
 HINT:  You might need to specify "USING abc::bigint".
 
