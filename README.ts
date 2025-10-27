@@ -1,3 +1,9 @@
- <div class="user-info">
-                    You are logged in as <strong>@ViewBag.Username</strong>
-                </div>
+ .user-info {
+            color: white;
+            font-size: 14px;
+        }
+
+
+      display: flex;
+            justify-content: space-between;
+            align-items: center;
