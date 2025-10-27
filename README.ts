@@ -1,6 +1,4 @@
-ALTER TABLE your_table_name 
-ALTER COLUMN abc TYPE bigint 
-USING abc::bigint;
+  System.InvalidOperationException: The entity type 'student' requires a primary key to be defined. If you intended to use a keyless entity type, call 'HasNoKey' in 'OnModelCreating'. For more information on keyless entity types, see https://go.microsoft.com/fwlink/?linkid=2141943.
 
 
 ERROR:  column "abc" cannot be cast automatically to type bigint
