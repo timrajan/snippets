@@ -1,3 +1,15 @@
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestHeadersTotalSize = 65536; // 64 KB (default is 32 KB)
+    serverOptions.Limits.MaxRequestHeaderCount = 100; // default is 100
+});
+
+// Rest of your configuration...
+var app = builder.Build();
+
+
 dbug: Microsoft.AspNetCore.Server.Kestrel.BadRequests[17]
       Connection id "" bad request data: "Request headers too long."
       Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Request headers too long.
