@@ -1,42 +1,69 @@
-var builder = WebApplication.CreateBuilder(args);
-
-builder.WebHost.ConfigureKestrel(serverOptions =>
+public (bool Success, string Message) TriggerBuildPipeline(StudyRecord record)
 {
-    serverOptions.Limits.MaxRequestHeadersTotalSize = 65536; // 64 KB (default is 32 KB)
-    serverOptions.Limits.MaxRequestHeaderCount = 100; // default is 100
-});
+    try
+    {
+        using (var httpClient = new HttpClient())
+        {
+            // CORRECT URL for Build Pipelines (Classic Build Definitions)
+            var url = $"https://dev.azure.com/{_organization}/{_project}/_apis/build/builds?api-version=7.0";
 
-// Rest of your configuration...
-var app = builder.Build();
+            // Add Basic Authentication with PAT
+            var authToken = Convert.ToBase64String(
+                System.Text.Encoding.ASCII.GetBytes($":{_pat}"));
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authToken);
 
+            // Build the payload for classic build pipeline
+            var payload = new
+            {
+                definition = new
+                {
+                    id = _pipelineId
+                },
+                sourceBranch = _branch,
+                parameters = JsonSerializer.Serialize(new
+                {
+                    // Map form fields to pipeline parameters
+                    team = record.Team ?? "",
+                    firstName = record.FirstName ?? "",
+                    middleName = record.MiddleName ?? "",
+                    lastName = record.LastName ?? "",
+                    dateOfBirth = record.DateOfBirth ?? "",
+                    emailAddress = record.EmailAddress ?? "",
+                    studentIdentityID = record.StudentIdentityID ?? "",
+                    studentInitialID = record.StudentInitialID ?? "",
+                    environment = record.Environment ?? "",
+                    studentIQLevel = record.StudentIQLevel ?? "",
+                    studentRollNumber = record.StudentRollNumber ?? "",
+                    studentRollName = record.StudentRollName ?? "",
+                    studentParentEmailAddress = record.StudentParentEmailAddress ?? "",
+                    status = record.Status ?? "",
+                    type = record.Type ?? "",
+                    tags = record.Tags ?? ""
+                })
+            };
 
-dbug: Microsoft.AspNetCore.Server.Kestrel.BadRequests[17]
-      Connection id "" bad request data: "Request headers too long."
-      Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Request headers too long.
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.<TakeMessageHeaders>g__TrimAndTakeMessageHeaders|45_0(SequenceReader`1& reader, Boolean trailers)
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TakeMessageHeaders(SequenceReader`1& reader, Boolean trailers)
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.ParseRequest(SequenceReader`1& reader)
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TryParseRequest(ReadResult result, Boolean& endConnection)
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
-         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequestsAsync[TContext](IHttpApplication`1 application)
+            // Serialize to JSON
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-ERROR:  column "abc" cannot be cast automatically to type bigint
-HINT:  You might need to specify "USING abc::bigint".
+            // Send POST request to Azure DevOps
+            var response = httpClient.PostAsync(url, content).Result;
 
-
-# Navigate to PostgreSQL bin folder or add it to PATH
-cd "C:\Program Files\PostgreSQL\14\bin"
-
-# Stop the server
-pg_ctl stop -D "C:\Program Files\PostgreSQL\14\data"
-
-# Force stop
-pg_ctl stop -D "C:\Program Files\PostgreSQL\14\data" -m immediate
-
-
-
- developed a test data generation and maintenance web application that streamlines QA workflows, reducing the time and effort required for test data preparation."
-
- empowers our QA team to generate and maintain test data independently, reducing bottlenecks and improving overall testing productivity."
-
-   "reducing test data setup time by X%" or "enabling QA to prepare test environments X times faster."
+            if (response.IsSuccessStatusCode)
+            {
+                var responseBody = response.Content.ReadAsStringAsync().Result;
+                return (true, $"Build pipeline triggered successfully! Response: {responseBody}");
+            }
+            else
+            {
+                var error = response.Content.ReadAsStringAsync().Result;
+                return (false, $"Failed to trigger pipeline. Status: {response.StatusCode}. Error: {error}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        return (false, $"Error triggering Azure DevOps pipeline: {ex.Message}");
+    }
+}
