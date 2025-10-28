@@ -1,7 +1,5 @@
-InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Username.Equals( value: __currentUsername_0, comparisonType: OrdinalIgnoreCase))' could not be translated. Additional information: Translation of the 'string.Equals' overload with a 'StringComparison' parameter is not supported. See https://go.microsoft.com/fwlink/?linkid=2129535 for more information. Either rewrite the query in a form that can be translated, or switch to client evaluation explicitly by inserting a call to 'AsEnumerable', 'AsAsyncEnumerable', 'ToList', or 'ToListAsync'. See https://go.microsoft.com/fwlink/?linkid=2101038 for more information.
-
 @{
-    ViewData["Title"] = "Add Team Member";
+    ViewData["Title"] = "Remove Team Member";
 }
 
 <style>
@@ -45,32 +43,7 @@ InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Usern
         border-color: #000;
     }
 
-    .radio-group {
-        display: flex;
-        gap: 30px;
-        align-items: center;
-    }
-
-    .radio-option {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .radio-option input[type="radio"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-    }
-
-    .radio-option label {
-        font-size: 16px;
-        color: #000;
-        cursor: pointer;
-        margin: 0;
-    }
-
-    .create-btn {
+    .remove-btn {
         background-color: white;
         color: #000;
         border: 2px solid #000;
@@ -81,10 +54,10 @@ InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Usern
         cursor: pointer;
         transition: all 0.3s;
         margin-left: 240px;
-        margin-top: 40px;
+        margin-top: 20px;
     }
 
-    .create-btn:hover {
+    .remove-btn:hover {
         background-color: #000;
         color: white;
     }
@@ -96,9 +69,17 @@ InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Usern
         border-radius: 4px;
         margin-bottom: 25px;
     }
+
+    .success-message {
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
 </style>
 
-<h1 class="page-title">Add Team Member</h1>
+<h1 class="page-title">Remove Team Member</h1>
 
 @if (ViewBag.Error != null)
 {
@@ -107,7 +88,14 @@ InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Usern
     </div>
 }
 
-<form method="post" action="/Team/AddMember" class="form-container">
+@if (ViewBag.Success != null)
+{
+    <div class="success-message">
+        @ViewBag.Success
+    </div>
+}
+
+<form method="post" action="/Team/RemoveMember" class="form-container">
     <div class="form-row">
         <label for="Name" class="form-label">Name</label>
         <input type="text"
@@ -117,26 +105,5 @@ InvalidOperationException: The LINQ expression 'DbSet<TAd>() .Where(t => t.Usern
                required />
     </div>
 
-    <div class="form-row">
-        <label class="form-label">Create Access</label>
-        <div class="radio-group">
-            <div class="radio-option">
-                <input type="radio"
-                       id="CreateAccessYes"
-                       name="CreateAccess"
-                       value="Yes"
-                       checked />
-                <label for="CreateAccessYes">Yes</label>
-            </div>
-            <div class="radio-option">
-                <input type="radio"
-                       id="CreateAccessNo"
-                       name="CreateAccess"
-                       value="No" />
-                <label for="CreateAccessNo">No</label>
-            </div>
-        </div>
-    </div>
-
-    <button type="submit" class="create-btn">Create Team Member</button>
+    <button type="submit" class="remove-btn">Remove Team Member</button>
 </form>
