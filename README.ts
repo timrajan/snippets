@@ -1,113 +1,73 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
+using StudentManagement.Data;
 using StudentManagement.Models;
 
-namespace StudentManagement.Data
+namespace StudentManagement.Controllers
 {
-    public class ApplicationDbContext : DbContext
+    public class StudentController : BaseController
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
+        private readonly ApplicationDbContext _context;
+
+        public StudentController(ApplicationDbContext context)
         {
+            _context = context;
         }
 
-        // DbSets for each table
-        public DbSet<Team> Teams { get; set; }
-        public DbSet<Student> Students { get; set; }
-        public DbSet<TeamAdmin> Users { get; set; }
-        public DbSet<StudyRecord> StudyRecords { get; set; }
-        public DbSet<SportsRecord> SportsRecords { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        public IActionResult Index()
         {
-            base.OnModelCreating(modelBuilder);
+            var students = _context.Students.ToList();
+            return View(students);
+        }
 
-            // Configure Team entity
-            modelBuilder.Entity<Team>(entity =>
+        // NEW: Show students grouped by team
+        public IActionResult ByTeam()
+        {
+            // We'll pass BOTH students and teams to the view
+            // For now, just pass students
+            var students = _context.Students.ToList();
+            return View(students);
+        }
+
+        // GET: Show form to create a new student
+        [HttpGet]
+        public IActionResult Create()
+        {
+            // Pass list of teams so Team Admin can select which team
+            // (Later, we'll restrict this to only THEIR team)
+            var teams = _context.Teams.ToList();
+            ViewBag.Teams = teams;
+            return View();
+        }
+
+        // POST: Receive form data and create the student
+        [HttpPost]
+        public IActionResult Create(Student student)
+        {
+            // Validate the data
+            if (string.IsNullOrEmpty(student.Name) ||
+                string.IsNullOrEmpty(student.Email) ||
+                student.TeamId == 0)
             {
-                entity.ToTable("teams");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-                entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
-                entity.Property(e => e.TeamAdminName).HasColumnName("team_admin_name").HasMaxLength(100);
-                entity.Property(e => e.CreatedDate).HasColumnName("created_date");
-            });
+                ViewBag.Error = "Name, Email, and Team are required fields.";
+                ViewBag.Teams = _context.Teams.ToList();
+                return View(student);
+            }
 
-            // Configure Student entity
-            modelBuilder.Entity<Student>(entity =>
-            {
-                entity.ToTable("students");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150).IsRequired();
-                entity.Property(e => e.TeamId).HasColumnName("team_id");
-                entity.Property(e => e.EnrollmentDate).HasColumnName("enrollment_date");
-                entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20);
-                entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(50);
+            // Set the enrollment date
+            student.EnrollmentDate = DateTime.Now;
 
-                // Foreign key relationship with Team
-                entity.HasOne<Team>()
-                    .WithMany()
-                    .HasForeignKey(e => e.TeamId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
+            // Add to database
+            _context.Students.Add(student);
+            _context.SaveChanges();
 
-            // Configure TeamAdmin entity (maps to 'users' table)
-            modelBuilder.Entity<TeamAdmin>(entity =>
-            {
-                entity.ToTable("users");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.TeamId).HasColumnName("team_id");
-                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150).IsRequired();
-                entity.Property(e => e.Username).HasColumnName("username").HasMaxLength(100).IsRequired();
-                entity.Property(e => e.AddedDate).HasColumnName("added_date");
+            // Get the team name for the success message
+            var team = _context.Teams.FirstOrDefault(t => t.Id == student.TeamId);
 
-                // Foreign key relationship with Team
-                entity.HasOne<Team>()
-                    .WithMany()
-                    .HasForeignKey(e => e.TeamId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
+            // Show success message
+            TempData["SuccessMessage"] = $"Student '{student.Name}' has been added to {team?.Name}!";
 
-            // Configure StudyRecord entity
-            modelBuilder.Entity<StudyRecord>(entity =>
-            {
-                entity.ToTable("study_records");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.Team).HasColumnName("team").HasMaxLength(50);
-                entity.Property(e => e.FirstName).HasColumnName("first_name").HasMaxLength(100);
-                entity.Property(e => e.MiddleName).HasColumnName("middle_name").HasMaxLength(100);
-                entity.Property(e => e.LastName).HasColumnName("last_name").HasMaxLength(100);
-                entity.Property(e => e.DateOfBirth).HasColumnName("date_of_birth").HasMaxLength(50);
-                entity.Property(e => e.EmailAddress).HasColumnName("email_address").HasMaxLength(150);
-                entity.Property(e => e.StudentIdentityID).HasColumnName("student_identity_id").HasMaxLength(50);
-                entity.Property(e => e.StudentInitialID).HasColumnName("student_initial_id").HasMaxLength(50);
-                entity.Property(e => e.Environment).HasColumnName("environment").HasMaxLength(50);
-                entity.Property(e => e.StudentIQLevel).HasColumnName("student_iq_level").HasMaxLength(50);
-                entity.Property(e => e.StudentRollNumber).HasColumnName("student_roll_number").HasMaxLength(50);
-                entity.Property(e => e.StudentRollName).HasColumnName("student_roll_name").HasMaxLength(100);
-                entity.Property(e => e.StudentParentEmailAddress).HasColumnName("student_parent_email_address").HasMaxLength(150);
-                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
-                entity.Property(e => e.Type).HasColumnName("type").HasMaxLength(50);
-                entity.Property(e => e.Tags).HasColumnName("tags").HasMaxLength(200);
-                entity.Property(e => e.CreatedDate).HasColumnName("created_date");
-            });
-
-            // Configure SportsRecord entity
-            modelBuilder.Entity<SportsRecord>(entity =>
-            {
-                entity.ToTable("sports_records");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.StudentName).HasColumnName("student_name").HasMaxLength(150);
-                entity.Property(e => e.Sport).HasColumnName("sport").HasMaxLength(100);
-                entity.Property(e => e.Score).HasColumnName("score");
-                entity.Property(e => e.Date).HasColumnName("date");
-            });
+            // Redirect to the students list
+            return RedirectToAction("Index");
         }
     }
 }
