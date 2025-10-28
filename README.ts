@@ -1,3 +1,4 @@
+
 @model StudentManagement.Models.Team
 
 @{
@@ -42,6 +43,24 @@
     }
 
     .form-input:focus {
+        border-color: #000;
+    }
+
+    .form-textarea {
+        padding: 10px 15px;
+        font-size: 16px;
+        border: 2px solid #000;
+        border-radius: 5px;
+        background-color: white;
+        color: #000;
+        outline: none;
+        width: 300px;
+        min-height: 100px;
+        resize: vertical;
+        font-family: Arial, sans-serif;
+    }
+
+    .form-textarea:focus {
         border-color: #000;
     }
 
@@ -91,6 +110,13 @@
                class="form-input"
                value="@Model?.Name"
                required />
+    </div>
+
+    <div class="form-row">
+        <label for="Description" class="form-label">Team Description</label>
+        <textarea id="Description"
+                  name="Description"
+                  class="form-textarea">@Model?.Description</textarea>
     </div>
 
     <div class="form-row">
