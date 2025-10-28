@@ -1,196 +1,113 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StudentManagement.Models;
-using StudentManagement.Services;
 
-namespace StudentManagement.Controllers
+namespace StudentManagement.Data
 {
-    public class StudyRecordController : BaseController
+    public class ApplicationDbContext : DbContext
     {
-        private readonly DataService _dataService;
-        private readonly AzureDevOpsService _azureDevOpsService;
-
-        public StudyRecordController(DataService dataService, AzureDevOpsService azureDevOpsService)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
         {
-            _dataService = dataService;
-            _azureDevOpsService = azureDevOpsService;
         }
 
-        // Show the main study record page with buttons
-        public IActionResult Index()
+        // DbSets for each table
+        public DbSet<Team> Teams { get; set; }
+        public DbSet<Student> Students { get; set; }
+        public DbSet<TeamAdmin> Users { get; set; }
+        public DbSet<StudyRecord> StudyRecords { get; set; }
+        public DbSet<SportsRecord> SportsRecords { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            return View();
-        }
+            base.OnModelCreating(modelBuilder);
 
-        // Show all study records
-        public IActionResult AllRecords()
-        {
-            return View(_dataService.StudyRecords);
-        }
-
-        // GET: Show form to select a student
-        [HttpGet]
-        public IActionResult SelectStudent()
-        {
-            ViewBag.Students = _dataService.Students;
-            return View();
-        }
-
-        // GET: Show form to select a subject type
-        [HttpGet]
-        public IActionResult SelectSubject()
-        {
-            // Note: StudyRecord model changed, no longer has Subject field
-            ViewBag.Subjects = new List<string>();
-            return View();
-        }
-
-        // Show study records by subject
-        public IActionResult BySubject(string subject)
-        {
-            // Note: StudyRecord model changed, no longer has Subject field
-            var records = new List<StudyRecord>();
-            ViewBag.Subject = subject;
-            return View(records);
-        }
-
-        // Show study records for a specific student
-        public IActionResult ByStudent(string firstName)
-        {
-            var studentRecords = _dataService.StudyRecords
-                .Where(r => r.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            ViewBag.StudentName = firstName;
-
-            return View(studentRecords);
-        }
-
-        // GET: Show the form to create a new study record
-        [HttpGet]
-        public IActionResult Create()
-        {
-            // Get current user's Windows username
-            var username = ViewBag.Username?.ToString() ?? Environment.UserName;
-
-            // Find the TeamAdmin record for this user
-            var teamAdmin = _dataService.Users.FirstOrDefault(ta =>
-                ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
-            if (teamAdmin != null)
+            // Configure Team entity
+            modelBuilder.Entity<Team>(entity =>
             {
-                // Map TeamId to team name (teamA, teamB, teamC)
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
+                entity.ToTable("teams");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(e => e.TeamAdminName).HasColumnName("team_admin_name").HasMaxLength(100);
+                entity.Property(e => e.CreatedDate).HasColumnName("created_date");
+            });
 
-                ViewBag.UserTeam = teamName;
-            }
-            else
+            // Configure Student entity
+            modelBuilder.Entity<Student>(entity =>
             {
-                // Default to teamA if user not found
-                ViewBag.UserTeam = "teamA";
-            }
+                entity.ToTable("students");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.TeamId).HasColumnName("team_id");
+                entity.Property(e => e.EnrollmentDate).HasColumnName("enrollment_date");
+                entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20);
+                entity.Property(e => e.Role).HasColumnName("role").HasMaxLength(50);
 
-            return View();
-        }
+                // Foreign key relationship with Team
+                entity.HasOne<Team>()
+                    .WithMany()
+                    .HasForeignKey(e => e.TeamId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 
-        // POST: Receive the form data and save it
-        [HttpPost]
-        public IActionResult Create(StudyRecord record)
-        {
-            // Generate a new ID
-            record.Id = _dataService.StudyRecords.Count > 0
-                ? _dataService.StudyRecords.Max(r => r.Id) + 1
-                : 1;
-
-            // Set the created date
-            record.CreatedDate = DateTime.Now;
-
-            // Trigger Azure DevOps Build Pipeline with captured values
-            var (success, message) = _azureDevOpsService.TriggerBuildPipeline(record);
-
-            if (success)
+            // Configure TeamAdmin entity (maps to 'users' table)
+            modelBuilder.Entity<TeamAdmin>(entity =>
             {
-                TempData["SuccessMessage"] = message;
-            }
-            else
+                entity.ToTable("users");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.TeamId).HasColumnName("team_id");
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.Username).HasColumnName("username").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.AddedDate).HasColumnName("added_date");
+
+                // Foreign key relationship with Team
+                entity.HasOne<Team>()
+                    .WithMany()
+                    .HasForeignKey(e => e.TeamId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Configure StudyRecord entity
+            modelBuilder.Entity<StudyRecord>(entity =>
             {
-                TempData["ErrorMessage"] = message;
-            }
+                entity.ToTable("study_records");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Team).HasColumnName("team").HasMaxLength(50);
+                entity.Property(e => e.FirstName).HasColumnName("first_name").HasMaxLength(100);
+                entity.Property(e => e.MiddleName).HasColumnName("middle_name").HasMaxLength(100);
+                entity.Property(e => e.LastName).HasColumnName("last_name").HasMaxLength(100);
+                entity.Property(e => e.DateOfBirth).HasColumnName("date_of_birth").HasMaxLength(50);
+                entity.Property(e => e.EmailAddress).HasColumnName("email_address").HasMaxLength(150);
+                entity.Property(e => e.StudentIdentityID).HasColumnName("student_identity_id").HasMaxLength(50);
+                entity.Property(e => e.StudentInitialID).HasColumnName("student_initial_id").HasMaxLength(50);
+                entity.Property(e => e.Environment).HasColumnName("environment").HasMaxLength(50);
+                entity.Property(e => e.StudentIQLevel).HasColumnName("student_iq_level").HasMaxLength(50);
+                entity.Property(e => e.StudentRollNumber).HasColumnName("student_roll_number").HasMaxLength(50);
+                entity.Property(e => e.StudentRollName).HasColumnName("student_roll_name").HasMaxLength(100);
+                entity.Property(e => e.StudentParentEmailAddress).HasColumnName("student_parent_email_address").HasMaxLength(150);
+                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50);
+                entity.Property(e => e.Type).HasColumnName("type").HasMaxLength(50);
+                entity.Property(e => e.Tags).HasColumnName("tags").HasMaxLength(200);
+                entity.Property(e => e.CreatedDate).HasColumnName("created_date");
+            });
 
-            // Add to our list
-            _dataService.StudyRecords.Add(record);
-
-            // Redirect to the index page
-            return RedirectToAction("Index");
-        }
-
-        // GET: Show the View Students page
-        [HttpGet]
-        public IActionResult ViewStudents()
-        {
-            // Get current user's Windows username
-            var username = ViewBag.Username?.ToString() ?? Environment.UserName;
-
-            // Find the TeamAdmin record for this user
-            var teamAdmin = _dataService.Users.FirstOrDefault(ta =>
-                ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
-            if (teamAdmin != null)
+            // Configure SportsRecord entity
+            modelBuilder.Entity<SportsRecord>(entity =>
             {
-                // Map TeamId to team name (teamA, teamB, teamC)
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
-
-                ViewBag.UserTeam = teamName;
-            }
-            else
-            {
-                // Default to teamA if user not found
-                ViewBag.UserTeam = "teamA";
-            }
-
-            return View();
-        }
-
-        // POST: Handle the View button click (for future DB implementation)
-        [HttpPost]
-        public IActionResult ViewStudents(string filterType, string filterValue)
-        {
-            // Get current user's team info (same as GET action)
-            var username = ViewBag.Username?.ToString() ?? Environment.UserName;
-            var teamAdmin = _dataService.Users.FirstOrDefault(ta =>
-                ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
-            if (teamAdmin != null)
-            {
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
-                ViewBag.UserTeam = teamName;
-            }
-            else
-            {
-                ViewBag.UserTeam = "teamA";
-            }
-
-            // This will be implemented when DB is ready
-            // For now, just return to the same view
-            ViewBag.Message = $"Searching for students by {filterType}: {filterValue}";
-            return View();
+                entity.ToTable("sports_records");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.StudentName).HasColumnName("student_name").HasMaxLength(150);
+                entity.Property(e => e.Sport).HasColumnName("sport").HasMaxLength(100);
+                entity.Property(e => e.Score).HasColumnName("score");
+                entity.Property(e => e.Date).HasColumnName("date");
+            });
         }
     }
 }
