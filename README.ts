@@ -67,6 +67,28 @@
         text-decoration: none;
     }
 
+    .remove-team-btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .remove-team-btn:disabled:hover {
+        background-color: #cccccc;
+        box-shadow: none;
+    }
+
+    .checkbox-cell {
+        text-align: center;
+        width: 80px;
+    }
+
+    .team-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
     .teams-table {
         margin-top: 40px;
         width: 100%;
@@ -119,7 +141,7 @@
         @if (role == "SuperAdmin")
         {
             <a href="/Team/Create" class="add-team-btn">Add Team</a>
-            <a href="/Team/Remove" class="remove-team-btn">Remove Team</a>
+            <button id="removeTeamBtn" class="remove-team-btn" disabled onclick="window.location.href='/Team/Remove'">Remove Team</button>
         }
         else
         {
@@ -142,6 +164,10 @@ else
             <tr>
                 <th>Name</th>
                 <th>@(role == "SuperAdmin" ? "Admins" : "Team Members")</th>
+                @if (role == "SuperAdmin")
+                {
+                    <th class="checkbox-cell">Select</th>
+                }
             </tr>
         </thead>
         <tbody>
@@ -159,6 +185,9 @@ else
                     <tr>
                         <td class="team-name-cell">@team.Name</td>
                         <td class="admins-cell">@adminNames</td>
+                        <td class="checkbox-cell">
+                            <input type="checkbox" class="team-checkbox" value="@team.Id" onchange="updateRemoveButtonState()" />
+                        </td>
                     </tr>
                 }
                 else
@@ -178,4 +207,16 @@ else
             }
         </tbody>
     </table>
+
+    @if (role == "SuperAdmin")
+    {
+        <script>
+            function updateRemoveButtonState() {
+                const checkboxes = document.querySelectorAll('.team-checkbox');
+                const removeBtn = document.getElementById('removeTeamBtn');
+                const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+                removeBtn.disabled = !anyChecked;
+            }
+        </script>
+    }
 }
