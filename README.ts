@@ -1,3 +1,13 @@
+CREATE TABLE employees (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    hire_date DATE,
+    salary DECIMAL(10, 2)
+);
+
+
 using Microsoft.AspNetCore.Mvc;
 using StudentManagement.Data;
 using StudentManagement.Models;
