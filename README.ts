@@ -1,136 +1,140 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Team Admin</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f5f5f5;
-        }
+@{
+    ViewData["Title"] = "Add Team Member";
+}
 
-        .back-btn {
-            background-color: white;
-            color: black;
-            border: 2px solid black;
-            border-radius: 30px;
-            padding: 10px 30px;
-            font-size: 16px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-
-        .back-btn:hover {
-            background-color: #f0f0f0;
-        }
-
-        h1 {
-            color: #000;
-            font-size: 32px;
-            margin-bottom: 60px;
-        }
-
-        .form-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 60px;
-        }
-
-        label {
-            font-size: 18px;
-            color: #000;
-            width: 200px;
-            font-weight: normal;
-        }
-
-        input[type="text"] {
-            width: 300px;
-            padding: 10px;
-            border: 1px solid #000;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #000;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 20px;
-            margin-left: 200px;
-        }
-
-        .submit-btn {
-            background-color: white;
-            color: black;
-            border: 2px solid black;
-            border-radius: 30px;
-            padding: 10px 40px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .submit-btn:hover {
-            background-color: #f0f0f0;
-        }
-
-        .cancel-btn {
-            background-color: white;
-            color: black;
-            border: 2px solid black;
-            border-radius: 30px;
-            padding: 10px 40px;
-            font-size: 16px;
-            text-decoration: none;
-            display: inline-block;
-            cursor: pointer;
-        }
-
-        .cancel-btn:hover {
-            background-color: #f0f0f0;
-        }
-
-        .error-message {
-            background-color: #f44336;
-            color: white;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 25px;
-        }
-    </style>
-</head>
-<body>
-    <a href="/Team/Index" class="back-btn">Back</a>
-
-    <h1>Add Team Admin</h1>
-
-    @if (ViewBag.Error != null)
-    {
-        <div class="error-message">
-            @ViewBag.Error
-        </div>
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 60px;
     }
 
-    <form method="post" action="/Team/AddAdmin/@ViewBag.Team.Id">
+    .form-container {
+        max-width: 600px;
+    }
 
-        <div class="form-row">
-            <label for="adminUsername">Admin Username</label>
-            <input type="text"
-                   id="adminUsername"
-                   name="adminUsername"
-                   required
-                   maxlength="100" />
+    .form-row {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 40px;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+
+    .form-label {
+        font-size: 18px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .form-input {
+        padding: 10px 15px;
+        font-size: 16px;
+        border: 2px solid #000;
+        border-radius: 5px;
+        background-color: white;
+        color: #000;
+        outline: none;
+        width: 300px;
+    }
+
+    .form-input:focus {
+        border-color: #000;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 30px;
+        align-items: center;
+    }
+
+    .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .radio-option input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .radio-option label {
+        font-size: 16px;
+        color: #000;
+        cursor: pointer;
+        margin: 0;
+    }
+
+    .create-btn {
+        background-color: white;
+        color: #000;
+        border: 2px solid #000;
+        border-radius: 25px;
+        padding: 12px 40px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-left: 240px;
+        margin-top: 40px;
+    }
+
+    .create-btn:hover {
+        background-color: #000;
+        color: white;
+    }
+
+    .error-message {
+        background-color: #f44336;
+        color: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+</style>
+
+<h1 class="page-title">Add Team Member</h1>
+
+@if (ViewBag.Error != null)
+{
+    <div class="error-message">
+        @ViewBag.Error
+    </div>
+}
+
+<form method="post" action="/Team/AddMember" class="form-container">
+    <div class="form-row">
+        <label for="Name" class="form-label">Name</label>
+        <input type="text"
+               id="Name"
+               name="Name"
+               class="form-input"
+               required />
+    </div>
+
+    <div class="form-row">
+        <label class="form-label">Create Access</label>
+        <div class="radio-group">
+            <div class="radio-option">
+                <input type="radio"
+                       id="CreateAccessYes"
+                       name="CreateAccess"
+                       value="Yes"
+                       checked />
+                <label for="CreateAccessYes">Yes</label>
+            </div>
+            <div class="radio-option">
+                <input type="radio"
+                       id="CreateAccessNo"
+                       name="CreateAccess"
+                       value="No" />
+                <label for="CreateAccessNo">No</label>
+            </div>
         </div>
+    </div>
 
-        <div class="button-group">
-            <button type="submit" class="submit-btn">submit</button>
-            <a href="/Team/Index" class="cancel-btn">Cancel</a>
-        </div>
-
-    </form>
-</body>
-</html>
+    <button type="submit" class="create-btn">Create Team Member</button>
+</form>
