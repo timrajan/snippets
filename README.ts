@@ -60,7 +60,7 @@ namespace StudentManagement.Controllers
         public IActionResult ByStudent(string firstName)
         {
             var studentRecords = _context.StudyRecords
-                .Where(r => r.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase))
+                .Where(r => r.FirstName.ToLower() == firstName.ToLower())
                 .ToList();
 
             ViewBag.StudentName = firstName;
@@ -77,7 +77,7 @@ namespace StudentManagement.Controllers
 
             // Find the TeamAdmin record for this user
             var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
 
             if (teamAdmin != null)
             {
@@ -137,7 +137,7 @@ namespace StudentManagement.Controllers
 
             // Find the TeamAdmin record for this user
             var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
 
             if (teamAdmin != null)
             {
@@ -168,7 +168,7 @@ namespace StudentManagement.Controllers
             // Get current user's team info (same as GET action)
             string username = ViewBag.Username?.ToString() ?? Environment.UserName;
             var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
 
             if (teamAdmin != null)
             {
