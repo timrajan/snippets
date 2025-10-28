@@ -1,205 +1,188 @@
-CREATE TABLE employees (
-    id SERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE,
-    hire_date DATE,
-    salary DECIMAL(10, 2)
-);
+@model List<StudentManagement.Models.Team>
 
+@{
+    var role = ViewBag.Role ?? "TeamAdmin";
+    ViewData["Title"] = role == "SuperAdmin" ? "Teams Management" : "Team Management";
+}
 
-using Microsoft.AspNetCore.Mvc;
-using StudentManagement.Data;
-using StudentManagement.Models;
-using StudentManagement.Services;
-
-namespace StudentManagement.Controllers
-{
-    public class StudyRecordController : BaseController
-    {
-        private readonly ApplicationDbContext _context;
-        private readonly AzureDevOpsService _azureDevOpsService;
-
-        public StudyRecordController(ApplicationDbContext context, AzureDevOpsService azureDevOpsService)
-        {
-            _context = context;
-            _azureDevOpsService = azureDevOpsService;
-        }
-
-        // Show the main study record page with buttons
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-        // Show all study records
-        public IActionResult AllRecords()
-        {
-            var records = _context.StudyRecords.ToList();
-            return View(records);
-        }
-
-        // GET: Show form to select a student
-        [HttpGet]
-        public IActionResult SelectStudent()
-        {
-            var students = _context.Students.ToList();
-            ViewBag.Students = students;
-            return View();
-        }
-
-        // GET: Show form to select a subject type
-        [HttpGet]
-        public IActionResult SelectSubject()
-        {
-            // Note: StudyRecord model changed, no longer has Subject field
-            ViewBag.Subjects = new List<string>();
-            return View();
-        }
-
-        // Show study records by subject
-        public IActionResult BySubject(string subject)
-        {
-            // Note: StudyRecord model changed, no longer has Subject field
-            var records = new List<StudyRecord>();
-            ViewBag.Subject = subject;
-            return View(records);
-        }
-
-        // Show study records for a specific student
-        public IActionResult ByStudent(string firstName)
-        {
-            var studentRecords = _context.StudyRecords
-                .Where(r => r.FirstName.ToLower() == firstName.ToLower())
-                .ToList();
-
-            ViewBag.StudentName = firstName;
-
-            return View(studentRecords);
-        }
-
-        // GET: Show the form to create a new study record
-        [HttpGet]
-        public IActionResult Create()
-        {
-            // Get current user's Windows username
-            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
-
-            // Find the TeamAdmin record for this user
-            var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
-
-            if (teamAdmin != null)
-            {
-                // Map TeamId to team name (teamA, teamB, teamC)
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
-
-                ViewBag.UserTeam = teamName;
-            }
-            else
-            {
-                // Default to teamA if user not found
-                ViewBag.UserTeam = "teamA";
-            }
-
-            return View();
-        }
-
-        // POST: Receive the form data and save it
-        [HttpPost]
-        public IActionResult Create(StudyRecord record)
-        {
-            // Set the created date
-            record.CreatedDate = DateTime.Now;
-
-            // Trigger Azure DevOps Build Pipeline with captured values
-            var (success, message) = _azureDevOpsService.TriggerBuildPipeline(record);
-
-            if (success)
-            {
-                TempData["SuccessMessage"] = message;
-            }
-            else
-            {
-                TempData["ErrorMessage"] = message;
-            }
-
-            // Add to database
-            _context.StudyRecords.Add(record);
-            _context.SaveChanges();
-
-            // Redirect to the index page
-            return RedirectToAction("Index");
-        }
-
-        // GET: Show the View Students page
-        [HttpGet]
-        public IActionResult ViewStudents()
-        {
-            // Get current user's Windows username
-            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
-
-            // Find the TeamAdmin record for this user
-            var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
-
-            if (teamAdmin != null)
-            {
-                // Map TeamId to team name (teamA, teamB, teamC)
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
-
-                ViewBag.UserTeam = teamName;
-            }
-            else
-            {
-                // Default to teamA if user not found
-                ViewBag.UserTeam = "teamA";
-            }
-
-            return View();
-        }
-
-        // POST: Handle the View button click (for future DB implementation)
-        [HttpPost]
-        public IActionResult ViewStudents(string filterType, string filterValue)
-        {
-            // Get current user's team info (same as GET action)
-            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
-            var teamAdmin = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.ToLower() == username.ToLower());
-
-            if (teamAdmin != null)
-            {
-                var teamName = teamAdmin.TeamId switch
-                {
-                    1 => "teamA",
-                    2 => "teamB",
-                    3 => "teamC",
-                    _ => "teamA"
-                };
-                ViewBag.UserTeam = teamName;
-            }
-            else
-            {
-                ViewBag.UserTeam = "teamA";
-            }
-
-            // This will be implemented when DB is ready
-            // For now, just return to the same view
-            ViewBag.Message = $"Searching for students by {filterType}: {filterValue}";
-            return View();
-        }
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
     }
+
+    .page-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #000;
+        margin: 0;
+    }
+
+    .add-team-btn {
+        background-color: #4054B5;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 12px 40px;
+        font-size: 16px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-block;
+    }
+
+    .add-team-btn:hover {
+        background-color: #2f3f8f;
+        box-shadow: 0 4px 12px rgba(64, 84, 181, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 15px;
+    }
+
+    .remove-team-btn {
+        background-color: #4054B5;
+        color: white;
+        border: none;
+        border-radius: 30px;
+        padding: 12px 40px;
+        font-size: 16px;
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-block;
+    }
+
+    .remove-team-btn:hover {
+        background-color: #2f3f8f;
+        box-shadow: 0 4px 12px rgba(64, 84, 181, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .teams-table {
+        margin-top: 40px;
+    }
+
+    .table-header {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 40px;
+        margin-bottom: 20px;
+    }
+
+    .header-label {
+        font-weight: bold;
+        font-size: 18px;
+        color: #000;
+    }
+
+    .team-row {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 40px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .team-name {
+        font-size: 18px;
+        font-weight: 500;
+        color: #000;
+    }
+
+    .admin-textbox {
+        width: 100%;
+        max-width: 500px;
+        padding: 12px 20px;
+        font-size: 16px;
+        border: 2px solid #000;
+        border-radius: 25px;
+        background-color: white;
+        color: #000;
+        outline: none;
+        cursor: default;
+    }
+
+    .admin-textbox:focus {
+        border-color: #000;
+    }
+
+    .no-teams {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-size: 18px;
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">@(role == "SuperAdmin" ? "Teams Management" : "Team Management")</h1>
+    <div class="button-group">
+        @if (role == "SuperAdmin")
+        {
+            <a href="/Team/Create" class="add-team-btn">Add Team</a>
+            <a href="/Team/Remove" class="remove-team-btn">Remove Team</a>
+        }
+        else
+        {
+            <a href="/Team/AddMember" class="add-team-btn">Add Team Member</a>
+            <a href="/Team/RemoveMember" class="remove-team-btn">Remove Team Member</a>
+        }
+    </div>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="no-teams">
+        <p>No teams yet. Create your first team to get started!</p>
+    </div>
+}
+else
+{
+    <div class="teams-table">
+        <div class="table-header">
+            <div class="header-label">Name</div>
+            <div class="header-label">@(role == "SuperAdmin" ? "Admins" : "Team Member")</div>
+        </div>
+
+        @foreach (var team in Model.OrderBy(t => t.Name))
+        {
+            @if (role == "SuperAdmin")
+            {
+                @* SuperAdmin view: Show team admins *@
+                var teamAdminsList = ((List<StudentManagement.Models.TeamAdmin>)ViewBag.TeamAdmins)
+                    .Where(a => a.TeamId == team.Id)
+                    .ToList();
+
+                var adminNames = string.Join(", ", teamAdminsList.Select(a => a.Name));
+
+                <div class="team-row">
+                    <div class="team-name">@team.Name</div>
+                    <input type="text" class="admin-textbox" value="@adminNames" readonly />
+                </div>
+            }
+            else
+            {
+                @* TeamAdmin view: Show team members (students) *@
+                var teamStudents = ((List<StudentManagement.Models.Student>)ViewBag.Students)
+                    .Where(s => s.TeamId == team.Id)
+                    .ToList();
+
+                var memberNames = string.Join(", ", teamStudents.Select(s => s.Name));
+
+                <div class="team-row">
+                    <div class="team-name">@team.Name</div>
+                    <input type="text" class="admin-textbox" value="@memberNames" readonly />
+                </div>
+            }
+        }
+    </div>
 }
