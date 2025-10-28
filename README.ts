@@ -1,319 +1,195 @@
 using Microsoft.AspNetCore.Mvc;
 using StudentManagement.Data;
 using StudentManagement.Models;
+using StudentManagement.Services;
 
 namespace StudentManagement.Controllers
 {
-    public class TeamController : BaseController
+    public class StudyRecordController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly AzureDevOpsService _azureDevOpsService;
 
-        public TeamController(ApplicationDbContext context)
+        public StudyRecordController(ApplicationDbContext context, AzureDevOpsService azureDevOpsService)
         {
             _context = context;
+            _azureDevOpsService = azureDevOpsService;
         }
 
-        // GET: Show all teams
+        // Show the main study record page with buttons
         public IActionResult Index()
         {
-            // Load teams with related data
-            var teamAdmins = _context.TeamAdmins.ToList();
-            var students = _context.Students.ToList();
-
-            // We need to pass BOTH teams and their admins/students to the view
-            ViewBag.TeamAdmins = teamAdmins;
-            ViewBag.Students = students;
-
-            // Get the current user's role and username
-            var role = ViewBag.Role as string;
-            var currentUsername = Environment.UserName;
-
-            // If TeamAdmin, only show their own team
-            if (role == "TeamAdmin")
-            {
-                // Find the team(s) that this admin manages
-                var adminRecord = _context.TeamAdmins
-                    .FirstOrDefault(ta => ta.Username.Equals(currentUsername, StringComparison.OrdinalIgnoreCase));
-
-                if (adminRecord != null)
-                {
-                    // Return only the teams this admin manages
-                    var adminTeams = _context.Teams
-                        .Where(t => t.Id == adminRecord.TeamId)
-                        .ToList();
-                    return View(adminTeams);
-                }
-            }
-
-            // For SuperAdmin or if no admin record found, show all teams
-            var allTeams = _context.Teams.ToList();
-            return View(allTeams);
+            return View();
         }
 
-        // GET: Show the form to create a new team
+        // Show all study records
+        public IActionResult AllRecords()
+        {
+            var records = _context.StudyRecords.ToList();
+            return View(records);
+        }
+
+        // GET: Show form to select a student
+        [HttpGet]
+        public IActionResult SelectStudent()
+        {
+            var students = _context.Students.ToList();
+            ViewBag.Students = students;
+            return View();
+        }
+
+        // GET: Show form to select a subject type
+        [HttpGet]
+        public IActionResult SelectSubject()
+        {
+            // Note: StudyRecord model changed, no longer has Subject field
+            ViewBag.Subjects = new List<string>();
+            return View();
+        }
+
+        // Show study records by subject
+        public IActionResult BySubject(string subject)
+        {
+            // Note: StudyRecord model changed, no longer has Subject field
+            var records = new List<StudyRecord>();
+            ViewBag.Subject = subject;
+            return View(records);
+        }
+
+        // Show study records for a specific student
+        public IActionResult ByStudent(string firstName)
+        {
+            var studentRecords = _context.StudyRecords
+                .Where(r => r.FirstName.Equals(firstName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            ViewBag.StudentName = firstName;
+
+            return View(studentRecords);
+        }
+
+        // GET: Show the form to create a new study record
         [HttpGet]
         public IActionResult Create()
         {
+            // Get current user's Windows username
+            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
+
+            // Find the TeamAdmin record for this user
+            var teamAdmin = _context.TeamAdmins
+                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (teamAdmin != null)
+            {
+                // Map TeamId to team name (teamA, teamB, teamC)
+                var teamName = teamAdmin.TeamId switch
+                {
+                    1 => "teamA",
+                    2 => "teamB",
+                    3 => "teamC",
+                    _ => "teamA"
+                };
+
+                ViewBag.UserTeam = teamName;
+            }
+            else
+            {
+                // Default to teamA if user not found
+                ViewBag.UserTeam = "teamA";
+            }
+
             return View();
         }
 
-        // POST: Receive the form data and create the team
+        // POST: Receive the form data and save it
         [HttpPost]
-        public IActionResult Create(Team team, string adminName, string adminEmail)
+        public IActionResult Create(StudyRecord record)
         {
-            // Validate team data
-            if (string.IsNullOrEmpty(team.Name))
-            {
-                ViewBag.Error = "Team name is required.";
-                return View(team);
-            }
-
-            // Validate at least one admin
-            if (string.IsNullOrEmpty(adminName))
-            {
-                ViewBag.Error = "Admin name is required.";
-                return View(team);
-            }
-
-            // Set default description if not provided
-            if (string.IsNullOrEmpty(team.Description))
-            {
-                team.Description = $"Team managed by {adminName}";
-            }
-
             // Set the created date
-            team.CreatedDate = DateTime.Now;
+            record.CreatedDate = DateTime.Now;
 
-            // Add the team (EF will auto-generate the ID)
-            _context.Teams.Add(team);
-            _context.SaveChanges();
+            // Trigger Azure DevOps Build Pipeline with captured values
+            var (success, message) = _azureDevOpsService.TriggerBuildPipeline(record);
 
-            // Create the first Team Admin
-            var newAdmin = new TeamAdmin
+            if (success)
             {
-                TeamId = team.Id,
-                Name = adminName,
-                Email = string.IsNullOrEmpty(adminEmail) ? $"{adminName.Replace(" ", "").ToLower()}@school.com" : adminEmail,
-                Username = "", // No Windows username by default
-                AddedDate = DateTime.Now
-            };
+                TempData["SuccessMessage"] = message;
+            }
+            else
+            {
+                TempData["ErrorMessage"] = message;
+            }
 
-            _context.TeamAdmins.Add(newAdmin);
+            // Add to database
+            _context.StudyRecords.Add(record);
             _context.SaveChanges();
 
-            // Show success message
-            TempData["SuccessMessage"] = $"Team '{team.Name}' has been created with {adminName} as Team Admin!";
-
-            // Redirect to the teams list
+            // Redirect to the index page
             return RedirectToAction("Index");
         }
 
-        // GET: Show form to add another admin to an existing team
+        // GET: Show the View Students page
         [HttpGet]
-        public IActionResult AddAdmin(int teamId)
+        public IActionResult ViewStudents()
         {
-            var team = _context.Teams.FirstOrDefault(t => t.Id == teamId);
-            if (team == null)
+            // Get current user's Windows username
+            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
+
+            // Find the TeamAdmin record for this user
+            var teamAdmin = _context.TeamAdmins
+                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (teamAdmin != null)
             {
-                return NotFound();
+                // Map TeamId to team name (teamA, teamB, teamC)
+                var teamName = teamAdmin.TeamId switch
+                {
+                    1 => "teamA",
+                    2 => "teamB",
+                    3 => "teamC",
+                    _ => "teamA"
+                };
+
+                ViewBag.UserTeam = teamName;
+            }
+            else
+            {
+                // Default to teamA if user not found
+                ViewBag.UserTeam = "teamA";
             }
 
-            ViewBag.Team = team;
             return View();
         }
 
-        // POST: Add a new admin to a team
+        // POST: Handle the View button click (for future DB implementation)
         [HttpPost]
-        public IActionResult AddAdmin(int teamId, string adminName, string adminEmail)
+        public IActionResult ViewStudents(string filterType, string filterValue)
         {
-            var team = _context.Teams.FirstOrDefault(t => t.Id == teamId);
-            if (team == null)
+            // Get current user's team info (same as GET action)
+            string username = ViewBag.Username?.ToString() ?? Environment.UserName;
+            var teamAdmin = _context.TeamAdmins
+                .FirstOrDefault(ta => ta.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (teamAdmin != null)
             {
-                return NotFound();
+                var teamName = teamAdmin.TeamId switch
+                {
+                    1 => "teamA",
+                    2 => "teamB",
+                    3 => "teamC",
+                    _ => "teamA"
+                };
+                ViewBag.UserTeam = teamName;
+            }
+            else
+            {
+                ViewBag.UserTeam = "teamA";
             }
 
-            // Validate
-            if (string.IsNullOrEmpty(adminName) || string.IsNullOrEmpty(adminEmail))
-            {
-                ViewBag.Error = "Admin name and email are required.";
-                ViewBag.Team = team;
-                return View();
-            }
-
-            // Create the new admin
-            var newAdmin = new TeamAdmin
-            {
-                TeamId = teamId,
-                Name = adminName,
-                Email = adminEmail,
-                Username = "", // No Windows username by default
-                AddedDate = DateTime.Now
-            };
-
-            _context.TeamAdmins.Add(newAdmin);
-            _context.SaveChanges();
-
-            TempData["SuccessMessage"] = $"{adminName} has been added as a Team Admin for '{team.Name}'!";
-
-            return RedirectToAction("Index");
-        }
-
-        // GET: Show form to remove a team
-        [HttpGet]
-        public IActionResult Remove()
-        {
+            // This will be implemented when DB is ready
+            // For now, just return to the same view
+            ViewBag.Message = $"Searching for students by {filterType}: {filterValue}";
             return View();
-        }
-
-        // POST: Remove a team by name
-        [HttpPost]
-        public IActionResult Remove(string teamName)
-        {
-            if (string.IsNullOrEmpty(teamName))
-            {
-                ViewBag.Error = "Team name is required.";
-                return View();
-            }
-
-            var team = _context.Teams
-                .FirstOrDefault(t => t.Name.Equals(teamName, StringComparison.OrdinalIgnoreCase));
-
-            if (team == null)
-            {
-                ViewBag.Error = $"Team '{teamName}' not found.";
-                return View();
-            }
-
-            // Remove all admins associated with this team
-            var adminsToRemove = _context.TeamAdmins
-                .Where(a => a.TeamId == team.Id)
-                .ToList();
-            _context.TeamAdmins.RemoveRange(adminsToRemove);
-
-            // Remove the team
-            _context.Teams.Remove(team);
-            _context.SaveChanges();
-
-            TempData["SuccessMessage"] = $"Team '{teamName}' has been removed successfully!";
-            return RedirectToAction("Index");
-        }
-
-        // GET: Show form to add a team member
-        [HttpGet]
-        public IActionResult AddMember()
-        {
-            return View();
-        }
-
-        // POST: Add a new team member (student)
-        [HttpPost]
-        public IActionResult AddMember(string name, string createAccess)
-        {
-            // Validate
-            if (string.IsNullOrEmpty(name))
-            {
-                ViewBag.Error = "Name is required.";
-                return View();
-            }
-
-            // Get the current Windows username
-            var currentUsername = Environment.UserName;
-
-            // Find the team(s) that this admin manages
-            var adminRecord = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.Equals(currentUsername, StringComparison.OrdinalIgnoreCase));
-
-            if (adminRecord == null)
-            {
-                ViewBag.Error = "You are not authorized to add team members. No team admin record found for your username.";
-                return View();
-            }
-
-            // Get the team
-            var team = _context.Teams.FirstOrDefault(t => t.Id == adminRecord.TeamId);
-            if (team == null)
-            {
-                ViewBag.Error = "Your assigned team could not be found.";
-                return View();
-            }
-
-            // Create the new student (team member) - only for the admin's team
-            var newStudent = new Student
-            {
-                Name = name,
-                Email = $"{name.Replace(" ", "").ToLower()}@school.com",
-                TeamId = team.Id,
-                EnrollmentDate = DateTime.Now,
-                Role = createAccess == "Yes" ? "Creator" : "Viewer"
-            };
-
-            _context.Students.Add(newStudent);
-            _context.SaveChanges();
-
-            TempData["SuccessMessage"] = $"{name} has been added to {team.Name} with {(createAccess == "Yes" ? "Creator" : "Viewer")} access!";
-
-            return RedirectToAction("Index");
-        }
-
-        // GET: Show form to remove a team member
-        [HttpGet]
-        public IActionResult RemoveMember()
-        {
-            return View();
-        }
-
-        // POST: Remove a team member by name
-        [HttpPost]
-        public IActionResult RemoveMember(string name)
-        {
-            if (string.IsNullOrEmpty(name))
-            {
-                ViewBag.Error = "Name is required.";
-                return View();
-            }
-
-            // Get the current Windows username
-            var currentUsername = Environment.UserName;
-
-            // Find the team(s) that this admin manages
-            var adminRecord = _context.TeamAdmins
-                .FirstOrDefault(ta => ta.Username.Equals(currentUsername, StringComparison.OrdinalIgnoreCase));
-
-            if (adminRecord == null)
-            {
-                ViewBag.Error = "You are not authorized to remove team members. No team admin record found for your username.";
-                return View();
-            }
-
-            // Find the student
-            var student = _context.Students
-                .FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-            if (student == null)
-            {
-                ViewBag.Error = $"Team member '{name}' not found.";
-                return View();
-            }
-
-            // Verify the student belongs to the admin's team
-            if (student.TeamId != adminRecord.TeamId)
-            {
-                ViewBag.Error = $"You can only remove members from your own team. '{name}' belongs to a different team.";
-                return View();
-            }
-
-            // Remove all sports records for this student
-            var sportsRecordsToRemove = _context.SportsRecords
-                .Where(sr => sr.StudentId == student.Id)
-                .ToList();
-            _context.SportsRecords.RemoveRange(sportsRecordsToRemove);
-
-            // Remove the student
-            _context.Students.Remove(student);
-            _context.SaveChanges();
-
-            TempData["SuccessMessage"] = $"Team member '{name}' has been removed successfully!";
-            return RedirectToAction("Index");
         }
     }
 }
