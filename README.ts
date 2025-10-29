@@ -1,4 +1,22 @@
-Install-Package: No match was found for the specified search criteria and module name 'Npgsql'. Try Get-PSRepository to see all available registered module repositories.
+Its probably a bit late but here is how Npgsql Version 4.0.2 can be included in powershell on Windows 10
+
+Register the packagesource NuGet with: register-PackageSource -provider NuGet -name nugetRepository -location http://www.nuget.org/api/v2
+
+In a powershell console with Administrator rights enter the command: Find-Package Npgsql | Install-Package positively answer the security questions
+
+3. Enter:
+
+Get-Package Npgsql
+
+and you will see the newly installed package Npgsql /
+
+Share
+Improve this answer
+Follow
+edited Aug 28, 2018 at 0:19
+
+
+
 ##############################################################################
 # StepByStep-UpdateAzureTests.ps1
 # 
