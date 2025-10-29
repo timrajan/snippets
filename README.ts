@@ -1,7 +1,8 @@
-.results-container {
-        margin: 60px auto 0 auto;
-        max-width: 800px;
+   .results-container {
+        margin-top: 60px;
+        padding: 0 40px;
         text-align: center;
+        width: 100%;
     }
 
     .results-title {
@@ -12,8 +13,9 @@
     }
 
     .results-table {
-        width: 100%;
+        width: 80%;
+        max-width: 1200px;
         border-collapse: collapse;
-        margin: 20px 0 0 0;
+        margin: 20px auto 0 auto;
         text-align: left;
     }
