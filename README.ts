@@ -1,44 +1,35 @@
-.results-container {
-        margin-top: 60px;
-    }
+@if (ViewBag.Results != null)
+    {
+        <div class="results-container">
+            <h2 class="results-title">Results for @ViewBag.FilterType: @ViewBag.FilterValue</h2>
 
-    .results-title {
-        font-size: 24px;
-        font-weight: bold;
-        color: #000;
-        margin-bottom: 20px;
-    }
-
-    .results-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-
-    .results-table th {
-        background-color: #f5f5f5;
-        text-align: left;
-        padding: 15px;
-        font-weight: bold;
-        font-size: 16px;
-        color: #000;
-        border: 1px solid #ddd;
-    }
-
-    .results-table td {
-        padding: 12px 15px;
-        font-size: 14px;
-        color: #000;
-        border: 1px solid #ddd;
-    }
-
-    .results-table tr:hover {
-        background-color: #f9f9f9;
-    }
-
-    .no-results {
-        text-align: center;
-        padding: 30px;
-        color: #999;
-        font-size: 16px;
+            @if (((List<StudentManagement.Models.StudyRecord>)ViewBag.Results).Count > 0)
+            {
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>First Name</th>
+                            <th>Email Address</th>
+                            <th>Student Initial ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in (List<StudentManagement.Models.StudyRecord>)ViewBag.Results)
+                        {
+                            <tr>
+                                <td>@record.FirstName</td>
+                                <td>@record.EmailAddress</td>
+                                <td>@record.StudentInitialID</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="no-results">
+                    No records found matching your criteria.
+                </div>
+            }
+        </div>
     }
