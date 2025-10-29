@@ -1,3 +1,4 @@
+Install-Package: No match was found for the specified search criteria and module name 'Npgsql'. Try Get-PSRepository to see all available registered module repositories.
 ##############################################################################
 # StepByStep-UpdateAzureTests.ps1
 # 
