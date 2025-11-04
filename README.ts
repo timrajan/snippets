@@ -1,6 +1,1 @@
-   /* Ensure page takes full width */
-    html, body {
-        width: 100% !important;
-        min-width: 100vw !important;
-        overflow-x: hidden;
-    }
+InvalidCastException: Reading as 'System.String' is not supported for fields having DataTypeName 'timestamp without time zone'
