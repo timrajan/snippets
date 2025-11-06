@@ -1,8 +1,10 @@
-    // API endpoint to get the next available study record ID
-        [HttpGet]
-        public JsonResult GetNextStudyRecordId()
-        {
-            var maxId = _context.StudyRecords.Max(r => (int?)r.Id) ?? 0;
-            var nextId = maxId + 1;
-            return Json(new { nextId = nextId });
-        }
+ // Add to database first to get the auto-generated ID
+            _context.StudyRecords.Add(record);
+            _context.SaveChanges();
+
+            // Now generate the email address using the actual assigned ID
+            var formattedId = record.Id.ToString("D3"); // Format with leading zeros (001, 002, etc.)
+            record.EmailAddress = $"{record.Team}-{record.Environment}-{record.Type}-{formattedId}@gmail.com";
+
+            // Update the record with the generated email
+            _context.SaveChanges();
