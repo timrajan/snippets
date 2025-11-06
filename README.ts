@@ -8,3 +8,6 @@
 
             // Update the record with the generated email
             _context.SaveChanges();
+
+
+<input type="text" id="EmailAddress" name="EmailAddress" value="@Model?.EmailAddress" readonly style="background-color: #f5f5f5; cursor: not-allowed;" />
