@@ -1,6 +1,18 @@
-public class TeamIndexViewModel
-{
-    public List<Team> Teams { get; set; }
-    public List<TeamMember> TeamMembers { get; set; }
-    public int? SelectedTeamId { get; set; }
-}
+var model = new TeamIndexViewModel
+        {
+            Teams = _context.Teams.ToList(),
+            SelectedTeamId = teamId
+        };
+
+        if (teamId.HasValue)
+        {
+            model.TeamMembers = _context.TeamMembers
+                .Where(m => m.TeamId == teamId.Value)
+                .ToList();
+        }
+        else
+        {
+            model.TeamMembers = _context.TeamMembers.ToList();
+        }
+
+        return View(model);
