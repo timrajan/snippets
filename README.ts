@@ -1,1 +1,9 @@
-InvalidOperationException: The model item passed into the ViewDataDictionary is of type 'System.Collections.Generic.List`1[Models.Team]', but this ViewDataDictionary instance requires a model item of type 'Models.TeamIndexViewModel'.
+ <select id="teamId" name="teamId" onchange="this.form.submit()">
+        <option value="">-- All Teams --</option>
+        @foreach (var team in Model.Teams)
+        {
+            <option value="@team.Id" @(Model.SelectedTeamId == team.Id ? "selected" : "")>
+                @team.Name
+            </option>
+        }
+    </select>
