@@ -1,8 +1,5 @@
- // Get user role
-            var role = ViewBag.Role?.ToString() ?? "TeamAdmin";
-
-            // If SuperAdmin, pass all teams to the view
-            if (role == "SuperAdmin")
-            {
-                ViewBag.Teams = _context.Teams.ToList();
-            }
+<select id="teamId" name="teamId" onchange="this.form.submit()">
+    <option value="">-- All Teams --</option>
+    <option value="1">Team A</option>
+    <option value="2">Team B</option>
+</select>
