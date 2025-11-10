@@ -1,1 +1,1 @@
-AmbiguousMatchException: The request matched multiple endpoints. Matches:
+InvalidOperationException: The model item passed into the ViewDataDictionary is of type 'Models.TeamIndexViewModel', but this ViewDataDictionary instance requires a model item of type 'System.Collections.Generic.IEnumerable`1[Models.Team]'.
