@@ -1,46 +1,22 @@
-// GET: Load page with optional team filter
-    public ActionResult Index(int? teamId)
-    {
-        var model = new YourViewModel
-        {
-            // Load all teams for dropdown
-            Teams = _context.Teams.Select(t => new TeamDto
-            {
-                TeamId = t.Id,
-                TeamName = t.Name
-            }).ToList(),
-            
-            SelectedTeamId = teamId
-        };
+  ViewBag.Teams = _context.Teams.ToList();
+        ViewBag.SelectedTeamId = teamId;
 
-        // Load team members based on selection
+        // Get team members based on selection
+        List<TeamMember> teamMembers;
+        
         if (teamId.HasValue)
         {
-            // Load specific team members
-            model.TeamMembers = _context.TeamMembers
+            teamMembers = _context.TeamMembers
                 .Where(m => m.TeamId == teamId.Value)
-                .Select(m => new TeamMemberDto
-                {
-                    Name = m.Name,
-                    Email = m.Email,
-                    Role = m.Role,
-                    TeamName = m.Team.Name
-                })
                 .ToList();
         }
         else
         {
-            // Load all team members (default)
-            model.TeamMembers = _context.TeamMembers
-                .Select(m => new TeamMemberDto
-                {
-                    Name = m.Name,
-                    Email = m.Email,
-                    Role = m.Role,
-                    TeamName = m.Team.Name
-                })
-                .ToList();
+            teamMembers = _context.TeamMembers.ToList();
         }
+        
+        ViewBag.TeamMembers = teamMembers;
 
-        return View(model);
-    }
+        // Return the teams list as model (if you need it)
+        var teams = _context.Teams.ToList();
+        return View(teams);
