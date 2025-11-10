@@ -1,2 +1,1 @@
-@using (Html.BeginForm("Index", "Team", FormMethod.Get))
-{
+InvalidOperationException: The model item passed into the ViewDataDictionary is of type 'System.Collections.Generic.List`1[Models.Team]', but this ViewDataDictionary instance requires a model item of type 'Models.TeamIndexViewModel'.
