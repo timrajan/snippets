@@ -1,3 +1,1 @@
-<option value="@team.Id" selected="@(Model.SelectedTeamId == team.Id)">
-    @team.Name
-</option>
+AmbiguousMatchException: The request matched multiple endpoints. Matches:
