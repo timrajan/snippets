@@ -1,15 +1,4 @@
- function toggleRadioButtons() {
-        var role = document.getElementById('Role').value;
-        var radioSection = document.getElementById('radioSection');
-        
-        if (role === 'admin') {
-            radioSection.style.display = 'none';
-        } else {
-            radioSection.style.display = 'block';
-        }
+ @if (User.IsInRole("SuperAdmin") || !User.IsInRole("TeamAdmin"))
+    {
+        <option value="admin">Admin</option>
     }
-    
-    // Check on page load
-    window.onload = function() {
-        toggleRadioButtons();
-    };
