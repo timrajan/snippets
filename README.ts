@@ -1,9 +1,3 @@
- <select id="teamId" name="teamId" onchange="this.form.submit()">
-        <option value="">-- All Teams --</option>
-        @foreach (var team in Model.Teams)
-        {
-            <option value="@team.Id" @(Model.SelectedTeamId == team.Id ? "selected" : "")>
-                @team.Name
-            </option>
-        }
-    </select>
+<option value="@team.Id" selected="@(Model.SelectedTeamId == team.Id)">
+    @team.Name
+</option>
