@@ -1,3 +1,5 @@
+RuntimeBinderException: Cannot convert type 'System.Collections.Generic.List<Models.Team>' to 'System.Collections.Generic.List<object>'
+
 @{
     ViewData["Title"] = "Team Admins";
     var teamDictionary = ((List<dynamic>)ViewBag.TeamList).ToDictionary(t => t.Id, t => t.Name);
