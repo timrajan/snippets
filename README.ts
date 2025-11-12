@@ -1,3 +1,9 @@
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Enable team dropdown before submit so its value gets posted
+    teamDropdown.disabled = false;
+});
+
+
 @model YourApp.Models.UserViewModel
 
 @{
