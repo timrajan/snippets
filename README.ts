@@ -1,1 +1,1 @@
-<input type="checkbox" class="team-checkbox" name="myIds" value=volume.TeamId onchange="updateButtonState()" />
+New-NetFirewallRule -DisplayName "Allow IIS HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
