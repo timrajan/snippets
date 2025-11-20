@@ -1,5 +1,19 @@
-CREATE TABLE my_table (
-    id SERIAL PRIMARY KEY,
-    eight_digit_number INTEGER NOT NULL,
-    CONSTRAINT check_eight_digits CHECK (eight_digit_number >= 10000000 AND eight_digit_number <= 99999999)
-);
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace StudentManagement.Models
+{
+    [Table("class_details")]
+    public class ClassDetail
+    {
+        [Key]
+        [Column("class")]
+        public string ClassName { get; set; }
+
+        [Column("student_id")]
+        public long StartStudentId { get; set; }
+
+        [Column("student_registration_number")]
+        public long EndStudentId { get; set; }
+    }
+}
