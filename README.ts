@@ -1,1 +1,4 @@
-[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("YOUR_PAT_HERE"))
+if ([string]::IsNullOrEmpty("$(YourVariableName)")) {
+    Write-Error "YourVariableName is required!"
+    exit 1
+}
