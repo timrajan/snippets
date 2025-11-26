@@ -1,1 +1,9 @@
-https://ibm.box.com/s/xyoxq57c7fmhr6ecnj1o247g5hqre2jn
+// jest.setup.js
+beforeEach(async () => {
+  const { testPath } = expect.getState();
+  
+  // Run only for tests in specific files/folders
+  if (testPath.includes('/authenticated/') || testPath.includes('.auth.test.js')) {
+    // Your puppeteer setup code
+  }
+});
