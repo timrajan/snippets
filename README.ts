@@ -1,18 +1,47 @@
-<div class="page-header d-flex align-items-center justify-content-between">
-   <h1 class="page-title mb-0"><b>Management</b></h1>
-   @using (Html.BeginForm("Index","Team", FormMethod.Get))
-   {
-      <div class="d-flex align-items-center gap-2">
-          <label for="teamId" class="mb-0">Team Name</label>
-          <select class="form-select w-auto" id="teamId" onchange="this.form.submit()">
-              <option value="">All Teams</option>
-              @foreach (var team in Model.Teams)
-              {
-                  <option value="@team.Id" selected="@(Model.SelectedTeamId == team.Id)">
-                      @team.Name
-                  </option>
-              }
-          </select>
-      </div>
-   }
+<div class="container">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>John Doe</td>
+                    <td>john@example.com</td>
+                    <td><span class="badge bg-success">Active</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">Edit</button>
+                        <button class="btn btn-sm btn-danger">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Jane Smith</td>
+                    <td>jane@example.com</td>
+                    <td><span class="badge bg-warning">Pending</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">Edit</button>
+                        <button class="btn btn-sm btn-danger">Delete</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Bob Wilson</td>
+                    <td>bob@example.com</td>
+                    <td><span class="badge bg-danger">Inactive</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">Edit</button>
+                        <button class="btn btn-sm btn-danger">Delete</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
