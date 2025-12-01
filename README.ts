@@ -1,24 +1,21 @@
-<!-- Striped rows -->
-<table class="table table-striped">
-
-<!-- Bordered -->
-<table class="table table-bordered">
-
-<!-- Hover effect -->
-<table class="table table-hover">
-
-<!-- Dark theme -->
-<table class="table table-dark">
-
-<!-- Small/compact -->
-<table class="table table-sm">
-
-<!-- Combine multiple -->
-<table class="table table-striped table-bordered table-hover">
+  .results-table {
+      /* width: 80%;
+      max-width: 1200px;
+      border-collapse: collapse;
+      margin: 20px auto 0 auto;
+      text-align: left; */
+  }
 
 
-    <div class="table-responsive">
-  <table class="table">
-    <!-- table content -->
-  </table>
-</div>
+      .results-table th {
+          /* background-color: #f5f5f5;
+          text-align: left;
+          padding: 15px;
+          font-weight: bold;
+          font-size: 16px;
+          color: #000;
+          border: 1px solid #ddd;
+          cursor: pointer;
+          user-select: none;
+          position: relative; */
+      }
