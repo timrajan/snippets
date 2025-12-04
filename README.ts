@@ -1,4 +1,6 @@
-a.disabled {
-    pointer-events: none;
-    opacity: 0.65;
-}
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    var tooltipList = [...tooltipTriggerList].map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
