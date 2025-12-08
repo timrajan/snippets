@@ -1,53 +1,12 @@
-using System;
-using System.Drawing;
-using SixLabors.ImageSharp.PixelFormats;
+Hi IBM Team
 
-namespace AppiumMobileFramework.ImageComparison.Models
-{
-    public class ImageComparisonResult
-    {
-        public bool AreEqual { get; set; }
-        public double SimilarityPercentage { get; set; }
-        public int DifferentPixels { get; set; }
-        public int TotalPixels { get; set; }
-        public string DifferenceImagePath { get; set; }
-        public List<DifferenceRegion> DifferenceRegions { get; set; } = new List<DifferenceRegion>();
-        public TimeSpan ComparisonTime { get; set; }
-        public string Image1Path { get; set; }
-        public string Image2Path { get; set; }
-        public ImageComparisonSettings Settings { get; set; }
+Good day to you
 
-        public double DifferencePercentage => 100.0 - SimilarityPercentage;
-        public bool HasSignificantDifferences => DifferentPixels > 0;
-    }
+I am reaching out to you regarding the IBM Mac machine to which I am not able to login. This is because I am not using the correct password. And each attempt makes it harder to try a new password. 
 
-    public class DifferenceRegion
-    {
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int PixelCount { get; set; }
+Is it possible to reset the password please. I tried to reset and it is prompting for a recovery key , if you could provide me a recovery key, that would be great
 
-        public override string ToString()
-        {
-            return $"Region at ({X}, {Y}) - Size: {Width}×{Height}px - Pixels: {PixelCount}";
-        }
-    }
+Can you please help me here please. 
 
-    public class ImageComparisonSettings
-    {
-        public int Threshold { get; set; } = 0;
-        public Rgba32 HighlightColor { get; set; } = new Rgba32(255, 255, 0, 255); // Red
-        //Rgba32(255, 255, 0, 255); // Yellow
-        // OR  
-        //Rgba32(255, 0, 255, 255); // Magenta
-        // OR
-        //Rgba32(0, 255, 255, 255); // Cyan
-        public bool GenerateReport { get; set; } = true;
-        public bool IncludeRegionAnalysis { get; set; } = true;
-        public string OutputDirectory { get; set; }
-        public bool UseGrayscaleBackground { get; set; } = true;
-    }
-}
-
+Regards
+Tim
