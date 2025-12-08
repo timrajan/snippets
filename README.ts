@@ -1,3 +1,16 @@
+/**
+ * Extracts all sheet names from an Excel attachment result
+ * @param excelAttachment - The Excel attachment result containing the buffer
+ * @returns string[] - Array of sheet names
+ */
+async function getSheetNamesFromExcel(
+  excelAttachment: ExcelAttachmentResult
+): Promise<string[]> {
+  const workbook = XLSX.read(excelAttachment.buffer, { type: 'buffer' });
+  return workbook.SheetNames;
+}
+
+
 import { Readable } from 'stream';
 
 // Configuration interface
