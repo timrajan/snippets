@@ -1,4 +1,56 @@
 /**
+ * Represents a row from the Excel sheet as key-value pairs
+ */
+type ExcelRow = Record<string, unknown>;
+
+/**
+ * Finds a row in the Excel file where the 'Id' column matches the given id
+ * and returns it as a semicolon-separated string (e.g., "Id:1234;Name:Apple;Color:Red")
+ * @param excelAttachment - The Excel attachment result containing the buffer
+ * @param id - The Id value to search for
+ * @param sheetName - Optional sheet name to search in (defaults to first sheet)
+ * @param idColumnName - Optional column name for Id (defaults to 'Id')
+ * @returns Promise<string | null> - The matching row as formatted string or null if not found
+ */
+async function getRowByIdAsString(
+  excelAttachment: ExcelAttachmentResult,
+  id: number | string,
+  sheetName?: string,
+  idColumnName: string = 'Id'
+): Promise<string | null> {
+  const workbook = XLSX.read(excelAttachment.buffer, { type: 'buffer' });
+  
+  // Use provided sheet name or default to first sheet
+  const targetSheet = sheetName || workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[targetSheet];
+  
+  if (!worksheet) {
+    throw new Error(`Sheet "${targetSheet}" not found in the Excel file`);
+  }
+  
+  // Convert sheet to JSON array of objects
+  const rows: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+  
+  // Find the row where Id column matches the given id
+  const matchingRow = rows.find((row) => {
+    const cellValue = row[idColumnName];
+    return cellValue?.toString() === id.toString();
+  });
+  
+  if (!matchingRow) {
+    return null;
+  }
+  
+  // Convert row to "Key:Value;Key:Value" format
+  const formattedString = Object.entries(matchingRow)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(';');
+  
+  return formattedString;
+}
+
+
+/**
  * Extracts all sheet names from an Excel attachment result
  * @param excelAttachment - The Excel attachment result containing the buffer
  * @returns string[] - Array of sheet names
