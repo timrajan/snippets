@@ -1,24 +1,15 @@
-import * as azdev from 'azure-devops-node-api';
-import { IWorkItemTrackingApi } from 'azure-devops-node-api/WorkItemTrackingApi';
-import { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
-
-interface TestCaseAttachment {
-  id: string;
-  url: string;
-  fileName: string;
-  size?: number;
-}
-
 /**
- * Fetches all attachments for a specific test case using Work Item Tracking API
+ * Fetches a specific attachment by filename from a test case
  * @param workItemApi - The Work Item Tracking API instance
  * @param testCaseId - The ID of the test case (work item)
- * @returns Promise<TestCaseAttachment[]> - List of attachments
+ * @param fileName - The name of the file to retrieve
+ * @returns Promise<TestCaseAttachment | null> - The matching attachment or null if not found
  */
-async function getTestCaseAttachments(
+async function getTestCaseAttachment(
   workItemApi: IWorkItemTrackingApi,
-  testCaseId: number
-): Promise<TestCaseAttachment[]> {
+  testCaseId: number,
+  fileName: string
+): Promise<TestCaseAttachment | null> {
   // Get the work item with relations (attachments are relations)
   const workItem: WorkItem = await workItemApi.getWorkItem(
     testCaseId,
@@ -28,49 +19,33 @@ async function getTestCaseAttachments(
   );
 
   if (!workItem.relations) {
-    return [];
+    return null;
   }
 
-  // Filter only attachments
-  const attachments: TestCaseAttachment[] = workItem.relations
-    .filter((relation) => relation.rel === 'AttachedFile')
-    .map((relation) => {
-      const url = relation.url || '';
-      const attributes = relation.attributes || {};
-      
-      // Extract attachment ID from URL
-      // URL format: https://dev.azure.com/{org}/_apis/wit/attachments/{attachmentId}
-      const attachmentId = url.split('/').pop() || '';
+  // Find the attachment that matches the filename
+  const attachmentRelation = workItem.relations.find((relation) => {
+    if (relation.rel !== 'AttachedFile') {
+      return false;
+    }
+    const attributes = relation.attributes || {};
+    const attachmentName = (attributes['name'] as string) || '';
+    return attachmentName.toLowerCase() === fileName.toLowerCase();
+  });
 
-      return {
-        id: attachmentId,
-        url: url,
-        fileName: attributes['name'] as string || '',
-        size: attributes['resourceSize'] as number,
-      };
-    });
+  if (!attachmentRelation) {
+    return null;
+  }
 
-  return attachments;
+  const url = attachmentRelation.url || '';
+  const attributes = attachmentRelation.attributes || {};
+  const attachmentId = url.split('/').pop() || '';
+
+  const attachment: TestCaseAttachment = {
+    id: attachmentId,
+    url: url,
+    fileName: attributes['name'] as string || '',
+    size: attributes['resourceSize'] as number,
+  };
+
+  return attachment;
 }
-
-// ============================================================================
-// Usage Example
-// ============================================================================
-
-async function main() {
-  const orgUrl = 'https://dev.azure.com/your-organization';
-  const pat = 'your-personal-access-token';
-
-  const authHandler = azdev.getPersonalAccessTokenHandler(pat);
-  const connection = new azdev.WebApi(orgUrl, authHandler);
-  
-  // Use Work Item Tracking API instead of Test API
-  const workItemApi = await connection.getWorkItemTrackingApi();
-
-  const testCaseId = 12345;
-  const attachments = await getTestCaseAttachments(workItemApi, testCaseId);
-
-  console.log('Attachments:', attachments);
-}
-
-main();
