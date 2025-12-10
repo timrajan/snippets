@@ -1,395 +1,76 @@
-/**
- * Represents a row from the Excel sheet as key-value pairs
- */
-type ExcelRow = Record<string, unknown>;
+import * as azdev from 'azure-devops-node-api';
+import { IWorkItemTrackingApi } from 'azure-devops-node-api/WorkItemTrackingApi';
+import { WorkItem } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 
-/**
- * Finds a row in the Excel file where the 'Id' column matches the given id
- * and returns it as a semicolon-separated string (e.g., "Id:1234;Name:Apple;Color:Red")
- * @param excelAttachment - The Excel attachment result containing the buffer
- * @param id - The Id value to search for
- * @param sheetName - Optional sheet name to search in (defaults to first sheet)
- * @param idColumnName - Optional column name for Id (defaults to 'Id')
- * @returns Promise<string | null> - The matching row as formatted string or null if not found
- */
-async function getRowByIdAsString(
-  excelAttachment: ExcelAttachmentResult,
-  id: number | string,
-  sheetName?: string,
-  idColumnName: string = 'Id'
-): Promise<string | null> {
-  const workbook = XLSX.read(excelAttachment.buffer, { type: 'buffer' });
-  
-  // Use provided sheet name or default to first sheet
-  const targetSheet = sheetName || workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[targetSheet];
-  
-  if (!worksheet) {
-    throw new Error(`Sheet "${targetSheet}" not found in the Excel file`);
-  }
-  
-  // Convert sheet to JSON array of objects
-  const rows: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
-  
-  // Find the row where Id column matches the given id
-  const matchingRow = rows.find((row) => {
-    const cellValue = row[idColumnName];
-    return cellValue?.toString() === id.toString();
-  });
-  
-  if (!matchingRow) {
-    return null;
-  }
-  
-  // Convert row to "Key:Value;Key:Value" format
-  const formattedString = Object.entries(matchingRow)
-    .map(([key, value]) => `${key}:${value}`)
-    .join(';');
-  
-  return formattedString;
-}
-
-
-/**
- * Extracts all sheet names from an Excel attachment result
- * @param excelAttachment - The Excel attachment result containing the buffer
- * @returns string[] - Array of sheet names
- */
-async function getSheetNamesFromExcel(
-  excelAttachment: ExcelAttachmentResult
-): Promise<string[]> {
-  const workbook = XLSX.read(excelAttachment.buffer, { type: 'buffer' });
-  return workbook.SheetNames;
-}
-
-
-import { Readable } from 'stream';
-
-// Configuration interface
-interface AdoConfig {
-  organizationUrl: string;
-  project: string;
-  personalAccessToken: string;
-}
-
-// Attachment interface from ADO API
-interface TestAttachment {
-  id: number;
-  fileName: string;
+interface TestCaseAttachment {
+  id: string;
   url: string;
-  createdDate: string;
-  comment?: string;
-  size: number;
-}
-
-interface AttachmentListResponse {
-  count: number;
-  value: TestAttachment[];
-}
-
-// Result interface for downloaded Excel with buffer
-interface ExcelAttachmentResult {
   fileName: string;
-  buffer: Buffer;
-  stream: Readable;
-  size: number;
-  createdDate: string;
+  size?: number;
 }
 
 /**
- * Azure DevOps Test Attachment Service
- * Handles fetching and downloading attachments from ADO test cases
- * Returns Excel files as buffers/streams for direct content reading
+ * Fetches all attachments for a specific test case using Work Item Tracking API
+ * @param workItemApi - The Work Item Tracking API instance
+ * @param testCaseId - The ID of the test case (work item)
+ * @returns Promise<TestCaseAttachment[]> - List of attachments
  */
-class AdoTestAttachmentService {
-  private config: AdoConfig;
-  private authHeader: string;
+async function getTestCaseAttachments(
+  workItemApi: IWorkItemTrackingApi,
+  testCaseId: number
+): Promise<TestCaseAttachment[]> {
+  // Get the work item with relations (attachments are relations)
+  const workItem: WorkItem = await workItemApi.getWorkItem(
+    testCaseId,
+    undefined,
+    undefined,
+    4 // WorkItemExpand.Relations
+  );
 
-  constructor(config: AdoConfig) {
-    this.config = config;
-    // Create Base64 encoded auth header for PAT authentication
-    this.authHeader = `Basic ${Buffer.from(`:${config.personalAccessToken}`).toString('base64')}`;
+  if (!workItem.relations) {
+    return [];
   }
 
-  /**
-   * Fetches all attachments for a specific test case
-   * @param testCaseId - The ID of the test case
-   * @returns Promise<TestAttachment[]> - List of attachments
-   */
-  async getTestCaseAttachments(testCaseId: number): Promise<TestAttachment[]> {
-    const url = `${this.config.organizationUrl}/${this.config.project}/_apis/test/TestCases/${testCaseId}/attachments?api-version=7.1-preview.1`;
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': this.authHeader,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch attachments: ${response.status} ${response.statusText}`);
-    }
-
-    const data: AttachmentListResponse = await response.json();
-    return data.value;
-  }
-
-  /**
-   * Fetches attachments from a test run result
-   * @param runId - The test run ID
-   * @param resultId - The test result ID within the run
-   * @returns Promise<TestAttachment[]> - List of attachments
-   */
-  async getTestRunResultAttachments(runId: number, resultId: number): Promise<TestAttachment[]> {
-    const url = `${this.config.organizationUrl}/${this.config.project}/_apis/test/Runs/${runId}/Results/${resultId}/attachments?api-version=7.1-preview.1`;
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': this.authHeader,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch test run attachments: ${response.status} ${response.statusText}`);
-    }
-
-    const data: AttachmentListResponse = await response.json();
-    return data.value;
-  }
-
-  /**
-   * Downloads an attachment and returns it as a Buffer
-   * @param attachmentUrl - The URL of the attachment to download
-   * @returns Promise<Buffer> - The attachment content as a buffer
-   */
-  async downloadAttachmentAsBuffer(attachmentUrl: string): Promise<Buffer> {
-    const response = await fetch(attachmentUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': this.authHeader,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download attachment: ${response.status} ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  }
-
-  /**
-   * Converts a Buffer to a Readable stream
-   * @param buffer - The buffer to convert
-   * @returns Readable - A readable stream
-   */
-  bufferToStream(buffer: Buffer): Readable {
-    const stream = new Readable();
-    stream.push(buffer);
-    stream.push(null); // Signal end of stream
-    return stream;
-  }
-
-  /**
-   * Checks if a filename is an Excel file
-   * @param fileName - The filename to check
-   * @returns boolean
-   */
-  private isExcelFile(fileName: string): boolean {
-    const excelExtensions = ['.xlsx', '.xls', '.xlsm', '.xlsb'];
-    const ext = fileName.toLowerCase().slice(fileName.lastIndexOf('.'));
-    return excelExtensions.includes(ext);
-  }
-
-  /**
-   * Filters attachments to only include Excel files
-   * @param attachments - List of all attachments
-   * @returns TestAttachment[] - Only Excel file attachments
-   */
-  filterExcelAttachments(attachments: TestAttachment[]): TestAttachment[] {
-    return attachments.filter(attachment => this.isExcelFile(attachment.fileName));
-  }
-
-  /**
-   * Gets Excel attachments from a test case as buffers/streams
-   * @param testCaseId - The ID of the test case
-   * @returns Promise<ExcelAttachmentResult[]> - Excel files with buffer and stream
-   */
-  async getExcelAttachmentsFromTestCase(testCaseId: number): Promise<ExcelAttachmentResult[]> {
-    const attachments = await this.getTestCaseAttachments(testCaseId);
-    const excelAttachments = this.filterExcelAttachments(attachments);
-
-    if (excelAttachments.length === 0) {
-      return [];
-    }
-
-    const results: ExcelAttachmentResult[] = [];
-
-    for (const attachment of excelAttachments) {
-      const buffer = await this.downloadAttachmentAsBuffer(attachment.url);
-      results.push({
-        fileName: attachment.fileName,
-        buffer,
-        stream: this.bufferToStream(buffer),
-        size: attachment.size,
-        createdDate: attachment.createdDate,
-      });
-    }
-
-    return results;
-  }
-
-  /**
-   * Gets a single Excel attachment from a test case as buffer/stream
-   * @param testCaseId - The ID of the test case
-   * @param fileName - Optional specific filename to retrieve
-   * @returns Promise<ExcelAttachmentResult | null>
-   */
-  async getExcelAttachmentFromTestCase(
-    testCaseId: number,
-    fileName?: string
-  ): Promise<ExcelAttachmentResult | null> {
-    const attachments = await this.getTestCaseAttachments(testCaseId);
-    let excelAttachments = this.filterExcelAttachments(attachments);
-
-    if (fileName) {
-      excelAttachments = excelAttachments.filter(
-        a => a.fileName.toLowerCase() === fileName.toLowerCase()
-      );
-    }
-
-    if (excelAttachments.length === 0) {
-      return null;
-    }
-
-    const attachment = excelAttachments[0];
-    const buffer = await this.downloadAttachmentAsBuffer(attachment.url);
-
-    return {
-      fileName: attachment.fileName,
-      buffer,
-      stream: this.bufferToStream(buffer),
-      size: attachment.size,
-      createdDate: attachment.createdDate,
-    };
-  }
-
-  /**
-   * Gets Excel attachments from a test run result as buffers/streams
-   * @param runId - The test run ID
-   * @param resultId - The test result ID
-   * @returns Promise<ExcelAttachmentResult[]> - Excel files with buffer and stream
-   */
-  async getExcelAttachmentsFromTestRunResult(
-    runId: number,
-    resultId: number
-  ): Promise<ExcelAttachmentResult[]> {
-    const attachments = await this.getTestRunResultAttachments(runId, resultId);
-    const excelAttachments = this.filterExcelAttachments(attachments);
-
-    if (excelAttachments.length === 0) {
-      return [];
-    }
-
-    const results: ExcelAttachmentResult[] = [];
-
-    for (const attachment of excelAttachments) {
-      const buffer = await this.downloadAttachmentAsBuffer(attachment.url);
-      results.push({
-        fileName: attachment.fileName,
-        buffer,
-        stream: this.bufferToStream(buffer),
-        size: attachment.size,
-        createdDate: attachment.createdDate,
-      });
-    }
-
-    return results;
-  }
-}
-
-// ============================================================================
-// Usage Examples
-// ============================================================================
-
-async function main(): Promise<void> {
-  // Configuration - replace with your actual values
-  const config: AdoConfig = {
-    organizationUrl: 'https://dev.azure.com/your-organization',
-    project: 'your-project-name',
-    personalAccessToken: process.env.ADO_PAT || 'your-personal-access-token',
-  };
-
-  const service = new AdoTestAttachmentService(config);
-
-  try {
-    const testCaseId = 12345; // Replace with your test case ID
-
-    // Example 1: Get all Excel attachments as buffers
-    const excelFiles = await service.getExcelAttachmentsFromTestCase(testCaseId);
-    
-    for (const excel of excelFiles) {
-      console.log(`File: ${excel.fileName}`);
-      console.log(`Size: ${excel.size} bytes`);
-      console.log(`Buffer length: ${excel.buffer.length}`);
+  // Filter only attachments
+  const attachments: TestCaseAttachment[] = workItem.relations
+    .filter((relation) => relation.rel === 'AttachedFile')
+    .map((relation) => {
+      const url = relation.url || '';
+      const attributes = relation.attributes || {};
       
-      // Use the buffer directly with xlsx or exceljs library
-      // Example with 'xlsx' library:
-      // import * as XLSX from 'xlsx';
-      // const workbook = XLSX.read(excel.buffer, { type: 'buffer' });
-      // const sheetName = workbook.SheetNames[0];
-      // const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-      // console.log(data);
+      // Extract attachment ID from URL
+      // URL format: https://dev.azure.com/{org}/_apis/wit/attachments/{attachmentId}
+      const attachmentId = url.split('/').pop() || '';
 
-      // Example with 'exceljs' library:
-      // import ExcelJS from 'exceljs';
-      // const workbook = new ExcelJS.Workbook();
-      // await workbook.xlsx.load(excel.buffer);
-      // workbook.worksheets.forEach(sheet => {
-      //   sheet.eachRow((row, rowNumber) => {
-      //     console.log(`Row ${rowNumber}:`, row.values);
-      //   });
-      // });
-    }
+      return {
+        id: attachmentId,
+        url: url,
+        fileName: attributes['name'] as string || '',
+        size: attributes['resourceSize'] as number,
+      };
+    });
 
-    // Example 2: Get a specific Excel file by name
-    const specificFile = await service.getExcelAttachmentFromTestCase(
-      testCaseId,
-      'test-data.xlsx'
-    );
-    
-    if (specificFile) {
-      console.log(`Found: ${specificFile.fileName}`);
-      // Use specificFile.buffer or specificFile.stream
-    }
-
-    // Example 3: Using the stream (e.g., for piping)
-    const [firstExcel] = await service.getExcelAttachmentsFromTestCase(testCaseId);
-    if (firstExcel) {
-      // Pipe to a writable stream or process chunks
-      firstExcel.stream.on('data', (chunk: Buffer) => {
-        console.log(`Received ${chunk.length} bytes`);
-      });
-      firstExcel.stream.on('end', () => {
-        console.log('Stream ended');
-      });
-    }
-
-  } catch (error) {
-    console.error('Error:', error);
-    process.exit(1);
-  }
+  return attachments;
 }
 
-// Run if this is the main module
-main();
+// ============================================================================
+// Usage Example
+// ============================================================================
 
-export { 
-  AdoTestAttachmentService, 
-  AdoConfig, 
-  TestAttachment, 
-  ExcelAttachmentResult 
-};
+async function main() {
+  const orgUrl = 'https://dev.azure.com/your-organization';
+  const pat = 'your-personal-access-token';
+
+  const authHandler = azdev.getPersonalAccessTokenHandler(pat);
+  const connection = new azdev.WebApi(orgUrl, authHandler);
+  
+  // Use Work Item Tracking API instead of Test API
+  const workItemApi = await connection.getWorkItemTrackingApi();
+
+  const testCaseId = 12345;
+  const attachments = await getTestCaseAttachments(workItemApi, testCaseId);
+
+  console.log('Attachments:', attachments);
+}
+
+main();
