@@ -1,3 +1,10 @@
+const orgUrl = 'https://dev.azure.com/your-organization';
+  const pat = 'your-personal-access-token';
+
+  const authHandler = azdev.getPersonalAccessTokenHandler(pat);
+  const connection = new azdev.WebApi(orgUrl, authHandler);
+  const workItemApi = await connection.getWorkItemTrackingApi();
+
 /**
  * Fetches a specific attachment by filename from a test case
  * @param workItemApi - The Work Item Tracking API instance
