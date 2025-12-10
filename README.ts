@@ -1,3 +1,30 @@
+// ============================================================================
+// Usage Example
+// ============================================================================
+
+/*
+async function main() {
+  const orgUrl = 'https://dev.azure.com/your-organization';
+  const pat = 'your-personal-access-token';
+
+  const authHandler = azdev.getPersonalAccessTokenHandler(pat);
+  const connection = new azdev.WebApi(orgUrl, authHandler);
+  const workItemApi = await connection.getWorkItemTrackingApi();
+
+  const testCaseId = 12345;
+  const fileName = 'SampleExcel.xlsx';
+
+  const attachment = await getTestCaseAttachment(workItemApi, testCaseId, fileName);
+
+  if (attachment) {
+    console.log('Found attachment:', attachment);
+    // Output: { id: 'guid-here', url: '...', fileName: 'SampleExcel.xlsx', size: 1234 }
+  } else {
+    console.log('Attachment not found');
+  }
+}
+
+
 const orgUrl = 'https://dev.azure.com/your-organization';
   const pat = 'your-personal-access-token';
 
