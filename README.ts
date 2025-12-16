@@ -1,4 +1,23 @@
 for (const [name, value] of result) {
+  switch (name) {
+    case 'cat2lex':
+      console.log('This is a cat:', value);
+      break;
+    case 'humans2lex':
+      console.log('This is a human:', value);
+      break;
+    case 'bird3lex':
+      console.log('This is a bird:', value);
+      break;
+    default:
+      console.log('Unknown:', name, value);
+      break;
+  }
+}
+
+
+
+for (const [name, value] of result) {
   console.log(`${name}: ${value}`);
 }
 // Output:
