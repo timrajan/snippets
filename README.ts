@@ -1,3 +1,12 @@
+for (const [name, value] of result) {
+  console.log(`${name}: ${value}`);
+}
+// Output:
+// cat2lex: 4 legs
+// humans2lex: 2 legs
+
+
+
 const result: [string, string][] = [];
 
 for (const item of sourceArray) {
