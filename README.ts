@@ -5,6 +5,23 @@ for (const item of sourceArray) {
   result.push([parts[0], parts[1]]);
 }
 
+const sourceArray: string[] = ['cat2lex|4 legs', 'Tiger2lex|no legs', 'humans2lex|2 legs', 'DOG3lex|4 legs'];
+
+const result: [string, string][] = [];
+
+for (const item of sourceArray) {
+  const parts = item.split('|');
+  const nameLower = parts[0].toLowerCase();
+  
+  if (nameLower.includes('tiger') || nameLower.includes('dog')) {
+    continue;
+  }
+  result.push([parts[0], parts[1]]);
+}
+
+console.log(result);
+// Output: [['cat2lex', '4 legs'], ['humans2lex', '2 legs']]
+
 
 type ExcelRow = Record<string, unknown>;
 
