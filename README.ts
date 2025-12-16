@@ -1,3 +1,11 @@
+const result: [string, string][] = [];
+
+for (const item of sourceArray) {
+  const parts = item.split('|');
+  result.push([parts[0], parts[1]]);
+}
+
+
 type ExcelRow = Record<string, unknown>;
 
 /**
