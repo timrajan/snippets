@@ -1,3 +1,9 @@
+const selector = `input[type="radio"][value="${value}"]`;
+  
+  // Click to select
+  await page.click(selector);
+
+
 for (const [name, value] of result) {
   switch (name) {
     case 'cat2lex':
