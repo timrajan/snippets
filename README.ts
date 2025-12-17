@@ -1,3 +1,24 @@
+/**
+ * Filters rows where a column matches a specific value
+ * @param sheetData - Array of rows from the sheet
+ * @param columnName - The column name to filter on (e.g., 'car')
+ * @param filterValue - The value to filter by (e.g., 'Toyota')
+ * @returns ExcelRow[] - Array of matching rows
+ */
+function filterRowsByColumnValue(
+  sheetData: ExcelRow[],
+  columnName: string,
+  filterValue: string
+): ExcelRow[] {
+  return sheetData.filter((row: ExcelRow) => {
+    const cellValue = row[columnName];
+    return cellValue?.toString().toLowerCase() === filterValue.toLowerCase();
+  });
+}
+
+
+
+
 const selector = `input[type="radio"][value="${value}"]`;
   
   // Click to select
