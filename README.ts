@@ -1,3 +1,19 @@
+import * as fs from 'fs';
+
+const logFile = 'test-logs.txt';
+fs.writeFileSync(logFile, ''); // Clear file at start
+
+export function log(...args: any[]): void {
+  const message = args.join(' ');
+  console.log(message);
+  fs.appendFileSync(logFile, message + '\n');
+}
+
+// Usage
+log('Step 1');
+log('Step 2');
+
+
 
 const element = await page.$(selector);
 
