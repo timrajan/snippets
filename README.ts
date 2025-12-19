@@ -1,5 +1,5 @@
 const allKeys = records.flatMap(record => Object.keys(record));
-
+.filter(key => key.toLowerCase().startsWith("str"));
 /**
  * Filters rows where a column matches a specific value
  * @param sheetData - Array of rows from the sheet
