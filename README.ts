@@ -1,3 +1,6 @@
+const cleanedKeys = uniqueKeys.map(key => key.replace("str", ""));
+
+
 const uniqueKeys = Array.from(new Set(
   records
     .flatMap(record => Object.keys(record))
