@@ -1,3 +1,11 @@
+const uniqueKeys = Array.from(new Set(
+  records
+    .flatMap(record => Object.keys(record))
+    .filter(key => key.startsWith("str"))
+));
+
+
+
 const allKeys = records.flatMap(record => Object.keys(record));
 .filter(key => key.toLowerCase().startsWith("str"));
 /**
