@@ -1,3 +1,6 @@
+Based on the last discussion, what we had was that we need only accessible names to identify the whole elements in the page. So, created a small logic where with our existing spreadsheet with the existing IDs, when we run it, we will be able to capture all the accessible names with the IDs. We don't have to manually go into Chrome Console and fetch those accessible names. Once we get all those accessible names, we can either drop it in a big lookup or take up the existing Excel and update it with the accessible names and run the entire test. These are some of the options. I like the idea of having this lookup, but the only thing is, who is going to maintain that lookup? Or else, we can just pick up one spreadsheet, update that's as a building names in that spreadsheet, and just finish off that test. These are some of the options. Happy to discuss, but this video gives you a clear picture. 
+
+
 https://www.youtube.com/shorts/m_OghVvNnNc
 
 import * as fs from 'fs';
