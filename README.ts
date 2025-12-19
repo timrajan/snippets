@@ -1,3 +1,13 @@
+
+const element = await page.$(selector);
+
+const snapshot = await page.accessibility.snapshot({ root: element });
+
+const accessibleName = snapshot?.name;
+console.log(accessibleName);
+
+
+
 const cleanedKeys = uniqueKeys.map(key => key.replace("str", ""));
 
 
