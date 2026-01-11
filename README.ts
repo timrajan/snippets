@@ -1,3 +1,15 @@
+ // Convert sheet to JSON (array of arrays)
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+        if (jsonData.length === 0) {
+            console.error('Sheet is empty');
+            return null;
+        }
+
+        // Get header row (first row)
+        const headers = jsonData[0];
+
+
 // Find the column index by column name
         const columnIndex = headers.findIndex(
             header => header !== undefined && 
