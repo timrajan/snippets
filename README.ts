@@ -12,3 +12,23 @@ export function filterRowsByColumnValue(sheetData: ExcelRow[], columnName: strin
     
     return results;
 }
+
+
+export function filterRowsByColumnValue(sheetData: ExcelRow[], columnName: string, filterValue: string): ExcelRow[] {
+    const results: ExcelRow[] = [];
+    
+    for (const row of sheetData) {
+        // Find the matching key (handles \r\n and whitespace)
+        const actualKey = Object.keys(row).find(key => 
+            key.replace(/[\r\n\t]/g, '').trim() === columnName.trim()
+        );
+        
+        const cellValue = actualKey ? row[actualKey] : undefined;
+        
+        if (cellValue?.toString().toLowerCase() === filterValue.toLowerCase()) {
+            results.push(row);
+        }
+    }
+    
+    return results;
+}
