@@ -32,3 +32,5 @@ export function filterRowsByColumnValue(sheetData: ExcelRow[], columnName: strin
     
     return results;
 }
+
+const hasSubstring = myArray.some(str => str.includes("test"));
