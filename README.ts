@@ -1,4 +1,1 @@
-export function findCommonStrings(array1: string[], array2: string[]): string[] {
-    const set2 = new Set(array2);
-    return array1.filter(item => set2.has(item));
-}
+MOZILLA/5.0 (WINDOWS NT 10.0^ WIN64^ X64) APPLEWEBKIT/537.36 (KHTML^ LIKE GECKO) CHROME/127.0.0.0 SAFARI/537.36
