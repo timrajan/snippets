@@ -1,1 +1,7 @@
-MOZILLA/5.0 (WINDOWS NT 10.0^ WIN64^ X64) APPLEWEBKIT/537.36 (KHTML^ LIKE GECKO) CHROME/127.0.0.0 SAFARI/537.36
+
+export function filterRowsByColumnValue(sheetData: ExcelRow[], columnName: string, filterValue: string): ExcelRow[] {
+    return sheetData.filter((row: ExcelRow) => {
+        const cellValue = row[columnName];
+        return cellValue?.toString().toLowerCase() === filterValue.toLowerCase();
+    });
+}
