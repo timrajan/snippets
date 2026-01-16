@@ -1,12 +1,7 @@
-● The backend shows no recording data for auth1:
 
-  steps: []
-  screenshots: []
-  total_steps: 0
-  screenshot_count: 0
+● The recording was created but no steps were saved (total_steps: 0, steps: []).
 
-  The recording you see in the frontend is likely stored locally in the browser (IndexedDB or localStorage), not synced to the backend.
-
-  The frontend needs to call the backend API to save the recording. When you stop/save a recording, it should:
-  1. POST /api/v1/test-recordings - create recording metadata
-  2. Update test case with steps via PUT /api/v1/test-cases/{id} or a dedicated steps endpoint
+  The recording metadata is there:
+  - Recording ID: 69575d90-b47e-4233-9af0-f3234ab635ef
+  - Test case: aurh4 (ID: 90f940c9-fee9-43a1-8543-1bd9a6c7f6be)
+  - total_actions: 0
