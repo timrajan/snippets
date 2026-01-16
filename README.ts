@@ -1,27 +1,12 @@
-Here's the curl to create a test case under the "test" folder:
+● The backend shows no recording data for auth1:
 
-  curl -X POST "http://localhost:8000/api/v1/test-cases" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMTgwNjZhZi1iZDYwLTQ2MzktYTE0NS00MGUxZTM2YWFkN2EiLCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkB0ZXN0ci5sb2NhbCIsImV4cCI6MTc2ODU5NjUxNSwidHlwZSI6ImFjY2VzcyJ9.hp61fWQuFuM8rfbdIW4F56OZROIuoZAo-du84HuoKOs" \
-    -d '{
-      "test_plan_id": "daea0da6-e37f-418c-8b96-6ccfb310cf07",
-      "folder_id": "3ea41c71-5c50-45f4-9ce9-36e90a3285ae",
-      "name": "My First Test Case"
-    }'
+  steps: []
+  screenshots: []
+  total_steps: 0
+  screenshot_count: 0
 
-  Single line for Windows:
+  The recording you see in the frontend is likely stored locally in the browser (IndexedDB or localStorage), not synced to the backend.
 
-  curl -X POST "http://localhost:8000/api/v1/test-cases" -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMTgwNjZhZi1iZDYwLTQ2MzktYTE0NS00MGUxZTM2YWFkN2EiLCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkB0ZXN0ci5sb2NhbCIsImV4cCI6MTc2ODU5NjUxNSwidHlwZSI6ImFjY2VzcyJ9.hp61fWQuFuM8rfbdIW4F56OZROIuoZAo-du84HuoKOs" -d "{\"test_plan_id\": \"daea0da6-e37f-418c-8b96-6ccfb310cf07\", \"folder_id\": \"3ea41c71-5c50-45f4-9ce9-36e90a3285ae\", \"name\": \"My First Test Case\"}"
-
-  Required fields:
-  - test_plan_id - the test plan UUID
-  - name - test case name
-
-  Optional fields:
-  - folder_id - folder UUID (null for root level)
-  - description - description text
-  - priority - "Low", "Medium", "High", "Critical" (default: Medium)
-  - status - "Active", "Inactive", "Draft", "Deprecated" (default: Draft)
-  - base_url - base URL for test
-  - browser - "chromium", "firefox", "webkit" (default: chromium)
-  - tags - array of strings
+  The frontend needs to call the backend API to save the recording. When you stop/save a recording, it should:
+  1. POST /api/v1/test-recordings - create recording metadata
+  2. Update test case with steps via PUT /api/v1/test-cases/{id} or a dedicated steps endpoint
