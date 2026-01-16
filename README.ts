@@ -1,19 +1,8 @@
- Backend Issue (You need to fix):                                                                                                                                                                             
-                                                                                                                                                                                                               
-  GET /api/v1/test-plans/{id}/tree -> 500 Internal Server Error                                                                                                                                                
-                                                                                                                                                                                                               
-  Your FastAPI backend's /test-plans/{id}/tree endpoint is crashing. Check your backend server logs for the actual error. Common causes:                                                                       
-  - Database query error                                                                                                                                                                                       
-  - Missing relationship data                                                                                                                                                                                  
-  - Null pointer / None value being accessed                                                                                                                                                                   
-  - Database connection issue                                                                                                                                                                                  
-                                                                                                                                                                                                               
-  The folder sync won't work until the backend tree endpoint is fixed.                                                                                                                                         
-                                                                                                                                                                                                               
-  When it worked once (at 06:42:07), the tree loaded successfully:                                                                                                                                             
-  GET /test-plans/{id}/tree -> 200 (0.06s)                                                                                                                                                                     
-  [TESTPLAN] Tree loaded successfully                                                                                                                                                                          
-                                                                                                                                                                                                               
-  But then it crashed again due to the double-loading issue (now fixed).                                                                                                                                       
-                                                                                                                                                                                                               
-  Next step: Check your FastAPI backend logs and fix the /test-plans/{id}/tree endpoint. 
+ curl -X POST "http://localhost:8000/api/v1/folders" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMTgwNjZhZi1iZDYwLTQ2MzktYTE0NS00MGUxZTM2YWFkN2EiLCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkB0ZXN0ci5sb2NhbCIsImV4cCI6MTc2ODU5NDU1NCwidHlwZSI6ImFjY2VzcyJ9.DO_yajaS8k0VItLKNE2TNdgP1CL43-Qiz6UvmFxGA70" \
+    -d "{\"test_plan_id\": \"daea0da6-e37f-418c-8b96-6ccfb310cf07\", \"name\": \"api\"}"
+
+  Or single line for Windows:
+
+  curl -X POST "http://localhost:8000/api/v1/folders" -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiMTgwNjZhZi1iZDYwLTQ2MzktYTE0NS00MGUxZTM2YWFkN2EiLCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkB0ZXN0ci5sb2NhbCIsImV4cCI6MTc2ODU5NDU1NCwidHlwZSI6ImFjY2VzcyJ9.DO_yajaS8k0VItLKNE2TNdgP1CL43-Qiz6UvmFxGA70" -d "{\"test_plan_id\": \"daea0da6-e37f-418c-8b96-6ccfb310cf07\", \"name\": \"api\"}"
