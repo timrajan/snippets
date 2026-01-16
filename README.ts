@@ -1,17 +1,19 @@
-Argument of type 'String[]' is not assignable to parameter of type 'string[]'
-
-function findStringWithSubstring(arr: string[], substring: string): string | undefined {
-  return arr.find(str => str.includes(substring));
-}
-
-// Usage example
-const fruits: string[] = ["apple", "banana", "orange", "grape"];
-
-const result = findStringWithSubstring(fruits, "nana");
-console.log(result);  // Output: "banana"
-
-const result2 = findStringWithSubstring(fruits, "app");
-console.log(result2);  // Output: "apple"
-
-const result3 = findStringWithSubstring(fruits, "xyz");
-console.log(result3);  // Output: undefined
+ Backend Issue (You need to fix):                                                                                                                                                                             
+                                                                                                                                                                                                               
+  GET /api/v1/test-plans/{id}/tree -> 500 Internal Server Error                                                                                                                                                
+                                                                                                                                                                                                               
+  Your FastAPI backend's /test-plans/{id}/tree endpoint is crashing. Check your backend server logs for the actual error. Common causes:                                                                       
+  - Database query error                                                                                                                                                                                       
+  - Missing relationship data                                                                                                                                                                                  
+  - Null pointer / None value being accessed                                                                                                                                                                   
+  - Database connection issue                                                                                                                                                                                  
+                                                                                                                                                                                                               
+  The folder sync won't work until the backend tree endpoint is fixed.                                                                                                                                         
+                                                                                                                                                                                                               
+  When it worked once (at 06:42:07), the tree loaded successfully:                                                                                                                                             
+  GET /test-plans/{id}/tree -> 200 (0.06s)                                                                                                                                                                     
+  [TESTPLAN] Tree loaded successfully                                                                                                                                                                          
+                                                                                                                                                                                                               
+  But then it crashed again due to the double-loading issue (now fixed).                                                                                                                                       
+                                                                                                                                                                                                               
+  Next step: Check your FastAPI backend logs and fix the /test-plans/{id}/tree endpoint. 
