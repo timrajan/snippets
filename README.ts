@@ -1,3 +1,5 @@
+Argument of type 'String[]' is not assignable to parameter of type 'string[]'
+
 function findStringWithSubstring(arr: string[], substring: string): string | undefined {
   return arr.find(str => str.includes(substring));
 }
