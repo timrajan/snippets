@@ -1,30 +1,43 @@
+Yes, you have all the endpoints for variables and checkpoints, and they're registered in the app.
 
- Upload thumbnail:                                                                                                                                                                                            
-  curl -X POST "http://192.168.0.46:8000/api/v1/test-recordings/{recording_id}/screenshots" \                                                                                                                  
-    -H "Authorization: Bearer {token}" \                                                                                                                                                                       
-    -F "file=@thumbnail.png" \                                                                                                                                                                                 
-    -F "step_number=0"                                                                                                                                                                                         
-                                                                                                                                                                                                               
-  Download thumbnail:                                                                                                                                                                                          
-  curl -X GET "http://192.168.0.46:8000/api/v1/test-recordings/{recording_id}/screenshots/0" \                                                                                                                 
-    -H "Authorization: Bearer {token}" \                                                                                                                                                                       
-    --output thumbnail.png                                                                                                                                                                                     
-                                                                                                                                                                                                               
-  The thumbnail is stored as a screenshot with step_number=0. Regular screenshots start from step_number=1.                                                                                                    
-                                                                                                                                                                                                               
-  Summary of endpoints:                                                                                                                                                                                        
-  ┌──────────────────────────┬────────┬─────────────────────────────────────────────────────────────────────────┐                                                                                              
-  │        Operation         │ Method │                                Endpoint                                 │                                                                                              
-  ├──────────────────────────┼────────┼─────────────────────────────────────────────────────────────────────────┤                                                                                              
-  │ Upload thumbnail         │ POST   │ /test-recordings/{recording_id}/screenshots (with step_number=0)        │                                                                                              
-  ├──────────────────────────┼────────┼─────────────────────────────────────────────────────────────────────────┤                                                                                              
-  │ Download thumbnail       │ GET    │ /test-recordings/{recording_id}/screenshots/0                           │                                                                                              
-  ├──────────────────────────┼────────┼─────────────────────────────────────────────────────────────────────────┤                                                                                              
-  │ Upload step screenshot   │ POST   │ /test-recordings/{recording_id}/screenshots (with step_number=1,2,3...) │                                                                                              
-  ├──────────────────────────┼────────┼─────────────────────────────────────────────────────────────────────────┤                                                                                              
-  │ Download step screenshot │ GET    │ /test-recordings/{recording_id}/screenshots/{step_number}               │                                                                                              
-  └──────────────────────────┴────────┴─────────────────────────────────────────────────────────────────────────┘                                                                                              
-  The code I added will:                                                                                                                                                                                       
-  1. Try to download thumbnail (step 0) from server                                                                                                                                                            
-  2. If not available, fall back to using the first screenshot (step 1) as thumbnail                                                                                                                           
-  3. Cache locally in .cache/recordings/{test_case_id}/{recording_id}/thumbnail.png     
+  Variables Endpoints (/api/v1/variables)
+  ┌────────┬────────────────────────────────┬──────────────────────────────────────┐
+  │ Method │            Endpoint            │             Description              │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ POST   │ /test-case/{test_case_id}      │ Create a variable                    │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ GET    │ /{variable_id}                 │ Get variable by ID                   │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ GET    │ /test-case/{test_case_id}      │ List all variables for a test case   │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ PUT    │ /{variable_id}                 │ Update a variable                    │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ DELETE │ /{variable_id}                 │ Delete a variable                    │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ POST   │ /test-case/{test_case_id}/bulk │ Bulk create variables                │
+  ├────────┼────────────────────────────────┼──────────────────────────────────────┤
+  │ DELETE │ /test-case/{test_case_id}      │ Delete all variables for a test case │
+  └────────┴────────────────────────────────┴──────────────────────────────────────┘
+  Checkpoints Endpoints (/api/v1/checkpoints)
+  ┌────────┬────────────────────────────────────┬────────────────────────────────────────┐
+  │ Method │              Endpoint              │              Description               │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ POST   │ /test-case/{test_case_id}          │ Create a checkpoint                    │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ GET    │ /{checkpoint_id}                   │ Get checkpoint by ID                   │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ GET    │ /test-case/{test_case_id}          │ List all checkpoints for a test case   │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ GET    │ /test-step/{test_step_id}          │ List checkpoints for a specific step   │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ GET    │ /test-case/{test_case_id}/critical │ List critical checkpoints only         │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ PUT    │ /{checkpoint_id}                   │ Update a checkpoint                    │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ DELETE │ /{checkpoint_id}                   │ Delete a checkpoint                    │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ POST   │ /test-case/{test_case_id}/reorder  │ Reorder checkpoints                    │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ POST   │ /test-case/{test_case_id}/bulk     │ Bulk create checkpoints                │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ DELETE │ /test-case/{test_case_id}          │ Delete all checkpoints for a test case │
