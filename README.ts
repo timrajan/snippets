@@ -1,3 +1,30 @@
+  Variables API Endpoints
+                                                                                                                                                                                                                                                                 Get All Variables (Global + Local) for a Test Case
+                                                                                                                                                                                                                                                               
+  GET /api/v1/variables/test-case/{test_case_id}/all                                                                                                                                                                                                           
+
+  curl "http://192.168.0.46:8000/api/v1/variables/test-case/7ce98331-6c3c-4b1a-b162-47861f2806e2/all" \
+    -H "Authorization: Bearer YOUR_TOKEN"
+
+  Response:
+  {
+    "global": [...],
+    "local": [...]
+  }
+
+  Get Only Global Variables
+
+  GET /api/v1/variables/global
+
+  Get Only Local Variables for a Test Case
+
+  GET /api/v1/variables/test-case/{test_case_id}
+
+  ---
+  Now let me complete the Test Runs implementation by creating the Schedules router and registering everything in main.py.
+
+
+
 Variables API Documentation                                                                                                                                                                                                                                  
   
   Base URL                                                                                                                                                                                                                                                        
