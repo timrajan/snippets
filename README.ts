@@ -1,185 +1,307 @@
- Here's the API specification for the Test Run Tree structure:                                                                                                                                                
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  Test Run Tree API Specification                                                                                                                                                                              
-                                                                                                                                                                                                               
-  Data Model                                                                                                                                                                                                   
-                                                                                                                                                                                                               
-  {                                                                                                                                                                                                            
-    "id": "uuid",                                                                                                                                                                                              
-    "user_id": "uuid",                                                                                                                                                                                         
-    "name": "string",                                                                                                                                                                                          
-    "type": "folder | testrun",                                                                                                                                                                                
-    "parent_id": "uuid | null",                                                                                                                                                                                
-    "expanded": "boolean",                                                                                                                                                                                     
-    "position": "integer",                                                                                                                                                                                     
-    "test_cases": ["uuid"],  // Only for testrun type - list of test case IDs                                                                                                                                  
-    "created_at": "datetime",                                                                                                                                                                                  
-    "updated_at": "datetime"                                                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  Endpoints                                                                                                                                                                                                    
-                                                                                                                                                                                                               
-  1. GET /test-run-tree                                                                                                                                                                                        
-                                                                                                                                                                                                               
-  Get the full tree structure for the authenticated user.                                                                                                                                                      
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "structure": {                                                                                                                                                                                             
-      "id": "root",                                                                                                                                                                                            
-      "name": "ROOT",                                                                                                                                                                                          
-      "type": "folder",                                                                                                                                                                                        
-      "expanded": true,                                                                                                                                                                                        
-      "children": [                                                                                                                                                                                            
-        {                                                                                                                                                                                                      
-          "id": "uuid-1",                                                                                                                                                                                      
-          "name": "Regression Suite",                                                                                                                                                                          
-          "type": "folder",                                                                                                                                                                                    
-          "expanded": true,                                                                                                                                                                                    
-          "children": [                                                                                                                                                                                        
-            {                                                                                                                                                                                                  
-              "id": "uuid-2",                                                                                                                                                                                  
-              "name": "Test Run 2024-01-17 #1",                                                                                                                                                                
-              "type": "testrun",                                                                                                                                                                               
-              "test_cases": ["tc-uuid-1", "tc-uuid-2"]                                                                                                                                                         
-            }                                                                                                                                                                                                  
-          ]                                                                                                                                                                                                    
-        }                                                                                                                                                                                                      
-      ]                                                                                                                                                                                                        
-    }                                                                                                                                                                                                          
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  2. POST /test-run-tree/folders                                                                                                                                                                               
-                                                                                                                                                                                                               
-  Create a new folder.                                                                                                                                                                                         
-                                                                                                                                                                                                               
-  Request:                                                                                                                                                                                                     
-  {                                                                                                                                                                                                            
-    "name": "New Folder",                                                                                                                                                                                      
-    "parent_id": "uuid | null"  // null for root level                                                                                                                                                         
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "id": "uuid",                                                                                                                                                                                              
-    "name": "New Folder",                                                                                                                                                                                      
-    "type": "folder",                                                                                                                                                                                          
-    "parent_id": "uuid",                                                                                                                                                                                       
-    "expanded": false,                                                                                                                                                                                         
-    "created_at": "datetime"                                                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  3. POST /test-run-tree/testruns                                                                                                                                                                              
-                                                                                                                                                                                                               
-  Create a new test run.                                                                                                                                                                                       
-                                                                                                                                                                                                               
-  Request:                                                                                                                                                                                                     
-  {                                                                                                                                                                                                            
-    "name": "Test Run 2024-01-17 #1",                                                                                                                                                                          
-    "parent_id": "uuid",  // folder ID (required)                                                                                                                                                              
-    "test_cases": []      // optional initial test cases                                                                                                                                                       
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "id": "uuid",                                                                                                                                                                                              
-    "name": "Test Run 2024-01-17 #1",                                                                                                                                                                          
-    "type": "testrun",                                                                                                                                                                                         
-    "parent_id": "uuid",                                                                                                                                                                                       
-    "test_cases": [],                                                                                                                                                                                          
-    "created_at": "datetime"                                                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  4. PATCH /test-run-tree/items/{item_id}                                                                                                                                                                      
-                                                                                                                                                                                                               
-  Update an item (rename, move, toggle expanded).                                                                                                                                                              
-                                                                                                                                                                                                               
-  Request:                                                                                                                                                                                                     
-  {                                                                                                                                                                                                            
-    "name": "Renamed Item",        // optional                                                                                                                                                                 
-    "parent_id": "new-parent-id",  // optional - for moving                                                                                                                                                    
-    "expanded": true               // optional - for folders                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "id": "uuid",                                                                                                                                                                                              
-    "name": "Renamed Item",                                                                                                                                                                                    
-    "type": "folder",                                                                                                                                                                                          
-    "parent_id": "new-parent-id",                                                                                                                                                                              
-    "expanded": true,                                                                                                                                                                                          
-    "updated_at": "datetime"                                                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  5. DELETE /test-run-tree/items/{item_id}                                                                                                                                                                     
-                                                                                                                                                                                                               
-  Delete a folder or test run (cascading delete for folders).                                                                                                                                                  
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "success": true,                                                                                                                                                                                           
-    "deleted_count": 3  // includes children if folder                                                                                                                                                         
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  6. POST /test-run-tree/items/{item_id}/copy                                                                                                                                                                  
-                                                                                                                                                                                                               
-  Copy an item (deep copy for folders).                                                                                                                                                                        
-                                                                                                                                                                                                               
-  Request:                                                                                                                                                                                                     
-  {                                                                                                                                                                                                            
-    "target_parent_id": "uuid"                                                                                                                                                                                 
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "id": "new-uuid",                                                                                                                                                                                          
-    "name": "Copy of Original",                                                                                                                                                                                
-    "type": "folder",                                                                                                                                                                                          
-    "parent_id": "target-parent-id"                                                                                                                                                                            
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  7. PATCH /test-run-tree/testruns/{testrun_id}/test-cases                                                                                                                                                     
-                                                                                                                                                                                                               
-  Update test cases in a test run.                                                                                                                                                                             
-                                                                                                                                                                                                               
-  Request:                                                                                                                                                                                                     
-  {                                                                                                                                                                                                            
-    "test_cases": ["tc-uuid-1", "tc-uuid-2", "tc-uuid-3"]                                                                                                                                                      
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  Response:                                                                                                                                                                                                    
-  {                                                                                                                                                                                                            
-    "id": "uuid",                                                                                                                                                                                              
-    "test_cases": ["tc-uuid-1", "tc-uuid-2", "tc-uuid-3"],                                                                                                                                                     
-    "updated_at": "datetime"                                                                                                                                                                                   
-  }                                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  Summary Table                                                                                                                                                                                                
-  ┌────────┬─────────────────────────────────────────┬───────────────────┐                                                                                                                                     
-  │ Method │                Endpoint                 │    Description    │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ GET    │ /test-run-tree                          │ Get full tree     │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ POST   │ /test-run-tree/folders                  │ Create folder     │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ POST   │ /test-run-tree/testruns                 │ Create test run   │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ PATCH  │ /test-run-tree/items/{id}               │ Update item       │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ DELETE │ /test-run-tree/items/{id}               │ Delete item       │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ POST   │ /test-run-tree/items/{id}/copy          │ Copy item         │                                                                                                                                     
-  ├────────┼─────────────────────────────────────────┼───────────────────┤                                                                                                                                     
-  │ PATCH  │ /test-run-tree/testruns/{id}/test-cases │ Update test cases │                                                                                                                                     
-  └────────┴─────────────────────────────────────────┴───────────────────┘                                                                                                                                     
-  ---                                                                                                                                                                                                          
-  Let me know when these APIs are ready, and I'll implement the client-side integration in the testrun_panel.py and create a new service file for these API calls.
+Test Run Tree API Documentation                                                                                                                                                                                                                              
+  
+  Base URL: /api/v1/test-run-tree                                                                                                                                                                                                                                 
+  Authentication: Bearer token required in all requests                                                                                                                                                                                                        
+  
+  ---
+  1. Get Full Tree
+
+  GET /api/v1/test-run-tree
+
+  curl:
+  curl -X GET "http://localhost:8000/api/v1/test-run-tree" \
+    -H "Authorization: Bearer YOUR_TOKEN"
+
+  Response: 200 OK
+  {
+    "structure": {
+      "id": "root",
+      "name": "ROOT",
+      "type": "folder",
+      "expanded": true,
+      "children": [
+        {
+          "id": "uuid-1",
+          "name": "Regression Suite",
+          "type": "folder",
+          "expanded": true,
+          "children": [
+            {
+              "id": "uuid-2",
+              "name": "Test Run 2026-01-17 #1",
+              "type": "testrun",
+              "test_cases": ["tc-uuid-1", "tc-uuid-2"]
+            }
+          ]
+        },
+        {
+          "id": "uuid-3",
+          "name": "Smoke Tests",
+          "type": "folder",
+          "expanded": false,
+          "children": []
+        }
+      ]
+    }
+  }
+
+  ---
+  2. Create Folder
+
+  POST /api/v1/test-run-tree/folders
+
+  curl:
+  curl -X POST "http://localhost:8000/api/v1/test-run-tree/folders" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Regression Suite",
+      "parent_id": null
+    }'
+
+  Request Body:
+  {
+    "name": "string (required, 1-255 chars)",
+    "parent_id": "uuid | null"
+  }
+  ┌───────────┬─────────────┬──────────┬─────────────────────────────────────────┐
+  │   Field   │    Type     │ Required │               Description               │
+  ├───────────┼─────────────┼──────────┼─────────────────────────────────────────┤
+  │ name      │ string      │ Yes      │ Folder name (1-255 chars)               │
+  ├───────────┼─────────────┼──────────┼─────────────────────────────────────────┤
+  │ parent_id │ string/null │ No       │ Parent folder UUID, null for root level │
+  └───────────┴─────────────┴──────────┴─────────────────────────────────────────┘
+  Response: 201 Created
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Regression Suite",
+    "type": "folder",
+    "parent_id": null,
+    "expanded": false,
+    "created_at": "2026-01-17T21:06:40.784Z"
+  }
+
+  ---
+  3. Create Test Run
+
+  POST /api/v1/test-run-tree/testruns
+
+  curl:
+  curl -X POST "http://localhost:8000/api/v1/test-run-tree/testruns" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Test Run 2026-01-17 #1",
+      "parent_id": "550e8400-e29b-41d4-a716-446655440000",
+      "test_cases": ["tc-uuid-1", "tc-uuid-2"]
+    }'
+
+  Request Body:
+  {
+    "name": "string (required)",
+    "parent_id": "uuid (required)",
+    "test_cases": ["uuid"]
+  }
+  ┌────────────┬──────────┬──────────┬───────────────────────────────┐
+  │   Field    │   Type   │ Required │          Description          │
+  ├────────────┼──────────┼──────────┼───────────────────────────────┤
+  │ name       │ string   │ Yes      │ Test run name (1-255 chars)   │
+  ├────────────┼──────────┼──────────┼───────────────────────────────┤
+  │ parent_id  │ string   │ Yes      │ Parent folder UUID (required) │
+  ├────────────┼──────────┼──────────┼───────────────────────────────┤
+  │ test_cases │ string[] │ No       │ List of test case UUIDs       │
+  └────────────┴──────────┴──────────┴───────────────────────────────┘
+  Response: 201 Created
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Test Run 2026-01-17 #1",
+    "type": "testrun",
+    "parent_id": "550e8400-e29b-41d4-a716-446655440000",
+    "test_cases": ["tc-uuid-1", "tc-uuid-2"],
+    "created_at": "2026-01-17T21:10:00.000Z"
+  }
+
+  ---
+  4. Update Item (Rename/Move/Toggle Expanded)
+
+  PATCH /api/v1/test-run-tree/items/{item_id}
+
+  curl - Rename:
+  curl -X PATCH "http://localhost:8000/api/v1/test-run-tree/items/550e8400-e29b-41d4-a716-446655440000" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Renamed Folder"
+    }'
+
+  curl - Move to another folder:
+  curl -X PATCH "http://localhost:8000/api/v1/test-run-tree/items/550e8400-e29b-41d4-a716-446655440000" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "parent_id": "new-parent-uuid"
+    }'
+
+  curl - Toggle expanded:
+  curl -X PATCH "http://localhost:8000/api/v1/test-run-tree/items/550e8400-e29b-41d4-a716-446655440000" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "expanded": true
+    }'
+
+  Request Body: (all fields optional)
+  {
+    "name": "string | null",
+    "parent_id": "uuid | null",
+    "expanded": "boolean | null"
+  }
+  ┌───────────┬─────────┬──────────┬───────────────────────────────┐
+  │   Field   │  Type   │ Required │          Description          │
+  ├───────────┼─────────┼──────────┼───────────────────────────────┤
+  │ name      │ string  │ No       │ New name                      │
+  ├───────────┼─────────┼──────────┼───────────────────────────────┤
+  │ parent_id │ string  │ No       │ New parent UUID for moving    │
+  ├───────────┼─────────┼──────────┼───────────────────────────────┤
+  │ expanded  │ boolean │ No       │ Expanded state (folders only) │
+  └───────────┴─────────┴──────────┴───────────────────────────────┘
+  Response: 200 OK
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Renamed Folder",
+    "type": "folder",
+    "parent_id": "new-parent-uuid",
+    "expanded": true,
+    "updated_at": "2026-01-17T21:15:00.000Z"
+  }
+
+  ---
+  5. Delete Item
+
+  DELETE /api/v1/test-run-tree/items/{item_id}
+
+  curl:
+  curl -X DELETE "http://localhost:8000/api/v1/test-run-tree/items/550e8400-e29b-41d4-a716-446655440000" \
+    -H "Authorization: Bearer YOUR_TOKEN"
+
+  Response: 200 OK
+  {
+    "success": true,
+    "deleted_count": 3
+  }
+  ┌───────────────┬─────────────────────────────────────────────────────────┐
+  │     Field     │                       Description                       │
+  ├───────────────┼─────────────────────────────────────────────────────────┤
+  │ success       │ Always true if successful                               │
+  ├───────────────┼─────────────────────────────────────────────────────────┤
+  │ deleted_count │ Number of items deleted (includes children for folders) │
+  └───────────────┴─────────────────────────────────────────────────────────┘
+  ---
+  6. Copy Item
+
+  POST /api/v1/test-run-tree/items/{item_id}/copy
+
+  curl:
+  curl -X POST "http://localhost:8000/api/v1/test-run-tree/items/550e8400-e29b-41d4-a716-446655440000/copy" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "target_parent_id": "target-folder-uuid"
+    }'
+
+  Request Body:
+  {
+    "target_parent_id": "uuid | null"
+  }
+  ┌──────────────────┬─────────────┬──────────┬───────────────────────────────────┐
+  │      Field       │    Type     │ Required │            Description            │
+  ├──────────────────┼─────────────┼──────────┼───────────────────────────────────┤
+  │ target_parent_id │ string/null │ No       │ Target folder UUID, null for root │
+  └──────────────────┴─────────────┴──────────┴───────────────────────────────────┘
+  Response: 201 Created
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "Copy of Regression Suite",
+    "type": "folder",
+    "parent_id": "target-folder-uuid"
+  }
+
+  ---
+  7. Update Test Cases in Test Run
+
+  PATCH /api/v1/test-run-tree/testruns/{testrun_id}/test-cases
+
+  curl:
+  curl -X PATCH "http://localhost:8000/api/v1/test-run-tree/testruns/660e8400-e29b-41d4-a716-446655440001/test-cases" \
+    -H "Authorization: Bearer YOUR_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "test_cases": ["tc-uuid-1", "tc-uuid-2", "tc-uuid-3"]
+    }'
+
+  Request Body:
+  {
+    "test_cases": ["uuid-1", "uuid-2", "uuid-3"]
+  }
+  ┌────────────┬──────────┬──────────┬──────────────────────────────────┐
+  │   Field    │   Type   │ Required │           Description            │
+  ├────────────┼──────────┼──────────┼──────────────────────────────────┤
+  │ test_cases │ string[] │ Yes      │ Complete list of test case UUIDs │
+  └────────────┴──────────┴──────────┴──────────────────────────────────┘
+  Response: 200 OK
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "test_cases": ["tc-uuid-1", "tc-uuid-2", "tc-uuid-3"],
+    "updated_at": "2026-01-17T21:20:00.000Z"
+  }
+
+  ---
+  Data Types
+
+  TreeItemType:
+  - folder - A folder that can contain other folders or test runs
+  - testrun - A test run that contains test cases
+
+  ---
+  Error Responses
+
+  404 Not Found:
+  {
+    "detail": "Item not found: {item_id}"
+  }
+
+  400 Bad Request:
+  {
+    "detail": "Parent must be a folder"
+  }
+
+  422 Validation Error:
+  {
+    "detail": [
+      {
+        "loc": ["body", "name"],
+        "msg": "field required",
+        "type": "value_error.missing"
+      }
+    ]
+  }
+
+  ---
+  Summary Table
+  ┌────────┬────────────────────────────────────────────────┬───────────────────────────────────┐
+  │ Method │                    Endpoint                    │            Description            │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ GET    │ /api/v1/test-run-tree                          │ Get full tree structure           │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ POST   │ /api/v1/test-run-tree/folders                  │ Create folder                     │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ POST   │ /api/v1/test-run-tree/testruns                 │ Create test run                   │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ PATCH  │ /api/v1/test-run-tree/items/{id}               │ Update item (rename/move/expand)  │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ DELETE │ /api/v1/test-run-tree/items/{id}               │ Delete item (cascade for folders) │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ POST   │ /api/v1/test-run-tree/items/{id}/copy          │ Copy item (deep copy for folders) │
+  ├────────┼────────────────────────────────────────────────┼───────────────────────────────────┤
+  │ PATCH  │ /api/v1/test-run-tree/testruns/{id}/test-cases │ Update test cases                 │
+  └────────┴────────────────────────────────────────────────┴───────────────────────────────────┘
