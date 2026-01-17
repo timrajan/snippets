@@ -1,4 +1,8 @@
- Get all variables (global + local) for a test case:                                                                                                                                                                                                            SELECT
+  1. POST /variables/test-case/98fca6be-92fa-4018-8fc6-57ced0cf2aca -> 201 (Created successfully)                                                                                                              
+  2. GET /variables/test-case/98fca6be-92fa-4018-8fc6-57ced0cf2aca -> 200 returns 2 variables   
+
+
+Get all variables (global + local) for a test case:                                                                                                                                                                                                            SELECT
       v.id,                                                                                                                                                                                                                                                    
       v.name,
       v.type,
