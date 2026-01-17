@@ -1,3 +1,46 @@
+ Get all variables (global + local) for a test case:                                                                                                                                                                                                            SELECT
+      v.id,                                                                                                                                                                                                                                                    
+      v.name,
+      v.type,
+      v.value,
+      v.scope,
+      tc.name AS test_case_name
+  FROM variables v
+  LEFT JOIN test_cases tc ON v.test_case_id = tc.id
+  WHERE v.scope = 'global'
+     OR tc.name = 'your_test_case_name'
+  ORDER BY v.scope DESC, v.name;
+
+  Get merged variables (local overrides global with same name):
+  SELECT DISTINCT ON (v.name)
+      v.id,
+      v.name,
+      v.type,
+      v.value,
+      v.scope
+  FROM variables v
+  LEFT JOIN test_cases tc ON v.test_case_id = tc.id
+  WHERE v.scope = 'global'
+     OR tc.name = 'your_test_case_name'
+  ORDER BY v.name, v.scope DESC;
+
+  Get only local variables for a test case:
+  SELECT v.id, v.name, v.type, v.value, v.scope
+  FROM variables v
+  JOIN test_cases tc ON v.test_case_id = tc.id
+  WHERE tc.name = 'your_test_case_name'
+    AND v.scope = 'local'
+  ORDER BY v.name;
+
+  Get only global variables:
+  SELECT id, name, type, value, scope
+  FROM variables
+  WHERE scope = 'global'
+  ORDER BY name;
+
+
+
+
 Let me read the router files to provide comprehensive API documentation.                                                                                                                                                                                     
   
 ● Read(app\routers\test_runs.py)                                                                                                                                                                                                                                 ⎿  Read 1011 lines
