@@ -1,29 +1,7 @@
- Quick summary:                                                                                                                                                                                                                                                 ┌──────────────────┬─────────────────────────────────────────────────────────────┐
-  │      Query       │                           Purpose                           │                                                                                                                                                                           
-  ├──────────────────┼─────────────────────────────────────────────────────────────┤
-  │ All variables    │ Returns both global + local for a test case (separate rows) │
-  ├──────────────────┼─────────────────────────────────────────────────────────────┤
-  │ Merged variables │ Returns one row per variable name, local overrides global   │
-  ├──────────────────┼─────────────────────────────────────────────────────────────┤
-  │ Local only       │ Returns only local variables for a specific test case       │
-  ├──────────────────┼─────────────────────────────────────────────────────────────┤
-  │ Global only      │ Returns all global variables                                │
-  └──────────────────┴─────────────────────────────────────────────────────────────┘
-  Note: The variables table is currently empty. You need to create variables via the API first:
-
-  # Create a global variable
-  curl -X POST "http://localhost:8000/api/v1/variables/global" \
-    -H "Authorization: Bearer YOUR_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"name": "baseUrl", "type": "String", "value": "https://example.com"}'
-
-  # Create a local variable for test case "bulb"
-  curl -X POST "http://localhost:8000/api/v1/variables/test-case/98fca6be-92fa-4018-8fc6-57ced0cf2aca" \
-    -H "Authorization: Bearer YOUR_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"name": "username", "type": "String", "value": "testuser"}'
-
-  Do you need help with anything else regarding the variables API?
+  1. Variables not saved - The frontend might not be calling the correct API to persist
+  2. Wrong API - Check which endpoint your frontend is calling:
+    - New API (scoped): POST /api/v1/variables/test-case/{test_case_id} for local
+    - New API (scoped): POST /api/v1/variables/global for global
 
 
 
