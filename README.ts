@@ -1,36 +1,16 @@
- I see the issue now. The debug output shows:                                                                                                                                                                 
-                                                                                                                                                                                                               
-  [DEBUG] Loading test run items for last_test_run_id: None                                                                                                                                                    
-                                                                                                                                                                                                               
-  The last_test_run_id is None because:                                                                                                                                                                        
-                                                                                                                                                                                                               
-  1. The test run tree (folders/suites structure) and actual test runs (execution results) are separate systems on the server                                                                                  
-  2. When you log back in, the tree is fetched fresh from the server - any local last_test_run_id we stored is lost because the server doesn't store this field                                                
-                                                                                                                                                                                                               
-  This is a server-side architectural issue. The server needs to either:                                                                                                                                       
-                                                                                                                                                                                                               
-  1. Option A: Store last_test_run_id in the test run tree node - so when a test is executed, the tree node is updated with the test run ID, and this persists across logins                                   
-  2. Option B: Provide an API to query test runs by tree node ID - so we can find the most recent test run for a given tree node                                                                               
-                                                                                                                                                                                                               
-  Here's a prompt for your server team:                                                                                                                                                                        
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  Link Test Runs to Test Run Tree Nodes                                                                                                                                                                        
-                                                                                                                                                                                                               
-  Problem                                                                                                                                                                                                      
-                                                                                                                                                                                                               
-  When a user executes tests from a test run tree node (e.g., "E-commerce Regression"), a new test run is created via POST /test-runs. But there's no link between the tree node and the created test run.     
-                                                                                                                                                                                                               
-  When the user logs back in and selects the same tree node, we can't find the test run results because:                                                                                                       
-  - Tree node ID (e.g., 60104577-c964-4d58-8a71-611487b7f716) ≠ Test run ID                                                                                                                                    
-                                                                                                                                                                                                               
-  Proposed Solutions                                                                                                                                                                                           
-                                                                                                                                                                                                               
-  Option A: Add last_test_run_id to tree nodes                                                                                                                                                                 
-  - When POST /test-runs is called, update the corresponding tree node with last_test_run_id                                                                                                                   
-  - Return this field when fetching the tree via GET /test-run-tree                                                                                                                                            
-                                                                                                                                                                                                               
-  Option B: Query test runs by criteria                                                                                                                                                                        
-  - Add endpoint: GET /test-runs?tree_node_id={id} or GET /test-runs?name={name}&test_plan_id={id}                                                                                                             
-  - Return the most recent test run matching the criteria                                                                                                                                                      
-                                                                   
+Based on my research, the major Australian banks (CommBank, NAB, West NABCommbankpac, ANZ) stopped accepting foreign currency cheques in 2022, and Bendigo Bank also ceased accepting foreign cheques from June 30, 2023 Bendigo Bank. Here are your options:
+Best Solution: Switch to Direct Transfer with Computershare
+The most practical long-term solution is to contact Computershare and change your payment method from cheques to direct bank transfer (wire transfer/EFT). Computershare charges a $5 USD fee for cheques or $10 USD for electronic funds transfer Whirlpool, and payments must generally be $100 USD or more to use their Global Wire service Computershare.
+You can make this change:
+
+Online through Computershare's Investor Centre
+By submitting their payment method form
+
+You'll need your Australian bank's SWIFT code and account details.
+For Your Current Cheque:
+Unfortunately, options are very limited:
+
+Return it to Computershare - Request they reissue as a wire transfer or a new cheque you can deposit elsewhere
+Open a US bank account - Some people open a US Bank of America account that allows mobile cheque deposits via their app, then transfer to Australia (though this involves multiple fees)
+Hunt for smaller banks - You could try calling around smaller credit unions or regional banks, but most have stopped this service. Some people have reported needing at least 6 months validity remaining on cheques for any bank to accept them Expat Forum
+Currency exchange services - Try contacting specialist currency exchange services (not banks) to see if they'll cash it
