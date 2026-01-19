@@ -1,56 +1,122 @@
-if (element) {
-  const text = await element.evaluate((el) => el.textContent);
-  console.log('Text:', text);
-}
-
-
-async function findNearestButton(
-  currentElement: JSHandle | ElementHandle,  // ✅ Accept both
-  buttonText: string
-): Promise<ElementHandle<HTMLButtonElement> | null> {
-  if (!currentElement) {
-    throw new Error('Current element is required');
-  }
-
-  // ✅ Convert JSHandle to ElementHandle
-  const element = currentElement.asElement();
-  
-  if (!element) {
-    throw new Error('Could not convert to ElementHandle');
-  }
-
-  const result = await page.evaluateHandle(
-    (el, text) => {
-      if (!(el instanceof Element)) {
-        console.log('❌ Not an Element');
-        return null;
-      }
-
-      let currentNode: Element | null = el;
-      let level = 0;
-      const maxLevels = 15;
-
-      while (currentNode && level < maxLevels) {
-        if (currentNode instanceof Element && typeof currentNode.querySelectorAll === 'function') {
-          const buttons = Array.from(currentNode.querySelectorAll('button'));
-          
-          for (const btn of buttons) {
-            const btnText = btn.textContent?.trim() || '';
-            if (btnText === text || btnText.includes(text)) {
-              return btn;
-            }
-          }
-        }
-
-        currentNode = currentNode.parentElement;
-        level++;
-      }
-
-      return null;
-    },
-    element,  // ✅ Use the converted element
-    buttonText
-  );
-
-  return result as unknown as ElementHandle<HTMLButtonElement> | null;
-}
+Defect CRUD                                                                                                                                                                                                                                                    ┌────────┬──────────────┬──────────────────────────────────────────────┐
+  │ Method │   Endpoint   │                 Description                  │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ GET    │ /            │ List all defects with filtering & pagination │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ GET    │ /{defect_id} │ Get single defect with all details           │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ POST   │ /            │ Create a new defect                          │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ PUT    │ /{defect_id} │ Update a defect                              │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ DELETE │ /{defect_id} │ Delete a defect                              │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ PATCH  │ /batch       │ Batch update multiple defects                │
+  ├────────┼──────────────┼──────────────────────────────────────────────┤
+  │ DELETE │ /batch       │ Batch delete multiple defects                │
+  └────────┴──────────────┴──────────────────────────────────────────────┘
+  Statistics & Export
+  ┌────────┬──────────────┬────────────────────────┐
+  │ Method │   Endpoint   │      Description       │
+  ├────────┼──────────────┼────────────────────────┤
+  │ GET    │ /statistics  │ Get defect statistics  │
+  ├────────┼──────────────┼────────────────────────┤
+  │ GET    │ /export/csv  │ Export defects to CSV  │
+  ├────────┼──────────────┼────────────────────────┤
+  │ GET    │ /export/json │ Export defects to JSON │
+  └────────┴──────────────┴────────────────────────┘
+  Screenshots & Attachments
+  ┌────────┬──────────────────────────────────────────┬───────────────────┐
+  │ Method │                 Endpoint                 │    Description    │
+  ├────────┼──────────────────────────────────────────┼───────────────────┤
+  │ POST   │ /{defect_id}/screenshots                 │ Upload screenshot │
+  ├────────┼──────────────────────────────────────────┼───────────────────┤
+  │ DELETE │ /{defect_id}/screenshots/{screenshot_id} │ Delete screenshot │
+  ├────────┼──────────────────────────────────────────┼───────────────────┤
+  │ POST   │ /{defect_id}/attachments                 │ Upload attachment │
+  ├────────┼──────────────────────────────────────────┼───────────────────┤
+  │ DELETE │ /{defect_id}/attachments/{attachment_id} │ Delete attachment │
+  └────────┴──────────────────────────────────────────┴───────────────────┘
+  Folders
+  ┌────────┬──────────────────────┬─────────────────────────────┐
+  │ Method │       Endpoint       │         Description         │
+  ├────────┼──────────────────────┼─────────────────────────────┤
+  │ GET    │ /folders             │ List folders (hierarchical) │
+  ├────────┼──────────────────────┼─────────────────────────────┤
+  │ POST   │ /folders             │ Create folder               │
+  ├────────┼──────────────────────┼─────────────────────────────┤
+  │ PUT    │ /folders/{folder_id} │ Update folder               │
+  ├────────┼──────────────────────┼─────────────────────────────┤
+  │ DELETE │ /folders/{folder_id} │ Delete folder               │
+  └────────┴──────────────────────┴─────────────────────────────┘
+  Filters
+  ┌────────┬──────────────────────────────────────┬───────────────────────┐
+  │ Method │               Endpoint               │      Description      │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ GET    │ /filters                             │ List all filters      │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ POST   │ /filters                             │ Create filter         │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ PUT    │ /filters/{filter_id}                 │ Update filter         │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ DELETE │ /filters/{filter_id}                 │ Delete filter         │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ POST   │ /filters/{filter_id}/set-default     │ Set as default filter │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ POST   │ /filters/{filter_id}/toggle-favorite │ Toggle favorite       │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ POST   │ /filters/{filter_id}/track-usage     │ Track usage           │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ POST   │ /filters/import                      │ Import filters        │
+  ├────────┼──────────────────────────────────────┼───────────────────────┤
+  │ GET    │ /filters/export                      │ Export filters        │
+  └────────┴──────────────────────────────────────┴───────────────────────┘
+  Filter Templates
+  ┌────────┬──────────────────────────────────────┬─────────────────────────────┐
+  │ Method │               Endpoint               │         Description         │
+  ├────────┼──────────────────────────────────────┼─────────────────────────────┤
+  │ GET    │ /filter-templates                    │ List filter templates       │
+  ├────────┼──────────────────────────────────────┼─────────────────────────────┤
+  │ POST   │ /filters/from-template/{template_id} │ Create filter from template │
+  └────────┴──────────────────────────────────────┴─────────────────────────────┘
+  External Sync (Jira, Azure DevOps)
+  ┌────────┬──────────────────────────┬─────────────────────────┐
+  │ Method │         Endpoint         │       Description       │
+  ├────────┼──────────────────────────┼─────────────────────────┤
+  │ POST   │ /{defect_id}/sync        │ Sync to external system │
+  ├────────┼──────────────────────────┼─────────────────────────┤
+  │ GET    │ /{defect_id}/sync-status │ Get sync status         │
+  └────────┴──────────────────────────┴─────────────────────────┘
+  ---
+  Query Parameters for GET /
+  ┌────────────┬────────┬────────────────────────────────────────┐
+  │ Parameter  │  Type  │              Description               │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ filter_id  │ UUID   │ Apply saved filter                     │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ status     │ string │ Filter by status                       │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ severity   │ string │ Filter by severity                     │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ priority   │ string │ Filter by priority                     │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ type       │ string │ Filter by type                         │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ tags       │ string │ Comma-separated tags                   │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ folder_id  │ UUID   │ Filter by folder                       │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ search     │ string │ Search in title/description            │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ date_from  │ date   │ Start date filter                      │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ date_to    │ date   │ End date filter                        │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ page       │ int    │ Page number (default: 1)               │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ per_page   │ int    │ Items per page (default: 50, max: 200) │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ sort_by    │ string │ Sort field (default: date_created)     │
+  ├────────────┼────────┼────────────────────────────────────────┤
+  │ sort_order │ string │ asc/desc (default: desc)               │
+  └────────────┴────────┴────────────────────────────────────────┘
