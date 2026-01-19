@@ -1,3 +1,11 @@
+
+RUNNING appRuleEngine rule: totalRDZGreaterThanZero, Result:true
+Inside evaluateHandle
+Element: Objectelement: {isolatedHandle: {…}, handle: {…}}[[Prototype]]: Object
+Element type: Object
+Is Element? false
+❌ Not an Element, returning null
+
 async function findNearestButton(
   currentElement: ElementHandle,
   buttonText: string
