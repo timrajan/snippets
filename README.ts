@@ -1,40 +1,38 @@
 async function findNearestButton(
-  currentElement: ElementHandle,
+  currentElement: JSHandle | ElementHandle,  // ✅ Accept both
   buttonText: string
 ): Promise<ElementHandle<HTMLButtonElement> | null> {
   if (!currentElement) {
     throw new Error('Current element is required');
   }
 
-  // Verify currentElement is valid
-  console.log('ElementHandle type:', typeof currentElement);
-  console.log('Has evaluate?', typeof currentElement.evaluate === 'function');
+  // ✅ Convert JSHandle to ElementHandle
+  const element = currentElement.asElement();
+  
+  if (!element) {
+    throw new Error('Could not convert to ElementHandle');
+  }
 
   const result = await page.evaluateHandle(
     (el, text) => {
-      console.log('Type of el:', typeof el);
-      console.log('el constructor:', el?.constructor?.name);
-      console.log('Is HTMLElement?', el instanceof HTMLElement);
-      console.log('Is Element?', el instanceof Element);
-      console.log('Is Node?', el instanceof Node);
-      
-      // Try to access it as an element anyway
-      let currentNode = el;
+      if (!(el instanceof Element)) {
+        console.log('❌ Not an Element');
+        return null;
+      }
+
+      let currentNode: Element | null = el;
       let level = 0;
       const maxLevels = 15;
 
       while (currentNode && level < maxLevels) {
-        console.log(`Level ${level}:`, currentNode.tagName);
-
-        const buttons = Array.from(currentNode.querySelectorAll('button'));
-        console.log(`Found ${buttons.length} buttons`);
-        
-        for (const btn of buttons) {
-          const btnText = btn.textContent?.trim() || '';
-          console.log(`  Button: "${btnText}"`);
-          if (btnText === text || btnText.includes(text)) {
-            console.log('  ✅ FOUND');
-            return btn;
+        if (currentNode instanceof Element && typeof currentNode.querySelectorAll === 'function') {
+          const buttons = Array.from(currentNode.querySelectorAll('button'));
+          
+          for (const btn of buttons) {
+            const btnText = btn.textContent?.trim() || '';
+            if (btnText === text || btnText.includes(text)) {
+              return btn;
+            }
           }
         }
 
@@ -44,7 +42,7 @@ async function findNearestButton(
 
       return null;
     },
-    currentElement,
+    element,  // ✅ Use the converted element
     buttonText
   );
 
