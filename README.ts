@@ -1,11 +1,3 @@
-
-RUNNING appRuleEngine rule: totalRDZGreaterThanZero, Result:true
-Inside evaluateHandle
-Element: Objectelement: {isolatedHandle: {…}, handle: {…}}[[Prototype]]: Object
-Element type: Object
-Is Element? false
-❌ Not an Element, returning null
-
 async function findNearestButton(
   currentElement: ElementHandle,
   buttonText: string
@@ -14,23 +6,22 @@ async function findNearestButton(
     throw new Error('Current element is required');
   }
 
-  console.log('Starting search for button:', buttonText);
-
-  const result = await page.evaluateHandle(
-    (currentElement, buttonText) => {
+  // ✅ FIX: Use currentElement.evaluateHandle instead of page.evaluateHandle
+  const result = await currentElement.evaluateHandle(
+    (element, buttonText) => {
       console.log('Inside evaluateHandle');
-      console.log('Element:', currentElement);
-      console.log('Element type:', currentElement?.constructor?.name);
-      console.log('Is Element?', currentElement instanceof Element);
+      console.log('Element:', element);
+      console.log('Element type:', element?.constructor?.name);
+      console.log('Is Element?', element instanceof Element);
 
-      if (!(currentElement instanceof Element)) {
+      if (!(element instanceof Element)) {
         console.log('❌ Not an Element, returning null');
         return null;
       }
 
       console.log('✅ Valid element, starting traversal');
 
-      let currentNode: Element | null = currentElement;
+      let currentNode: Element | null = element;
       let level = 0;
       const maxLevels = 15;
 
@@ -58,11 +49,8 @@ async function findNearestButton(
       console.log('❌ No button found after', level, 'levels');
       return null;
     },
-    currentElement,
-    buttonText
+    buttonText  // ✅ Only pass buttonText, element is automatic
   );
-
-  console.log('evaluateHandle completed, result:', result);
 
   return result as unknown as ElementHandle<HTMLButtonElement> | null;
 }
