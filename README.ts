@@ -1,3 +1,5 @@
+ TypeError: currentNode.querySelectorAll is not a function
+
 Type 'NodeListOf<HTMLButtonElement>' must have a '[Symbol.iterator]()' method that returns an iterator.ts(
 
 
