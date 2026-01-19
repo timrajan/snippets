@@ -1,4 +1,7 @@
- /**
+Type 'NodeListOf<HTMLButtonElement>' must have a '[Symbol.iterator]()' method that returns an iterator.ts(
+
+
+/**
    * Find and click button immediately
    */
   async findAndClickButton(
