@@ -1,3 +1,7 @@
+const textContent = await jsHandle.evaluate((el) => el.textContent);
+console.log('Text:', textContent);
+
+
 async function findNearestButton(
   currentElement: JSHandle | ElementHandle,  // ✅ Accept both
   buttonText: string
