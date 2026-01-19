@@ -1,68 +1,45 @@
- TypeError: currentNode.querySelectorAll is not a function
-
-Type 'NodeListOf<HTMLButtonElement>' must have a '[Symbol.iterator]()' method that returns an iterator.ts(
-
-
-/**
-   * Find and click button immediately
-   */
-  async findAndClickButton(
-    currentElement: ElementHandle,
-    buttonText: 'Add' | 'Save' | 'Cancel'
-  ): Promise<void> {
-    const found = await this.findNearestButton(currentElement, buttonText);
-    if (!found) {
-      throw new Error(`Button "${buttonText}" not found in DOM tree`);
-    }
-    await this.clickStoredButton();
+async findNearestButton(
+  currentElement: ElementHandle,
+  buttonText: string
+): Promise<ElementHandle<HTMLButtonElement> | null> {
+  if (!currentElement) {
+    throw new Error('Current element is required');
   }
 
+  const result = await this.page.evaluateHandle(
+    (element, text) => {
+      // ✅ NEW LINE: Validate element first
+      if (!(element instanceof Element)) {
+        return null;
+      }
 
- /**
-   * Find nearest button by walking up the DOM tree from a specific element
-   * Pure DOM traversal - no side effects
-   * @param currentElement - The element to start searching from
-   * @param buttonText - The button text to find
-   * @returns ElementHandle of the button or null if not found
-   */
-  async findNearestButton(
-    currentElement: ElementHandle,
-    buttonText: string
-  ): Promise<ElementHandle<HTMLButtonElement> | null> {
-    if (!currentElement) {
-      throw new Error('Current element is required');
-    }
+      let currentNode: Element | null = element;
+      let level = 0;
+      const maxLevels = 15;
 
-    const button = await this.page.evaluateHandle(
-      (element, text) => {
-        let currentNode: Element | null = element;
-        let level = 0;
-        const maxLevels = 15; // Safety limit
-
-        while (currentNode && level < maxLevels) {
-          // Look for button in current level
-          const buttons = currentNode.querySelectorAll('button');
+      while (currentNode && level < maxLevels) {
+        // ✅ MODIFIED LINE: Added safety check
+        if (currentNode instanceof Element && typeof currentNode.querySelectorAll === 'function') {
+          const buttons = Array.from(currentNode.querySelectorAll('button'));
           
           for (const btn of buttons) {
             const btnText = btn.textContent?.trim() || '';
             if (btnText === text || btnText.includes(text)) {
-              return btn as HTMLButtonElement;
+              return btn;
             }
           }
-
-          // No button found, go up one level
-          currentNode = currentNode.parentElement;
-          level++;
         }
 
-        return null;
-      },
-      currentElement,
-      buttonText
-    ) as ElementHandle<HTMLButtonElement>;
+        currentNode = currentNode.parentElement;
+        level++;
+      }
 
-    // Check if button was actually found
-    const isNull = await this.page.evaluate((btn) => btn === null, button);
-    
-    return isNull ? null : button;
-  }
+      return null;
+    },
+    currentElement,
+    buttonText
+  );
+
+  // ✅ MODIFIED: Changed return handling
+  return result.asElement() as ElementHandle<HTMLButtonElement> | null;
+}
