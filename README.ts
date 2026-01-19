@@ -1,5 +1,7 @@
-const textContent = await jsHandle.evaluate((el) => el.textContent);
-console.log('Text:', textContent);
+if (element) {
+  const text = await element.evaluate((el) => el.textContent);
+  console.log('Text:', text);
+}
 
 
 async function findNearestButton(
