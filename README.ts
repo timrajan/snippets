@@ -1,3 +1,14 @@
+// ✅ FIX: Convert to ElementHandle and check if it's valid
+    const button = result.asElement() as ElementHandle<HTMLButtonElement> | null;
+    
+    if (button !== null) {
+      console.log(`✅ Button "${buttonText}" found from element ${i + 1}`);
+      return button;
+    }
+    
+    console.log(`Element ${i + 1}: No button found, continuing...`);
+
+
 async function findNearestButton(
     elements: ElementHandle[],  // ✅ Changed to array
     buttonText: string
