@@ -1,3 +1,5 @@
+const outerHTML = await element.evaluate((el) => el.outerHTML);
+console.log(outerHTML);
 Argument of type 'ElementHandle<Node>' is not assignable to parameter of type 'ElementHandle<Element>'.
 
 async function getParentChain(
