@@ -1,3 +1,5 @@
+Argument of type 'ElementHandle<Node>' is not assignable to parameter of type 'ElementHandle<Element>'.
+
 async function getParentChain(
   element: ElementHandle,
   maxLevels: number = 15
