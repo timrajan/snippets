@@ -1,3 +1,29 @@
+async function findHiddenTextboxByValue(
+  page: Page, 
+  expectedValue: string
+): Promise<ElementHandle<Element> | null> {
+  const textboxes = await page.$$('input[aria-hidden="true"], textarea[aria-hidden="true"]');
+  
+  for (const textbox of textboxes) {
+    const value = await textbox.evaluate((el: HTMLInputElement) => el.value);
+    
+    if (value === expectedValue) {
+      // Dispose other textboxes to free memory
+      textboxes.forEach(tb => {
+        if (tb !== textbox) tb.dispose();
+      });
+      return textbox;
+    }
+  }
+  
+  // Dispose all if no match found
+  await Promise.all(textboxes.map(tb => tb.dispose()));
+  
+  return null;
+}
+
+
+
 import { Page, ElementHandle } from 'puppeteer';
 
 /**
