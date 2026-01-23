@@ -1,20 +1,27 @@
- // Read Excel workbook
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-
-    // Check if sheet exists
-    if (!workbook.SheetNames.includes(sheetName)) {
-        throw new Error(`Sheet "${sheetName}" not found in the Excel file`);
-    }
-
-    const worksheet = workbook.Sheets[sheetName];
-
-    // Convert first row to JSON to get headers
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    if (jsonData.length === 0) {
-        console.error("Sheet is empty");
-        return null;
-    }
-
-    // First row contains column names
-    const columnNames = (jsonData[0] as any[]).filter((name) => name !== undefined && name !== null && name !== "").map((name) => String(name));
+ I'll help you with Option 2 - delete from server and clear local sync status.                                                                                                                                  
+                                                                                                                                                                                                                 
+  Step 1: Clear local sync status files                                                                                                                                                                          
+                                                                                                                                                                                                                 
+⏺ Bash(find /Users/timothyrajanalex/Documents/tester-browser/recordings/test_runs -name "sync_status.json" -delete 2>/dev/null; echo "Local sync status files cleared")                                          
+  ⎿  Local sync status files cleared                                                                                                                                                                             
+                                                                                                                                                                                                                 
+⏺ Local sync status cleared.                                                                                                                                                                                     
+                                                                                                                                                                                                                 
+  Step 2: Delete from server database                                                                                                                                                                            
+                                                                                                                                                                                                                 
+  To delete reports from the server, I need to know:                                                                                                                                                             
+  1. How do you connect to the database? (PostgreSQL? What host/port?)                                                                                                                                           
+  2. What is your user_id? (Or I can help you find it)                                                                                                                                                           
+                                                                                                                                                                                                                 
+  Or if you have a database client (like pgAdmin, DBeaver, or psql), you can run these SQL commands:                                                                                                             
+                                                                                                                                                                                                                 
+  -- First, find your user_id (if you don't know it)                                                                                                                                                             
+  SELECT id, email FROM users WHERE email = 'your_email@example.com';                                                                                                                                            
+                                                                                                                                                                                                                 
+  -- Then delete all your reports (replace <user_id> with the actual UUID)                                                                                                                                       
+  DELETE FROM report_network_logs WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                 
+  DELETE FROM report_console_logs WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                 
+  DELETE FROM step_results WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                        
+  DELETE FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>');                                                                                                   
+  DELETE FROM suite_runs WHERE user_id = '<user_id>';                                                                                                                                                            
+                                                                    
