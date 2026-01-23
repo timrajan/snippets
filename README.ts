@@ -1,3 +1,8 @@
+const valueHandle = await element.getProperty('value');
+const value = await valueHandle.jsonValue();
+console.log(value);
+
+
 async function findHiddenTextboxByValue(
   page: Page, 
   expectedValue: string
