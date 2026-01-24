@@ -1,27 +1,37 @@
- I'll help you with Option 2 - delete from server and clear local sync status.                                                                                                                                  
-                                                                                                                                                                                                                 
-  Step 1: Clear local sync status files                                                                                                                                                                          
-                                                                                                                                                                                                                 
-⏺ Bash(find /Users/timothyrajanalex/Documents/tester-browser/recordings/test_runs -name "sync_status.json" -delete 2>/dev/null; echo "Local sync status files cleared")                                          
-  ⎿  Local sync status files cleared                                                                                                                                                                             
-                                                                                                                                                                                                                 
-⏺ Local sync status cleared.                                                                                                                                                                                     
-                                                                                                                                                                                                                 
-  Step 2: Delete from server database                                                                                                                                                                            
-                                                                                                                                                                                                                 
-  To delete reports from the server, I need to know:                                                                                                                                                             
-  1. How do you connect to the database? (PostgreSQL? What host/port?)                                                                                                                                           
-  2. What is your user_id? (Or I can help you find it)                                                                                                                                                           
-                                                                                                                                                                                                                 
-  Or if you have a database client (like pgAdmin, DBeaver, or psql), you can run these SQL commands:                                                                                                             
-                                                                                                                                                                                                                 
-  -- First, find your user_id (if you don't know it)                                                                                                                                                             
-  SELECT id, email FROM users WHERE email = 'your_email@example.com';                                                                                                                                            
-                                                                                                                                                                                                                 
-  -- Then delete all your reports (replace <user_id> with the actual UUID)                                                                                                                                       
-  DELETE FROM report_network_logs WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                 
-  DELETE FROM report_console_logs WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                 
-  DELETE FROM step_results WHERE test_case_result_id IN (SELECT id FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>'));                                        
-  DELETE FROM test_case_results WHERE suite_run_id IN (SELECT id FROM suite_runs WHERE user_id = '<user_id>');                                                                                                   
-  DELETE FROM suite_runs WHERE user_id = '<user_id>';                                                                                                                                                            
-                                                                    
+I see the issue. The 422 error is intentional - it means:                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                 1. The test run with ID f68fdf7d-4a0a-4a14-9728-e7255eb42e3e either:                                                                                                                                                                                             - Doesn't exist, OR                                                                                                                                                                                                                                        
+    - Is not in 'running' status (already completed/cancelled)                                                                                                                                                                                                   
+  From the code at line 369-374:
+  db_run = stop_test_run(db, run_id)
+  if not db_run:
+      raise HTTPException(
+          status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+          detail="Cannot stop test run: not running or not found"
+      )
+
+  Summary of Issues
+  ┌──────────────────────────────────┬────────┬──────────────────────────────────────────────┐
+  │             Request              │ Status │                 Explanation                  │
+  ├──────────────────────────────────┼────────┼──────────────────────────────────────────────┤
+  │ GET /api/v1/suite-runs           │ 404    │ Wrong path - Use /api/v1/reports/suite-runs  │
+  ├──────────────────────────────────┼────────┼──────────────────────────────────────────────┤
+  │ POST /api/v1/test-runs/{id}/stop │ 422    │ Test run not found or not in 'running' state │
+  ├──────────────────────────────────┼────────┼──────────────────────────────────────────────┤
+  │ GET /api/v1/test-runs/{id}/stop  │ 405    │ Expected - stop is POST only                 │
+  ├──────────────────────────────────┼────────┼──────────────────────────────────────────────┤
+  │ GET /favicon.ico                 │ 404    │ Normal - no favicon served by API            │
+  └──────────────────────────────────┴────────┴──────────────────────────────────────────────┘
+  Correct Endpoints
+
+  # Suite runs (test reports)
+  GET  /api/v1/reports/suite-runs
+  POST /api/v1/reports/suite-runs
+  GET  /api/v1/reports/suite-runs/{id}
+
+  # Test runs (execution management)
+  GET  /api/v1/test-runs
+  POST /api/v1/test-runs
+  GET  /api/v1/test-runs/{id}
+  POST /api/v1/test-runs/{id}/start
+  POST /api/v1/test-runs/{id}/stop    # Only works if status='running'
+  POST /api/v1/test-runs/{id}/cancel  # Only works if status='pending'
