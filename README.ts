@@ -1,20 +1,17 @@
- Excellent! Both are now working:                                                                                                                                                                               
-                                                                                                                                                                                                                 
-  ✅ Suite run created: 4f61b0fc-7e4d-468a-8692-8a5e99832da2 (201)                                                                                                                                               ─
-  ✅ Test case result created: e8671895-1e7b-43a0-9403-8d942b75793a (201)                                                                                                                                         
-  ✅ Sync marked as complete                                                                                                                                                                                     ─
-                                                                                                                                                                                                                 
-  However, there's one issue:                                                                                                                                                                                    
-  [REPORTS] Loaded 0 suite runs from server                                                                                                                                                                      
-                                                                                                                                                                                                                 
-  The suite runs are being created successfully but GET /api/v1/reports/suite-runs returns 0 results. This could be:                                                                                             
-                                                                                                                                                                                                                 
-  1. Server-side issue - The GET endpoint might have a bug or require different query parameters                                                                                                                 
-  2. User scoping - The server might filter by user and there's a mismatch                                                                                                                                       
-  3. Pagination issue - The response format might be different than expected                                                                                                                                     
-                                                                                                                                                                                                                 
-  Can you ask the team to verify:                                                                                                                                                                                
-  1. Are the suite runs visible in the database?                                                                                                                                                                 
-  2. What's the expected response format from GET /api/v1/reports/suite-runs?                                                                                                                                    
-                                                                                                                                                                                                                 
-  The 422 error on "stop test run" is expected (test already completed/not running).  
+Here's a message for the team:                                                                                                                                                                                                                               
+
+  ---                                                                                                                                                                                                                                                            Issue: GET /api/v1/reports/suite-runs returns 0 results despite successful creation
+                                                                                                                                                                                                                                                               
+  What's happening:
+  - POST /api/v1/reports/suite-runs successfully creates a suite run (201) with ID 4f61b0fc-7e4d-468a-8692-8a5e99832da2
+  - GET /api/v1/reports/suite-runs returns 0 results
+
+  Root cause identified:
+  The suite run was created with user_id = 9e584a24-0151-4abe-aa47-9c790c25514b, but the GET request appears to be authenticating as a different user.
+
+  The API filters suite runs by the authenticated user's ID, so if the tokens don't match the same user, the results will be empty.
+
+  Action needed:
+  1. What user_id is the GET request authenticating as? (Decode the JWT or check logs)
+  2. Why are the POST and GET requests using different auth tokens/users?
+  3. Is there a token refresh happening that's switching users, or are multiple accounts configured?
