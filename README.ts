@@ -1,17 +1,36 @@
-Here's a message for the team:                                                                                                                                                                                                                               
-
-  ---                                                                                                                                                                                                                                                            Issue: GET /api/v1/reports/suite-runs returns 0 results despite successful creation
-                                                                                                                                                                                                                                                               
-  What's happening:
-  - POST /api/v1/reports/suite-runs successfully creates a suite run (201) with ID 4f61b0fc-7e4d-468a-8692-8a5e99832da2
-  - GET /api/v1/reports/suite-runs returns 0 results
-
-  Root cause identified:
-  The suite run was created with user_id = 9e584a24-0151-4abe-aa47-9c790c25514b, but the GET request appears to be authenticating as a different user.
-
-  The API filters suite runs by the authenticated user's ID, so if the tokens don't match the same user, the results will be empty.
-
-  Action needed:
-  1. What user_id is the GET request authenticating as? (Decode the JWT or check logs)
-  2. Why are the POST and GET requests using different auth tokens/users?
-  3. Is there a token refresh happening that's switching users, or are multiple accounts configured?
+ Issue: GET /api/v1/reports/suite-runs returns 0 results despite successful POST                                                                                                                                
+                                                                                                                                                                                                                 
+  What's Happening                                                                                                                                                                                               
+                                                                                                                                                                                                                 
+  1. POST /api/v1/reports/suite-runs creates a suite run successfully (201)                                                                                                                                      
+    - Suite run ID: ac47c028-df72-4455-9ceb-d395a746464c                                                                                                                                                         
+    - User ID from JWT: 9e584a24-0151-4abe-aa47-9c790c25514b                                                                                                                                                     
+  2. GET /api/v1/reports/suite-runs returns 0 results (200 OK but empty)                                                                                                                                         
+    - Same user ID from JWT: 9e584a24-0151-4abe-aa47-9c790c25514b                                                                                                                                                
+    - Query params: page=1, per_page=200, sort_by=started_at, sort_order=desc                                                                                                                                    
+                                                                                                                                                                                                                 
+  Request Bodies                                                                                                                                                                                                 
+                                                                                                                                                                                                                 
+  POST Request:                                                                                                                                                                                                  
+  {                                                                                                                                                                                                              
+    "suite_name": "Sat",                                                                                                                                                                                         
+    "suite_path": ["ROOT", "Sat"],                                                                                                                                                                               
+    "status": "Failed",                                                                                                                                                                                          
+    "total_tests": 1,                                                                                                                                                                                            
+    "passed_tests": 0,                                                                                                                                                                                           
+    "failed_tests": 1,                                                                                                                                                                                           
+    "skipped_tests": 0,                                                                                                                                                                                          
+    "duration_ms": 33332,                                                                                                                                                                                        
+    "metadata": {"run_timestamp": "Run_20260124_114423", "pass_rate": 0.0}                                                                                                                                       
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  Investigation Needed                                                                                                                                                                                           
+                                                                                                                                                                                                                 
+  1. Verify the suite run is being persisted to the database (check the suite_runs table for ID ac47c028-df72-4455-9ceb-d395a746464c)                                                                            
+  2. Check what user_id is stored on the created record - does it match 9e584a24-0151-4abe-aa47-9c790c25514b?                                                                                                    
+  3. Review the GET endpoint's query logic - is it filtering by user_id correctly?                                                                                                                               
+  4. Check server logs for the GET request to see the actual SQL query being executed                                                                                                                            
+                                                                                                                                                                                                                 
+  Expected Behavior                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  GET /api/v1/reports/suite-runs should return the suite run that was just created when authenticated as the same user who created it
