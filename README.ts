@@ -1,23 +1,20 @@
- Correct Endpoint                                                                                                                                                                                                                                             
-                                                                                                                                                                                                                                                                 POST /api/v1/reports/test-case-results                                                                                                                                                                                                                       
-                                                                                                                                                                                                                                                                 Required Request Body
-
-  {
-    "suite_run_id": "uuid-of-suite-run",
-    "test_case_name": "string (required)",
-    "test_case_path": ["folder", "subfolder"]
-  }
-
-  Optional Fields
-  ┌──────────────────┬──────────┬─────────┐
-  │      Field       │   Type   │ Default │
-  ├──────────────────┼──────────┼─────────┤
-  │ test_case_id     │ UUID     │ null    │
-  ├──────────────────┼──────────┼─────────┤
-  │ iteration_number │ int      │ 1       │
-  ├──────────────────┼──────────┼─────────┤
-  │ base_url         │ string   │ null    │
-  ├──────────────────┼──────────┼─────────┤
-  │ tags             │ string[] │ null    │
-  └──────────────────┴──────────┴─────────┘
-  The GET /api/v1/reports/suite-runs/{id}/test-cases endpoint is only for reading test case results, not creating them.
+ Excellent! Both are now working:                                                                                                                                                                               
+                                                                                                                                                                                                                 
+  ✅ Suite run created: 4f61b0fc-7e4d-468a-8692-8a5e99832da2 (201)                                                                                                                                               ─
+  ✅ Test case result created: e8671895-1e7b-43a0-9403-8d942b75793a (201)                                                                                                                                         
+  ✅ Sync marked as complete                                                                                                                                                                                     ─
+                                                                                                                                                                                                                 
+  However, there's one issue:                                                                                                                                                                                    
+  [REPORTS] Loaded 0 suite runs from server                                                                                                                                                                      
+                                                                                                                                                                                                                 
+  The suite runs are being created successfully but GET /api/v1/reports/suite-runs returns 0 results. This could be:                                                                                             
+                                                                                                                                                                                                                 
+  1. Server-side issue - The GET endpoint might have a bug or require different query parameters                                                                                                                 
+  2. User scoping - The server might filter by user and there's a mismatch                                                                                                                                       
+  3. Pagination issue - The response format might be different than expected                                                                                                                                     
+                                                                                                                                                                                                                 
+  Can you ask the team to verify:                                                                                                                                                                                
+  1. Are the suite runs visible in the database?                                                                                                                                                                 
+  2. What's the expected response format from GET /api/v1/reports/suite-runs?                                                                                                                                    
+                                                                                                                                                                                                                 
+  The 422 error on "stop test run" is expected (test already completed/not running).  
