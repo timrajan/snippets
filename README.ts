@@ -1,139 +1,148 @@
- Current Implementation                                                                                                                                                                                         
-                                                                                                                                                                                                                 
-  Endpoints being used:                                                                                                                                                                                          
-  - GET /settings - Retrieve all user settings                                                                                                                                                                   
-  - PUT /settings - Update all user settings (full replacement)                                                                                                                                                  
-  - POST /settings/reset - Reset settings to defaults                                                                                                                                                            
-                                                                                                                                                                                                                 
-  Payload format: Flat JSON object with all settings as key-value pairs.                                                                                                                                         
-                                                                                                                                                                                                                 
-  ---                                                                                                                                                                                                            
-  Questions                                                                                                                                                                                                      
-                                                                                                                                                                                                                 
-  1. Schema Validation                                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  Does the server perform strict schema validation on the settings payload?                                                                                                                                      
-                                                                                                                                                                                                                 
-  - If YES: What fields are accepted? Is there a whitelist of allowed fields?                                                                                                                                    
-  - If NO (flexible JSONB): Does the server accept and store ANY fields we send, or does it filter/ignore unknown fields?                                                                                        
-                                                                                                                                                                                                                 
-  2. Browser Widget Settings Support                                                                                                                                                                             
-                                                                                                                                                                                                                 
-  We need to store these 5 fields that are NOT in the current API spec (settings-api-spec-v2.md):                                                                                                                
-  ┌────────────────────────────┬──────────────────┬──────────────────────────────────────────────┐                                                                                                               
-  │           Field            │       Type       │                Example Value                 │                                                                                                               
-  ├────────────────────────────┼──────────────────┼──────────────────────────────────────────────┤                                                                                                               
-  │ show_cross_browser_toolbar │ boolean          │ true                                         │                                                                                                               
-  ├────────────────────────────┼──────────────────┼──────────────────────────────────────────────┤                                                                                                               
-  │ show_watch_mode_controls   │ boolean          │ true                                         │                                                                                                               
-  ├────────────────────────────┼──────────────────┼──────────────────────────────────────────────┤                                                                                                               
-  │ show_snapshots_widget      │ boolean          │ true                                         │                                                                                                               
-  ├────────────────────────────┼──────────────────┼──────────────────────────────────────────────┤                                                                                                               
-  │ show_location_widget       │ boolean          │ true                                         │                                                                                                               
-  ├────────────────────────────┼──────────────────┼──────────────────────────────────────────────┤                                                                                                               
-  │ selected_browsers          │ array of strings │ ["chrome", "opera", "vivaldi", "arc", "tor"] │                                                                                                               
-  └────────────────────────────┴──────────────────┴──────────────────────────────────────────────┘                                                                                                               
-  Questions:                                                                                                                                                                                                     
-  - Are these fields currently being accepted and stored by the server?                                                                                                                                          
-  - If not, can they be added to the schema?                                                                                                                                                                     
-  - For selected_browsers, can you confirm the server supports storing an array of strings (up to 5 browser identifiers)?                                                                                        
-                                                                                                                                                                                                                 
-  3. Field Persistence Verification                                                                                                                                                                              
-                                                                                                                                                                                                                 
-  Can you confirm what happens when we send a PUT /settings request with this payload:                                                                                                                           
-                                                                                                                                                                                                                 
-  {                                                                                                                                                                                                              
-    "captures_per_minute": 60,                                                                                                                                                                                   
-    "default_url": "https://example.com",                                                                                                                                                                        
-    "selected_browsers": ["chrome", "opera", "vivaldi"],                                                                                                                                                         
-    "show_cross_browser_toolbar": true,                                                                                                                                                                          
-    "show_watch_mode_controls": false,                                                                                                                                                                           
-    ... other fields ...                                                                                                                                                                                         
-  }                                                                                                                                                                                                              
-                                                                                                                                                                                                                 
-  Specifically:                                                                                                                                                                                                  
-  - Is selected_browsers stored and returned in subsequent GET /settings calls?                                                                                                                                  
-  - Is show_cross_browser_toolbar stored and returned?                                                                                                                                                           
-  - Are any fields silently dropped or ignored?                                                                                                                                                                  
-                                                                                                                                                                                                                 
-  4. GET /settings Response Format                                                                                                                                                                               
-                                                                                                                                                                                                                 
-  When calling GET /settings for a user who has saved settings, what exactly is returned?                                                                                                                        
-                                                                                                                                                                                                                 
-  Expected response format:                                                                                                                                                                                      
-  {                                                                                                                                                                                                              
-    "data": {                                                                                                                                                                                                    
-      "captures_per_minute": 60,                                                                                                                                                                                 
-      "selected_browsers": ["chrome", "opera", "vivaldi"],                                                                                                                                                       
-      "show_cross_browser_toolbar": true,                                                                                                                                                                        
-      ... all other saved fields ...                                                                                                                                                                             
-    }                                                                                                                                                                                                            
-  }                                                                                                                                                                                                              
-                                                                                                                                                                                                                 
-  Questions:                                                                                                                                                                                                     
-  - Does the response include ALL fields that were saved via PUT /settings?                                                                                                                                      
-  - Or does it only return fields that match a predefined schema?                                                                                                                                                
-  - If a field was never set by the user, is it omitted or returned with a default value?                                                                                                                        
-                                                                                                                                                                                                                 
-  5. First-Time User Behavior                                                                                                                                                                                    
-                                                                                                                                                                                                                 
-  For a user who has never saved settings (first login):                                                                                                                                                         
-  - Does GET /settings return null/None?                                                                                                                                                                         
-  - Or does it return an empty object {}?                                                                                                                                                                        
-  - Or does it return default values for all fields?                                                                                                                                                             
-                                                                                                                                                                                                                 
-  6. Credentials Handling Confirmation                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  For sensitive fields (ai_api_key, jira_api_token, azure_pat):                                                                                                                                                  
-  - Confirm: These are stored encrypted and never returned in GET responses?                                                                                                                                     
-  - Confirm: Instead, the server returns has_ai_api_key: true/false flags?                                                                                                                                       
-                                                                                                                                                                                                                 
-  ---                                                                                                                                                                                                            
-  Test Request                                                                                                                                                                                                   
-                                                                                                                                                                                                                 
-  Could you run this test and share the results?                                                                                                                                                                 
-                                                                                                                                                                                                                 
-  Step 1: Make a PUT request with these browser widget fields:                                                                                                                                                   
-  curl -X PUT https://api.example.com/settings \                                                                                                                                                                 
-    -H "Authorization: Bearer <token>" \                                                                                                                                                                         
-    -H "Content-Type: application/json" \                                                                                                                                                                        
-    -d '{                                                                                                                                                                                                        
-      "captures_per_minute": 60,                                                                                                                                                                                 
-      "selected_browsers": ["opera", "vivaldi", "arc"],                                                                                                                                                          
-      "show_cross_browser_toolbar": false,                                                                                                                                                                       
-      "show_watch_mode_controls": true,                                                                                                                                                                          
-      "show_snapshots_widget": false,                                                                                                                                                                            
-      "show_location_widget": true                                                                                                                                                                               
-    }'                                                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  Step 2: Make a GET request:                                                                                                                                                                                    
-  curl -X GET https://api.example.com/settings \                                                                                                                                                                 
-    -H "Authorization: Bearer <token>"                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  Question: Does the GET response include selected_browsers, show_cross_browser_toolbar, etc. with the values we just saved?                                                                                     
-                                                                                                                                                                                                                 
-  ---                                                                                                                                                                                                            
-  Summary of What We Need                                                                                                                                                                                        
-                                                                                                                                                                                                                 
-  1. Confirmation that the 5 browser widget fields are stored and returned by the server                                                                                                                         
-  2. If not supported, a timeline for adding them to the schema                                                                                                                                                  
-  3. Documentation of any fields that are filtered/ignored by the server                                                                                                                                         
-  4. Clarification on whether the server uses strict schema validation or flexible JSONB storage                                                                                                                 
-                                                                                                                                                                                                                 
-  ---                                                                                                                                                                                                            
-  Our Available Browser Options (for reference)                                                                                                                                                                  
-                                                                                                                                                                                                                 
-  The selected_browsers field can contain up to 5 values from this list:                                                                                                                                         
-  - chrome                                                                                                                                                                                                       
-  - firefox                                                                                                                                                                                                      
-  - safari                                                                                                                                                                                                       
-  - edge                                                                                                                                                                                                         
-  - opera                                                                                                                                                                                                        
-  - brave                                                                                                                                                                                                        
-  - vivaldi                                                                                                                                                                                                      
-  - arc                                                                                                                                                                                                          
-  - chromium                                                                                                                                                                                                     
-  - tor                                                                                                                                                                                                          
-                                                                                                                                                                                                                 
-  ---                                                                                                                                                                                                            
-  Please let me know if you need any additional information or logs from the client side.      
+ I've added the 5 browser widget fields and created detailed documentation. Here's the summary for the UI team:
+
+  Summary of Changes & Answers                                                                                                                                                                                                                                                                                                                
+  ✅ All 5 Browser Widget Fields Now Supported                                                                                                                                                                                                                 
+  ┌────────────────────────────┬─────────┬──────────────────────────────────────────────┬──────────────────────────┐                                                                                                                                           
+  │           Field            │  Type   │                   Default                    │        Validation        │
+  ├────────────────────────────┼─────────┼──────────────────────────────────────────────┼──────────────────────────┤
+  │ show_cross_browser_toolbar │ boolean │ true                                         │ None                     │
+  ├────────────────────────────┼─────────┼──────────────────────────────────────────────┼──────────────────────────┤
+  │ show_watch_mode_controls   │ boolean │ true                                         │ None                     │
+  ├────────────────────────────┼─────────┼──────────────────────────────────────────────┼──────────────────────────┤
+  │ show_snapshots_widget      │ boolean │ true                                         │ None                     │
+  ├────────────────────────────┼─────────┼──────────────────────────────────────────────┼──────────────────────────┤
+  │ show_location_widget       │ boolean │ true                                         │ None                     │
+  ├────────────────────────────┼─────────┼──────────────────────────────────────────────┼──────────────────────────┤
+  │ selected_browsers          │ array   │ ["chrome","firefox","safari","edge","opera"] │ Max 5, from allowed list │
+  └────────────────────────────┴─────────┴──────────────────────────────────────────────┴──────────────────────────┘
+  Allowed browsers: chrome, firefox, safari, edge, opera, brave, vivaldi, arc, chromium, tor
+
+  Answers to Questions
+  ┌──────────────────────────────────┬───────────────────────────────────────────────────────────┐
+  │             Question             │                          Answer                           │
+  ├──────────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Schema validation?               │ Strict - unknown fields are dropped                       │
+  ├──────────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Browser widget fields stored?    │ YES ✅ (just added)                                       │
+  ├──────────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ selected_browsers array support? │ YES ✅ (max 5, validated)                                 │
+  ├──────────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ First-time user response?        │ { "data": null, "message": "No settings found for user" } │
+  ├──────────────────────────────────┼───────────────────────────────────────────────────────────┤
+  │ Credentials handling?            │ Stored encrypted, returned as has_* flags                 │
+  └──────────────────────────────────┴───────────────────────────────────────────────────────────┘
+  Documentation Created
+
+  1. docs/SETTINGS_API_V2_DOCUMENTATION.md - Complete API reference (updated with browser fields)
+  2. docs/SETTINGS_API_UI_TEAM_ANSWERS.md - Direct answers to all questions with examples
+
+  Test Example
+
+  # PUT - Save browser widget settings
+  curl -X PUT http://localhost:8000/api/v1/settings \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "selected_browsers": ["opera", "vivaldi", "arc"],
+      "show_cross_browser_toolbar": false,
+      "show_watch_mode_controls": true,
+      ...other fields...
+    }'
+
+  # GET - Verify they're returned
+  curl -X GET http://localhost:8000/api/v1/settings \
+    -H "Authorization: Bearer <token>"
+  # Response includes: selected_browsers, show_cross_browser_toolbar, etc.
+
+✻ Crunched for 3m 19s                          
+
+❯ give me a snippet of what has been done so that I can give it to the UI Team                                                                                                                                                                                   ⎿  ⧉ Selected 901 lines from docs\SETTINGS_API_V2_DOCUMENTATION.md in Visual Studio Code
+                                                                                                                                                                                                                                                               
+● Here's a concise snippet for the UI team:                                                                                                                                                                                                                    
+
+  ---
+  Settings API V2 - Implementation Complete
+                                                                                                                                                                                                                                                                 What Was Done                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+  1. Refactored Settings API from nested structure to flat structure matching settings.json                                                                                                                                                                      2. Added 5 browser widget fields per your request
+  3. Created documentation at docs/SETTINGS_API_V2_DOCUMENTATION.md
+
+  ---
+  API Endpoints
+  ┌────────┬────────────────────────────────────┬────────────────────────────────────────┐
+  │ Method │              Endpoint              │              Description               │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ GET    │ /api/v1/settings                   │ Get all settings                       │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ PUT    │ /api/v1/settings                   │ Update all settings (full replacement) │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ POST   │ /api/v1/settings/reset             │ Reset to defaults ({"confirm": true})  │
+  ├────────┼────────────────────────────────────┼────────────────────────────────────────┤
+  │ POST   │ /api/v1/settings/integrations/test │ Test Jira/Azure connection             │
+  └────────┴────────────────────────────────────┴────────────────────────────────────────┘
+  ---
+  Browser Widget Fields (NEW)
+  ┌────────────────────────────┬──────────┬──────────────────────────────────────────────┐
+  │           Field            │   Type   │                   Default                    │
+  ├────────────────────────────┼──────────┼──────────────────────────────────────────────┤
+  │ show_cross_browser_toolbar │ boolean  │ true                                         │
+  ├────────────────────────────┼──────────┼──────────────────────────────────────────────┤
+  │ show_watch_mode_controls   │ boolean  │ true                                         │
+  ├────────────────────────────┼──────────┼──────────────────────────────────────────────┤
+  │ show_snapshots_widget      │ boolean  │ true                                         │
+  ├────────────────────────────┼──────────┼──────────────────────────────────────────────┤
+  │ show_location_widget       │ boolean  │ true                                         │
+  ├────────────────────────────┼──────────┼──────────────────────────────────────────────┤
+  │ selected_browsers          │ string[] │ ["chrome","firefox","safari","edge","opera"] │
+  └────────────────────────────┴──────────┴──────────────────────────────────────────────┘
+  selected_browsers validation:
+  - Maximum 5 browsers
+  - Allowed values: chrome, firefox, safari, edge, opera, brave, vivaldi, arc, chromium, tor
+
+  ---
+  Key Behaviors
+  ┌─────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────┐
+  │    Scenario     │                                          Behavior                                           │
+  ├─────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ First-time user │ GET returns { "data": null, "message": "No settings found" } → UI should PUT local defaults │
+  ├─────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Credentials     │ ai_api_key, jira_api_token, azure_pat are input-only. Response returns has_* flags instead  │
+  ├─────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Unknown fields  │ Silently dropped (strict schema validation)                                                 │
+  ├─────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ PUT request     │ Full replacement - always send complete settings object                                     │
+  └─────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────┘
+  ---
+  Response Format
+
+  GET /settings (success):
+  {
+    "success": true,
+    "data": {
+      "captures_per_minute": 60,
+      "selected_browsers": ["chrome", "opera", "vivaldi"],
+      "show_cross_browser_toolbar": true,
+      "has_ai_api_key": false,
+      "has_jira_api_token": false,
+      "has_azure_pat": false,
+      ...
+    },
+    "metadata": {
+      "last_updated": "2026-01-24T12:00:00Z",
+      "version": 1
+    }
+  }
+
+  GET /settings (first-time user):
+  {
+    "success": true,
+    "data": null,
+    "message": "No settings found for user"
+  }
+
+  ---
+  Total Fields: 46
+
+  Full field reference available in docs/SETTINGS_API_V2_DOCUMENTATION.md
+
+  ---
+  Status: ✅ Ready for integration
