@@ -1,30 +1,99 @@
-Found the Problem!
-                                                                                                                                                                                                                                                                 The log shows the server IS receiving requests, but only for suite runs and test case results:                                                                                                                                                                 ┌────────────────────────────────────────────┬────────────────┐
-  │                  Request                   │     Status     │                                                                                                                                                                                              
-  ├────────────────────────────────────────────┼────────────────┤                                                                                                                                                                                                │ POST /api/v1/reports/suite-runs            │ ✅ 201 Created │
-  ├────────────────────────────────────────────┼────────────────┤                                                                                                                                                                                              
-  │ POST /api/v1/reports/test-case-results     │ ✅ 201 Created │                                                                                                                                                                                              
-  ├────────────────────────────────────────────┼────────────────┤
-  │ POST .../test-case-results/{id}/steps/bulk │ ❌ NOT CALLED  │
-  ├────────────────────────────────────────────┼────────────────┤
-  │ POST .../test-case-results/{id}/artifacts  │ ❌ NOT CALLED  │
-  └────────────────────────────────────────────┴────────────────┘
-  Conclusion: Client is NOT Sending Steps/Artifacts
-
-  The client successfully:
-  1. Creates a suite run with suite_name: "Sat", total_tests: 1, failed_tests: 1
-  2. Creates a test case result with test_case_name: "test2", total_steps: 6
-
-  But then stops - it never calls the endpoints to upload:
-  - The 6 steps it claims to have (total_steps: 6)
-  - Any screenshots/artifacts
-
-  This is a Client-Side Issue
-
-  The server endpoints are working correctly. The client code needs to be updated to:
-
-  1. After creating the test case result, get the returned id
-  2. Call POST /api/v1/reports/test-case-results/{id}/steps/bulk with the step data
-  3. Call POST /api/v1/reports/test-case-results/{id}/artifacts for each screenshot
-
-  The client is reporting metadata about steps (total_steps: 6) but not actually sending the step details.
+  We're updating the client to sync complete test report data to the server (not just basic step info). Before we proceed with testing, I need to verify the API can accept and store the following data fields: 
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  1. Test Case Results (POST /test-case-results)                                                                                                                                                                 
+                                                                                                                                                                                                                 
+  We're now sending a metadata object containing:                                                                                                                                                                
+  {                                                                                                                                                                                                              
+    "metadata": {                                                                                                                                                                                                
+      "start_time": "2024-01-15T10:30:00Z",                                                                                                                                                                      
+      "end_time": "2024-01-15T10:32:45Z",                                                                                                                                                                        
+      "initial_url": "https://example.com",                                                                                                                                                                      
+      "pass_rate": 85.5,                                                                                                                                                                                         
+      "total_checkpoints": 10,                                                                                                                                                                                   
+      "passed_checkpoints": 8,                                                                                                                                                                                   
+      "failed_checkpoints": 2,                                                                                                                                                                                   
+      "checkpoint_results": [...],                                                                                                                                                                               
+      "accessibility_results": [...],                                                                                                                                                                            
+      "pre_script_results": {...},                                                                                                                                                                               
+      "post_script_results": {...}                                                                                                                                                                               
+    }                                                                                                                                                                                                            
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  Question: Is the metadata field stored as JSONB and can it accept arbitrary nested objects?                                                                                                                    
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  2. Step Results (POST /step-results/bulk)                                                                                                                                                                      
+                                                                                                                                                                                                                 
+  We're now including these fields per step:                                                                                                                                                                     
+  {                                                                                                                                                                                                              
+    "step_number": 1,                                                                                                                                                                                            
+    "action": "click",                                                                                                                                                                                           
+    "element": "button#submit",                                                                                                                                                                                  
+    "value": "",                                                                                                                                                                                                 
+    "status": "passed",                                                                                                                                                                                          
+    "description": "Click on submit button",                                                                                                                                                                     
+    "playwright_code": "await page.click('button#submit');",                                                                                                                                                     
+    "timestamp": "2024-01-15T10:30:15Z",                                                                                                                                                                         
+    "screenshot_path": "step_001.png"                                                                                                                                                                            
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  Questions:                                                                                                                                                                                                     
+  - Is playwright_code (TEXT) column available in step_results table?                                                                                                                                            
+  - Is timestamp accepted as ISO 8601 string or datetime?                                                                                                                                                        
+  - Any max length limits on playwright_code or description?                                                                                                                                                     
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  3. Checkpoint Results                                                                                                                                                                                          
+                                                                                                                                                                                                                 
+  Per the API spec, there's a checkpoint_results table. We have checkpoint data like:                                                                                                                            
+  {                                                                                                                                                                                                              
+    "checkpoint_type": "text",                                                                                                                                                                                   
+    "selector": "#error-message",                                                                                                                                                                                
+    "property_name": "textContent",                                                                                                                                                                              
+    "expected_value": "Success",                                                                                                                                                                                 
+    "actual_value": "Error occurred",                                                                                                                                                                            
+    "status": "failed",                                                                                                                                                                                          
+    "step_number": 5                                                                                                                                                                                             
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  Questions:                                                                                                                                                                                                     
+  - Is there an endpoint to sync checkpoint results? (e.g., POST /checkpoint-results/bulk)                                                                                                                       
+  - Or should checkpoints be included in the step's metadata/nested object?                                                                                                                                      
+  - How do we link checkpoints to their parent step (by step_number or step_id)?                                                                                                                                 
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  4. Artifacts/Screenshots                                                                                                                                                                                       
+                                                                                                                                                                                                                 
+  Currently uploading via POST /artifacts with multipart/form-data.                                                                                                                                              
+                                                                                                                                                                                                                 
+  Question: Is there a size limit per file or total per test case?                                                                                                                                               
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  5. Data Retrieval                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  When fetching reports back (GET /test-case-results/{id}):                                                                                                                                                      
+                                                                                                                                                                                                                 
+  Questions:                                                                                                                                                                                                     
+  - Does the response include the full metadata object?                                                                                                                                                          
+  - Does GET /step-results?test_case_result_id={id} return playwright_code?                                                                                                                                      
+  - Is there an endpoint to fetch checkpoint results?                                                                                                                                                            
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Summary of Fields We Need Confirmed:                                                                                                                                                                           
+  ┌───────────────────────┬────────────────────┬───────────┬─────────────────────────┐                                                                                                                           
+  │         Field         │       Table        │   Type    │         Status?         │                                                                                                                           
+  ├───────────────────────┼────────────────────┼───────────┼─────────────────────────┤                                                                                                                           
+  │ metadata              │ test_case_results  │ JSONB     │ ?                       │                                                                                                                           
+  ├───────────────────────┼────────────────────┼───────────┼─────────────────────────┤                                                                                                                           
+  │ playwright_code       │ step_results       │ TEXT      │ ?                       │                                                                                                                           
+  ├───────────────────────┼────────────────────┼───────────┼─────────────────────────┤                                                                                                                           
+  │ timestamp             │ step_results       │ TIMESTAMP │ ?                       │                                                                                                                           
+  ├───────────────────────┼────────────────────┼───────────┼─────────────────────────┤                                                                                                                           
+  │ checkpoint_results    │ checkpoint_results │ -         │ Endpoint exists?        │                                                                                                                           
+  ├───────────────────────┼────────────────────┼───────────┼─────────────────────────┤                                                                                                                           
+  │ start_time / end_time │ test_case_results  │ TIMESTAMP │ Via metadata or direct? │                                                                                                                           
+  └───────────────────────┴────────────────────┴───────────┴─────────────────────────┘                                                                                                                           
+  Please confirm which fields are currently implemented and if any require API updates.                                                                                                                          
+                                                                                                                                                                                                                 
+  Thanks!                                          
