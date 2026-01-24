@@ -1,700 +1,942 @@
-# Backend Analysis for Team Workspace Functionality
+Testr Desktop Application - API Integration Report
+Document Version: 1.0 Date: January 25, 2026 Application: Testr Desktop (PyQt6/QFluentWidgets)
+
+Executive Summary
+This document provides a comprehensive overview of all API endpoints consumed by the Testr Desktop application. The application is a PyQt6-based desktop testing tool that integrates with a backend API for user authentication, test management, execution tracking, and defect reporting.
+
+Table of Contents
+Recent Feature Additions
+Authentication & Session Management
+Workspace & Team Management
+Test Plan Management
+Test Run Management
+Defect Management
+Reports & Analytics
+User Settings
+Authentication Details
+Error Handling
+Summary Statistics
+Recent Feature Additions
+Phase 14: Subscription Expiry & Personal Workspace
+Handle 402 subscription expired responses
+Personal workspace mode when no team is selected
+Subscription expired dialog with upgrade options
+Phase 15: Password Change Flow for First Login
+Auto-created admin accounts with must_change_password flag
+Password change dialog with validation (8+ chars, uppercase, lowercase, number)
+Admin welcome dialog showing organization context
+Phase 17: Session Expiry & Token Refresh Handling
+Automatic token refresh every 50 minutes (production)
+Session inactivity monitoring (30-minute timeout with 5-minute warning)
+Network connectivity monitoring
+Graceful handling of 402 errors during token refresh
+Auto-logout on inactivity with warning dialog
+1. Authentication & Session Management
+1.1 User Login
+Field	Value
+Endpoint	POST /auth/login
+Description	Authenticate user and obtain JWT tokens
+Request Body:
 
-**Date:** 2026-01-25
-**Purpose:** Complete analysis of existing backend implementation to inform team workspace feature planning
-
----
-
-## Executive Summary
-
-The backend has **partial infrastructure** for team workspaces:
-- **Workspace model exists** with PERSONAL/TEAM enum but TEAM functionality is not implemented
-- **User model has `is_paid` flag** for free tier enforcement
-- **Free tier limit (5 test cases)** is implemented at workspace level
-- **NO team/membership model** - must be created from scratch
-- **NO RBAC** - only simple owner-based authorization
-- **Data scoping is user_id-based** for most artifacts (good foundation)
-
-**Estimated Effort:** Medium-High complexity due to missing team infrastructure
-
----
-
-## Task 1: Artifact Types Inventory
-
-### 1.1 Complete List of Artifacts (26 Types)
-
-| # | Artifact Type | Model File | Table Name | Has user_id FK | Scoped By |
-|---|--------------|------------|------------|----------------|-----------|
-| 1 | Test Plan | `test_plan.py` | `test_plans` | `created_by` (SET NULL) | created_by |
-| 2 | Test Plan Folder | `folder.py` | `test_plan_folders` | `created_by` (SET NULL) | test_plan_id |
-| 3 | Test Case | `test_case.py` | `test_cases` | `created_by` (SET NULL) | test_plan_id |
-| 4 | Test Step | `test_case.py` | `test_steps` | No | test_case_id |
-| 5 | Test Checkpoint | `test_case.py` | `test_checkpoints` | No | test_case_id |
-| 6 | Test Screenshot | `test_case.py` | `test_screenshots` | No | test_case_id |
-| 7 | Test Variable | `test_case.py` | `test_variables` | No | test_case_id |
-| 8 | Test Asset | `test_case.py` | `test_assets` | `uploaded_by` (SET NULL) | test_case_id |
-| 9 | Test Script | `test_script.py` | `test_scripts` | `created_by` (SET NULL) | test_case_id |
-| 10 | Test Recording | `test_recording.py` | `test_recordings` | `recorded_by` (SET NULL) | test_case_id |
-| 11 | Test Dependency | `test_dependency.py` | `test_dependencies` | No | test_case_id |
-| 12 | Test Run | `test_run.py` | `test_runs` | `created_by` (NOT NULL) | test_plan_id |
-| 13 | Test Run Item | `test_run.py` | `test_run_items` | No | test_run_id |
-| 14 | Test Run Result | `test_run.py` | `test_run_results` | No | test_run_id |
-| 15 | Schedule | `test_run.py` | `schedules` | `created_by` (NOT NULL) | test_plan_id |
-| 16 | Suite Run | `test_report.py` | `suite_runs` | `user_id` (CASCADE) | **user_id** |
-| 17 | Test Case Result | `test_report.py` | `test_case_results` | `user_id` (CASCADE) | suite_run_id & **user_id** |
-| 18 | Test Artifact | `test_report.py` | `test_artifacts` | No | test_case_result_id |
-| 19 | Defect | `defects.py` | `defects` | `user_id` (CASCADE) | **user_id** |
-| 20 | Defect Folder | `defects.py` | `defect_folders` | `user_id` (CASCADE) | **user_id** |
-| 21 | Defect Filter | `defects.py` | `defect_filters` | `user_id` (CASCADE) | **user_id** |
-| 22 | User Settings | `settings.py` | `user_settings` | `user_id` (CASCADE) | **user_id** |
-| 23 | User Credentials | `settings.py` | `user_credentials` | No (via settings) | user_settings_id |
-| 24 | Variable | `variable.py` | `variables` | No | test_case_id |
-| 25 | Workspace | `workspace.py` | `workspaces` | `owner_id` (CASCADE) | **owner_id** |
-| 26 | Audit Log | `audit_log.py` | `audit_logs` | `performed_by_user_id` | test_case_id |
-
-### 1.2 Scoping Hierarchy
-
-```
-User
-  └── Workspace (owner_id) [PERSONAL or TEAM]
-        └── Test Plan (???) [NOT LINKED TO WORKSPACE YET]
-              └── Test Plan Folder
-              └── Test Case
-                    ├── Test Step
-                    ├── Test Checkpoint
-                    ├── Test Screenshot
-                    ├── Test Variable
-                    ├── Test Asset
-                    ├── Test Script
-                    ├── Test Recording
-                    └── Test Dependency
-              └── Test Run
-                    └── Test Run Item
-                    └── Test Run Result
-              └── Schedule
-        └── Suite Run (user_id)
-              └── Test Case Result (user_id)
-                    └── Test Artifact
-                    └── Step Result
-        └── Defect (user_id)
-              └── Defect Folder (user_id)
-        └── Defect Filter (user_id)
-  └── User Settings (user_id)
-        └── User Credentials
-```
-
----
-
-## Task 2: Database Schema Analysis
-
-### 2.1 Current Schema Structure
-
-**Total Tables:** ~50+ tables across all modules
-
-**Core Tables:**
-```sql
--- USERS
-users (
-    id UUID PK,
-    username VARCHAR(100) UNIQUE NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    is_admin BOOLEAN DEFAULT FALSE,
-    is_paid BOOLEAN DEFAULT FALSE,  -- Free tier flag
-    email_verified BOOLEAN DEFAULT FALSE,
-    created_at, updated_at, last_login_at
-)
-
--- WORKSPACES
-workspaces (
-    id UUID PK,
-    name VARCHAR(255) NOT NULL,
-    type workspace_type ('PERSONAL', 'TEAM'),
-    owner_id UUID FK -> users(id) CASCADE,
-    max_test_cases INTEGER DEFAULT 5,
-    current_test_cases INTEGER DEFAULT 0,
-    description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at, updated_at
-)
-
--- TEST PLANS (NO workspace_id!)
-test_plans (
-    id UUID PK,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_by UUID FK -> users(id) SET NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at, updated_at
-)
-```
-
-### 2.2 Key Observations
-
-| Issue | Impact | Required Change |
-|-------|--------|-----------------|
-| **Test Plans not linked to Workspace** | Cannot scope test plans per workspace/team | Add `workspace_id` FK to `test_plans` |
-| **No Team Membership table** | Cannot implement team sharing | Create `team_members` table |
-| **No Role table** | Cannot implement RBAC | Create `roles` table with permissions |
-| **Defects scoped only to user** | Cannot share defects in team | Add optional `workspace_id` to defects |
-| **Suite Runs scoped only to user** | Cannot share test reports | Add optional `workspace_id` to suite_runs |
-
----
-
-## Task 3: Existing Team/Workspace Infrastructure
-
-### 3.1 What EXISTS
-
-```python
-# app/models/workspace.py
-class WorkspaceType(str, enum.Enum):
-    PERSONAL = "PERSONAL"
-    TEAM = "TEAM"  # Enum exists but not used!
-
-class Workspace(Base):
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False)
-    type = Column(Enum(WorkspaceType), default=WorkspaceType.PERSONAL)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    max_test_cases = Column(Integer, default=5)
-    current_test_cases = Column(Integer, default=0)
-
-    def can_add_test_case(self) -> bool:
-        if self.max_test_cases == -1:  # Unlimited for paid
-            return True
-        return self.current_test_cases < self.max_test_cases
-```
-
-### 3.2 What's MISSING
-
-| Missing Component | Description |
-|-------------------|-------------|
-| **TeamMember model** | No way to add users to a team workspace |
-| **TeamRole model** | No role definitions (owner, admin, member, viewer) |
-| **TeamInvite model** | No invitation system |
-| **workspace_id on TestPlan** | Test plans not linked to workspace |
-| **Team creation endpoint** | Only personal workspace auto-created |
-| **Team management endpoints** | No CRUD for team members |
-| **Team scoping middleware** | No way to scope queries by team |
-
----
-
-## Task 4: User Model Analysis
-
-### 4.1 Current User Model
-
-```python
-# app/models/user.py
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username = Column(String(100), unique=True, nullable=True)  # Optional
-    email = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    full_name = Column(String(255))
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
-    is_paid = Column(Boolean, default=False)  # FREE TIER FLAG
-    email_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True))
-    updated_at = Column(DateTime(timezone=True))
-    last_login_at = Column(DateTime(timezone=True))
-
-    # Relationships
-    workspaces = relationship("Workspace", back_populates="owner")
-    refresh_tokens = relationship("RefreshToken", back_populates="user")
-```
-
-### 4.2 User Fields for Team Feature
-
-| Field | Status | Notes |
-|-------|--------|-------|
-| `is_paid` | EXISTS | Controls free tier (5 test cases) |
-| `is_admin` | EXISTS | System admin, NOT team admin |
-| `team_memberships` | MISSING | Relationship to TeamMember |
-| `current_team_id` | MISSING | Active team context (optional) |
-
----
-
-## Task 5: Authentication & Authorization Analysis
-
-### 5.1 Current Authentication
-
-```python
-# app/utils/dependencies.py
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    """JWT-based auth - returns User object"""
-    token = credentials.credentials
-    payload = decode_token(token)
-    user = db.query(User).filter(User.id == payload["sub"]).first()
-    return user
-```
-
-**Token Structure:**
-- Access Token: 1 hour expiry, type="access"
-- Refresh Token: 8 hours expiry, type="refresh", stored in DB
-
-### 5.2 Current Authorization
-
-**SIMPLE OWNERSHIP MODEL:**
-```python
-# Example from defects CRUD
-def get_defect(db: Session, defect_id: UUID, user_id: UUID):
-    return db.execute(
-        select(Defect).where(
-            Defect.id == defect_id,
-            Defect.user_id == user_id  # Owner check only
-        )
-    ).scalar_one_or_none()
-```
-
-### 5.3 What's MISSING
-
-| Feature | Status | Required For |
-|---------|--------|--------------|
-| Team-aware auth middleware | MISSING | Team context in requests |
-| Role-based permissions | MISSING | Team member roles |
-| Resource ownership check | PARTIAL | Only owner check, no team check |
-| Permission decorator | MISSING | `@require_permission("edit")` |
-
----
-
-## Task 6: Current Artifact API Endpoints
-
-### 6.1 API Endpoint Inventory
-
-| Router | Prefix | Key Endpoints |
-|--------|--------|---------------|
-| auth | `/api/v1/auth` | login, register, refresh, logout, me |
-| test_plans | `/api/v1/test-plans` | CRUD for test plans |
-| folders | `/api/v1/folders` | CRUD for test plan folders |
-| test_cases | `/api/v1/test-cases` | CRUD, clone, move, parameterization |
-| test_scripts | `/api/v1/test-scripts` | CRUD for scripts |
-| test_recordings | `/api/v1/test-recordings` | CRUD for recordings |
-| test_runs | `/api/v1/test-runs` | Create, list, update status, results |
-| schedules | `/api/v1/schedules` | Schedule management |
-| test_report | `/api/v1/reports` | Suite runs, test case results, artifacts |
-| defects | `/api/v1/defects` | CRUD, filters, folders, sync |
-| settings | `/api/v1/settings` | User settings (flat structure) |
-| assets | `/api/v1/test-cases/{id}/assets` | File uploads for test cases |
-| checkpoints | `/api/v1/checkpoints` | Checkpoint management |
-
-### 6.2 Endpoint Authorization Patterns
-
-**Pattern 1: Direct User Scope**
-```python
-# Used by: defects, suite_runs, defect_filters
-@router.get("")
-def list_defects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return crud.list_defects(db, user_id=current_user.id, ...)
-```
-
-**Pattern 2: Resource Lookup (No User Check!)**
-```python
-# Used by: test_cases, test_plans (SECURITY GAP!)
-@router.get("/{test_case_id}")
-def get_test_case(
-    test_case_id: UUID,
-    current_user: User = Depends(get_current_user),  # Auth only
-    db: Session = Depends(get_db)
-):
-    # No check that current_user owns this test case!
-    return crud_get_test_case(db, test_case_id)
-```
-
----
-
-## Task 7: Data Scoping Logic
-
-### 7.1 Current Scoping Patterns
-
-**Direct User Scoping:**
-```python
-# Defects - properly scoped
-query = db.query(Defect).filter(Defect.user_id == user_id)
-
-# Suite Runs - properly scoped
-query = db.query(SuiteRun).filter(SuiteRun.user_id == user_id)
-
-# User Settings - properly scoped
-query = db.query(UserSettings).filter(UserSettings.user_id == user_id)
-```
-
-**Indirect Scoping (via Test Plan):**
-```python
-# Test Cases - scoped via test_plan_id, NOT user!
-query = db.query(TestCase).filter(TestCase.test_plan_id == test_plan_id)
-# ISSUE: No check that user owns the test_plan!
-```
-
-### 7.2 Scoping Gaps
-
-| Module | Issue | Risk |
-|--------|-------|------|
-| Test Plans | No user_id check on GET/UPDATE/DELETE | Any user can access any test plan |
-| Test Cases | No ownership verification | Cross-user access possible |
-| Test Runs | Only created_by check | No team scoping |
-| Artifacts | Via test_case_result only | Inherits parent's scoping |
-
----
-
-## Task 8: Workspace Model Check
-
-### 8.1 Current Implementation
-
-```python
-# Workspace model EXISTS with these features:
-- PERSONAL/TEAM type enum
-- owner_id foreign key
-- max_test_cases limit (5 default, -1 unlimited)
-- current_test_cases counter
-- can_add_test_case() method
-- increment/decrement methods
-```
-
-### 8.2 What Workspace is Used For
-
-1. **Auto-created on signup:**
-```python
-# auth.py register endpoint
-workspace = create_personal_workspace(db=db, owner_id=user.id)
-```
-
-2. **Returned on login:**
-```python
-workspaces = get_workspaces_by_owner(db, user.id)
-# Included in LoginResponse
-```
-
-3. **NOT enforced on test case creation!**
-```python
-# Test case creation does NOT check workspace limits
-# The workspace counter is NOT incremented
-```
-
----
-
-## Task 9: Free Tier Limits Check
-
-### 9.1 Current Free Tier Implementation
-
-| Limit | Defined | Enforced | Location |
-|-------|---------|----------|----------|
-| 5 test cases per workspace | YES | **NOT ENFORCED** | `workspace.max_test_cases = 5` |
-| Unlimited for paid users | YES | **NOT ENFORCED** | `max_test_cases = -1` |
-
-### 9.2 Free Tier Code (Not Used)
-
-```python
-# workspace.py - methods exist but not called
-def can_add_test_case(self) -> bool:
-    if self.max_test_cases == -1:
-        return True
-    return self.current_test_cases < self.max_test_cases
-
-# crud/workspace.py
-def can_add_test_case(db: Session, workspace_id: UUID) -> bool:
-    workspace = get_workspace_by_id(db, workspace_id)
-    if workspace.max_test_cases == -1:
-        return True
-    return workspace.current_test_cases < workspace.max_test_cases
-```
-
-### 9.3 Required Implementation
-
-```python
-# Should be called in test_cases.py create endpoint:
-if not can_add_test_case(db, workspace_id):
-    raise HTTPException(
-        status_code=403,
-        detail="Test case limit reached. Upgrade to paid plan for unlimited test cases."
-    )
-```
-
----
-
-## Task 10: Payment/Subscription Infrastructure
-
-### 10.1 Current State
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `User.is_paid` field | EXISTS | Boolean flag |
-| Subscription model | MISSING | No subscription tracking |
-| Payment integration | MISSING | No Stripe/payment gateway |
-| Plan tiers table | MISSING | No plan definitions |
-| Usage tracking | PARTIAL | `current_test_cases` counter |
-| Billing history | MISSING | No transaction records |
-
-### 10.2 What Exists
-
-```python
-# User model
-is_paid = Column(Boolean, default=False)
-
-# Workspace model
-max_test_cases = Column(Integer, default=5)  # 5 for free, -1 for paid
-
-# Workspace upgrade function
-def upgrade_workspace_to_unlimited(db: Session, workspace_id: UUID):
-    workspace.max_test_cases = -1  # Unlimited
-```
-
----
-
-## Task 11: Multi-tenancy Preparedness
-
-### 11.1 Current Architecture Assessment
-
-| Aspect | Status | Notes |
-|--------|--------|-------|
-| Data isolation | PARTIAL | User-scoped but not team-scoped |
-| Cross-tenant queries | POSSIBLE | No middleware prevents it |
-| Tenant context | MISSING | No X-Team-ID header |
-| Database schema | SINGLE | No schema-per-tenant |
-| Row-level security | NO | Not using Postgres RLS |
-
-### 11.2 Required for Multi-tenancy
-
-1. **Team context middleware** - inject team_id into all queries
-2. **Row-level security** - Postgres RLS policies (optional)
-3. **Tenant validation** - verify user belongs to requested team
-4. **Cascading permissions** - team -> workspace -> test_plan -> test_case
-
----
-
-## Task 12: Database Migration Status
-
-### 12.1 Existing Migrations
-
-| Migration | Status | Description |
-|-----------|--------|-------------|
-| `001_user_workspace_migration.sql` | APPLIED | Users + Workspaces |
-| `002_refresh_tokens_migration.sql` | APPLIED | Token table |
-| `003_metadata_column_migration.sql` | APPLIED | Test report metadata |
-| `004_settings_v2_migration.sql` | APPLIED | Settings flat structure |
-
-### 12.2 Required New Migrations
-
-```sql
--- 005_team_workspace_migration.sql (NEEDED)
-CREATE TABLE team_members (
-    id UUID PRIMARY KEY,
-    team_id UUID REFERENCES workspaces(id),
-    user_id UUID REFERENCES users(id),
-    role VARCHAR(50) NOT NULL,  -- 'owner', 'admin', 'member', 'viewer'
-    invited_by UUID REFERENCES users(id),
-    joined_at TIMESTAMP,
-    UNIQUE(team_id, user_id)
-);
-
--- Add workspace_id to test_plans
-ALTER TABLE test_plans
-ADD COLUMN workspace_id UUID REFERENCES workspaces(id);
-
--- Add workspace_id to defects (optional)
-ALTER TABLE defects
-ADD COLUMN workspace_id UUID REFERENCES workspaces(id);
-```
-
----
-
-## Task 13: RBAC Check
-
-### 13.1 Current Authorization
-
-| Check Type | Implemented | Notes |
-|------------|-------------|-------|
-| Authentication | YES | JWT Bearer tokens |
-| User active check | YES | `User.is_active` |
-| Resource ownership | PARTIAL | Only some modules |
-| Role-based access | NO | No role system |
-| Permission-based | NO | No permission checks |
-| Team membership | NO | No team validation |
-
-### 13.2 Suggested RBAC Model
-
-```python
-class TeamRole(str, Enum):
-    OWNER = "owner"      # Full control, can delete team
-    ADMIN = "admin"      # Manage members, all artifacts
-    MEMBER = "member"    # Create/edit own artifacts
-    VIEWER = "viewer"    # Read-only access
-
-ROLE_PERMISSIONS = {
-    "owner": ["*"],
-    "admin": ["read", "write", "delete", "manage_members"],
-    "member": ["read", "write"],
-    "viewer": ["read"]
-}
-```
-
----
-
-## Task 14: Current Relationships Analysis
-
-### 14.1 Entity Relationship Diagram (Text)
-
-```
-User (1) ──owns──> (N) Workspace
-User (1) ──creates──> (N) TestPlan [NOT via workspace!]
-User (1) ──creates──> (N) Defect
-User (1) ──owns──> (1) UserSettings
-
-Workspace (1) ──contains──> (?) TestPlan [RELATIONSHIP MISSING]
-
-TestPlan (1) ──contains──> (N) TestPlanFolder
-TestPlan (1) ──contains──> (N) TestCase
-TestPlan (1) ──has──> (N) TestRun
-TestPlan (1) ──has──> (N) Schedule
-
-TestCase (1) ──has──> (N) TestStep
-TestCase (1) ──has──> (N) TestCheckpoint
-TestCase (1) ──has──> (N) TestScreenshot
-TestCase (1) ──has──> (N) TestVariable
-TestCase (1) ──has──> (N) TestAsset
-TestCase (1) ──has──> (N) TestScript
-TestCase (1) ──has──> (N) TestRecording
-```
-
-### 14.2 Missing Relationships
-
-| From | To | Type | Status |
-|------|-----|------|--------|
-| Workspace | TestPlan | 1:N | MISSING |
-| Workspace | TeamMember | 1:N | MISSING (table doesn't exist) |
-| User | TeamMember | 1:N | MISSING |
-| Workspace | Defect | 1:N | MISSING (optional) |
-
----
-
-## Task 15: API Response Formats
-
-### 15.1 Standard Response Patterns
-
-**Success Response (List):**
-```json
 {
-    "items": [...],
-    "pagination": {
-        "page": 1,
-        "page_size": 20,
-        "total_items": 150,
-        "total_pages": 8
+  "email": "string",
+  "password": "string"
+}
+Response (200 OK):
+
+{
+  "access_token": "string (JWT)",
+  "refresh_token": "string (JWT)",
+  "expires_in": 3600,
+  "user_id": "uuid",
+  "email": "string",
+  "username": "string",
+  "is_active": true,
+  "is_paid": true,
+  "workspaces": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "role": "ADMIN|MEMBER|VIEWER"
     }
+  ],
+  "must_change_password": false,
+  "organization_name": "string (optional)"
 }
-```
+Notes:
 
-**Success Response (Single):**
-```json
+workspaces array is returned when user belongs to team workspaces
+must_change_password: true indicates first-login admin that must change password
+organization_name is returned when must_change_password is true
+1.2 User Registration
+Field	Value
+Endpoint	POST /auth/register
+Description	Register new user account
+Request Body:
+
 {
-    "id": "uuid",
-    "name": "...",
-    "created_at": "2026-01-25T00:00:00Z",
-    ...
+  "email": "string",
+  "password": "string"
 }
-```
+Response (201 Created):
 
-**Settings Response (Wrapper):**
-```json
 {
-    "success": true,
-    "data": { ... },
-    "metadata": {
-        "last_updated": "...",
-        "version": 1
+  "id": "uuid",
+  "email": "string",
+  "username": "string"
+}
+1.3 Token Refresh
+Field	Value
+Endpoint	POST /auth/refresh
+Description	Refresh access token before expiry
+Request Body:
+
+{
+  "refresh_token": "string"
+}
+Response (200 OK):
+
+{
+  "access_token": "string (JWT)",
+  "refresh_token": "string (JWT)",
+  "expires_in": 3600
+}
+Error Responses:
+
+401 Unauthorized: Refresh token expired or invalid
+402 Payment Required: Subscription expired
+Notes:
+
+Desktop app refreshes token automatically every 50 minutes
+On 402 response, app shows subscription expired dialog
+On 401 response, app triggers session expiry flow
+1.4 Logout
+Field	Value
+Endpoint	POST /auth/logout
+Description	Revoke refresh token and end session
+Request Body:
+
+{
+  "refresh_token": "string"
+}
+Response (200 OK):
+
+{
+  "success": true
+}
+1.5 Get Current User
+Field	Value
+Endpoint	GET /auth/me
+Description	Get authenticated user's profile
+Response (200 OK):
+
+{
+  "user_id": "uuid",
+  "id": "uuid",
+  "email": "string",
+  "username": "string",
+  "is_active": true,
+  "is_paid": true
+}
+1.6 Change Password
+Field	Value
+Endpoint	POST /auth/change-password
+Description	Change user password (requires authentication)
+Request Body:
+
+{
+  "current_password": "string",
+  "new_password": "string"
+}
+Response (200 OK):
+
+{
+  "success": true,
+  "message": "Password changed successfully"
+}
+Validation Rules:
+
+New password: minimum 8 characters
+Must contain: uppercase, lowercase, and number
+Notes:
+
+For first-login admins (must_change_password: true), current_password may be the temporary password
+After successful change, app continues with normal login flow
+1.7 Forgot Password - Verify Email
+Field	Value
+Endpoint	POST /auth/forgot-password/verify-email
+Description	Step 1: Verify email exists for password reset
+Request Body:
+
+{
+  "email": "string"
+}
+Response (200 OK):
+
+{
+  "success": true
+}
+1.8 Forgot Password - Reset
+Field	Value
+Endpoint	POST /auth/forgot-password/reset
+Description	Step 2: Reset password after email verification
+Request Body:
+
+{
+  "email": "string",
+  "new_password": "string"
+}
+Response (200 OK):
+
+{
+  "success": true
+}
+2. Workspace & Team Management
+2.1 Get Workspace Limits
+Field	Value
+Endpoint	GET /workspace/limits
+Description	Check workspace test case quotas
+Response (200 OK):
+
+{
+  "max_test_cases": 100,
+  "current_test_cases": 45,
+  "can_add_more": true,
+  "is_unlimited": false
+}
+Notes:
+
+is_unlimited: true for paid/enterprise plans
+Used to show limit warnings before creating test cases
+Returns 403 when limit reached (app shows upgrade dialog)
+3. Test Plan Management
+3.1 List Test Plans
+Field	Value
+Endpoint	GET /test-plans
+Description	Get all test plans for current workspace
+Response (200 OK):
+
+{
+  "test_plans": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "description": "string",
+      "is_active": true,
+      "created_at": "ISO8601",
+      "updated_at": "ISO8601"
     }
+  ]
 }
-```
+3.2 Create Test Plan
+Field	Value
+Endpoint	POST /test-plans
+Description	Create new test plan
+Request Body:
 
-**Error Response:**
-```json
 {
-    "detail": "Error message"
+  "name": "string",
+  "description": "string (optional)",
+  "is_active": true
 }
-```
+Response (201 Created):
 
-**Validation Error Response:**
-```json
 {
-    "detail": "Invalid request format",
-    "errors": [
-        {
-            "field": "body.name",
-            "message": "field required",
-            "type": "value_error"
-        }
-    ]
+  "id": "uuid",
+  "name": "string",
+  "description": "string",
+  "is_active": true,
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
 }
-```
+3.3 Get Test Plan
+Field	Value
+Endpoint	GET /test-plans/{plan_id}
+Description	Get specific test plan details
+Path Parameters:
 
----
+plan_id: UUID of the test plan
+Response (200 OK):
 
-## Gap Analysis Summary
+{
+  "id": "uuid",
+  "name": "string",
+  "description": "string",
+  "is_active": true,
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
+}
+3.4 Update Test Plan
+Field	Value
+Endpoint	PUT /test-plans/{plan_id}
+Description	Update test plan metadata
+Request Body:
 
-### Critical Gaps (Must Fix)
+{
+  "name": "string (optional)",
+  "description": "string (optional)",
+  "is_active": "boolean (optional)"
+}
+3.5 Delete Test Plan
+Field	Value
+Endpoint	DELETE /test-plans/{plan_id}
+Description	Delete test plan and all contents
+3.6 Get Test Plan Tree
+Field	Value
+Endpoint	GET /test-plans/{plan_id}/tree
+Description	Get complete hierarchical structure
+Response (200 OK):
 
-| Gap | Impact | Effort |
-|-----|--------|--------|
-| No TeamMember model | Cannot implement teams | High |
-| TestPlan not linked to Workspace | Cannot scope test plans | Medium |
-| No workspace_id on TestPlan | Teams can't share test plans | Medium |
-| Free tier limits not enforced | Users can exceed 5 test cases | Low |
-| No authorization on test plans/cases | Security vulnerability | Medium |
+{
+  "id": "uuid",
+  "type": "root",
+  "name": "string",
+  "expanded": true,
+  "children": [],
+  "folders": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "parent_folder_id": "uuid|null",
+      "display_order": 0,
+      "children": []
+    }
+  ],
+  "root_test_cases": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "folder_id": "uuid|null",
+      "display_order": 0
+    }
+  ]
+}
+3.7 Sync Test Plan Tree
+Field	Value
+Endpoint	POST /test-plans/{plan_id}/tree/sync
+Description	Sync tree structure changes (reorder, move)
+Request Body:
 
-### Moderate Gaps (Should Fix)
+{
+  "tree": {
+    "folders": [...],
+    "test_cases": [...]
+  }
+}
+3.8 Create Folder
+Field	Value
+Endpoint	POST /folders
+Description	Create folder in test plan
+Request Body:
 
-| Gap | Impact | Effort |
-|-----|--------|--------|
-| No RBAC system | All team members equal | High |
-| No team invitation system | Manual member adding only | Medium |
-| Defects not shareable in teams | No collaborative defect tracking | Low |
+{
+  "test_plan_id": "uuid",
+  "name": "string",
+  "parent_folder_id": "uuid (optional)",
+  "display_order": 0
+}
+3.9 Reorder Folders
+Field	Value
+Endpoint	POST /folders/reorder
+Description	Update folder display order
+Request Body:
 
-### Minor Gaps (Nice to Have)
+[
+  {"folder_id": "uuid", "display_order": 0},
+  {"folder_id": "uuid", "display_order": 1}
+]
+3.10 Create Test Case
+Field	Value
+Endpoint	POST /test-cases
+Description	Create new test case
+Request Body:
 
-| Gap | Impact | Effort |
-|-----|--------|--------|
-| No subscription management | Manual is_paid flag | Medium |
-| No billing integration | External payment needed | High |
-| No activity logs for teams | No audit trail | Low |
+{
+  "test_plan_id": "uuid",
+  "name": "string",
+  "folder_id": "uuid (optional)",
+  "description": "string",
+  "priority": "HIGH|MEDIUM|LOW",
+  "base_url": "string",
+  "browser": "chromium|firefox|webkit",
+  "tags": ["string"],
+  "display_order": 0
+}
+Response (201 Created):
 
----
+{
+  "id": "uuid",
+  "test_plan_id": "uuid",
+  "name": "string",
+  "folder_id": "uuid|null",
+  "description": "string",
+  "priority": "string",
+  "base_url": "string",
+  "browser": "string",
+  "tags": [],
+  "display_order": 0,
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
+}
+3.11 Reorder Test Cases
+Field	Value
+Endpoint	POST /test-cases/reorder
+Description	Update test case display order
+Request Body:
 
-## Recommended Implementation Order
+[
+  {"test_case_id": "uuid", "display_order": 0},
+  {"test_case_id": "uuid", "display_order": 1}
+]
+3.12 Create Test Recording
+Field	Value
+Endpoint	POST /test-recordings
+Description	Create test recording for test case
+Request Body:
 
-1. **Phase 1: Team Foundation**
-   - Create TeamMember model
-   - Add workspace_id to TestPlan
-   - Create team CRUD endpoints
-   - Add team context middleware
+{
+  "test_case_id": "uuid",
+  "recording_data": "JSON blob"
+}
+3.13 Create Test Script
+Field	Value
+Endpoint	POST /test-scripts
+Description	Create pre/post execution script
+Request Body:
 
-2. **Phase 2: Authorization**
-   - Implement role-based permissions
-   - Add authorization checks to all endpoints
-   - Create permission decorators
+{
+  "test_case_id": "uuid",
+  "script_type": "pre|post",
+  "script_language": "javascript|python",
+  "script_content": "string"
+}
+3.14 Get Global Variables
+Field	Value
+Endpoint	GET /variables/global
+Description	Get all global variables
+3.15 Create Global Variable
+Field	Value
+Endpoint	POST /variables/global
+Description	Create new global variable
+Request Body:
 
-3. **Phase 3: Free Tier Enforcement**
-   - Enforce test case limits
-   - Add upgrade workflow
-   - Create limit exceeded responses
+{
+  "name": "string",
+  "value": "string",
+  "scope": "GLOBAL|TEST_PLAN|TEST_CASE",
+  "is_encrypted": false
+}
+3.16 Resolve Variables
+Field	Value
+Endpoint	GET /variables/resolve
+Description	Resolve variable values at runtime
+Query Parameters:
 
-4. **Phase 4: Team Features**
-   - Team invitation system
-   - Team settings
-   - Activity logs
+names: Comma-separated variable names
+4. Test Run Management
+4.1 Create Test Run
+Field	Value
+Endpoint	POST /test-runs
+Description	Create new test run
+Request Body:
 
----
+{
+  "run_name": "string",
+  "test_plan_id": "uuid",
+  "suite_path": "string",
+  "suite_name": "string",
+  "scheduled_at": "ISO8601 (optional)",
+  "parallel_enabled": false,
+  "parallel_count": 1,
+  "retry_on_failure": false,
+  "retry_count": 0,
+  "browser_name": "chromium",
+  "viewport_width": 1920,
+  "viewport_height": 1080,
+  "tags": [],
+  "notes": "string"
+}
+Response (201 Created):
 
-**Document Created:** 2026-01-25
-**Total Models Analyzed:** 26 artifact types
-**Total Tables:** ~50+ tables
-**Ready for Team Implementation:** Partial (workspace model exists)
+{
+  "id": "uuid",
+  "run_name": "string",
+  "run_number": 1,
+  "status": "PENDING|RUNNING|COMPLETED|FAILED|CANCELLED",
+  "test_plan_id": "uuid",
+  "scheduled_at": "ISO8601",
+  "started_at": "ISO8601",
+  "completed_at": "ISO8601",
+  "duration_ms": 0,
+  "total_tests": 0,
+  "passed_tests": 0,
+  "failed_tests": 0,
+  "skipped_tests": 0,
+  "pass_rate": 0.0,
+  "browser_name": "string",
+  "viewport_width": 1920,
+  "viewport_height": 1080,
+  "created_at": "ISO8601"
+}
+4.2 List Test Runs
+Field	Value
+Endpoint	GET /test-runs
+Description	List test runs with filtering
+Query Parameters:
+
+test_plan_id: UUID (filter by test plan)
+status: PENDING|RUNNING|COMPLETED|FAILED|CANCELLED
+from_date: ISO8601
+to_date: ISO8601
+search: string
+sort_by: created_at|run_name|status
+sort_order: asc|desc
+limit: integer (default 50)
+offset: integer (default 0)
+Response (200 OK):
+
+{
+  "items": [...],
+  "total": 100,
+  "limit": 50,
+  "offset": 0
+}
+4.3 Get Test Run
+Field	Value
+Endpoint	GET /test-runs/{run_id}
+Description	Get specific test run details
+4.4 Update Test Run
+Field	Value
+Endpoint	PUT /test-runs/{run_id}
+Description	Update test run (typically for completion)
+Request Body:
+
+{
+  "status": "COMPLETED",
+  "completed_at": "ISO8601",
+  "duration_ms": 12345,
+  "total_tests": 10,
+  "passed_tests": 8,
+  "failed_tests": 2,
+  "skipped_tests": 0,
+  "pass_rate": 80.0,
+  "results_folder": "string",
+  "report_path": "string"
+}
+4.5 Delete Test Run
+Field	Value
+Endpoint	DELETE /test-runs/{run_id}
+Description	Delete test run
+4.6 Start Test Run
+Field	Value
+Endpoint	POST /test-runs/{run_id}/start
+Description	Start executing test run
+Request Body:
+
+{
+  "browser_name": "chromium",
+  "viewport_width": 1920,
+  "viewport_height": 1080
+}
+4.7 Stop Test Run
+Field	Value
+Endpoint	POST /test-runs/{run_id}/stop
+Description	Stop a running test run
+4.8 Cancel Test Run
+Field	Value
+Endpoint	POST /test-runs/{run_id}/cancel
+Description	Cancel a test run
+4.9 Get Test Run Summary
+Field	Value
+Endpoint	GET /test-runs/{run_id}/summary
+Description	Get detailed statistics
+4.10 Add Test Run Item
+Field	Value
+Endpoint	POST /test-runs/{run_id}/items
+Description	Add single test case to run
+Request Body:
+
+{
+  "test_case_id": "uuid"
+}
+4.11 Bulk Add Test Run Items
+Field	Value
+Endpoint	POST /test-runs/{run_id}/items/bulk
+Description	Add multiple test cases to run
+Request Body:
+
+{
+  "test_case_ids": ["uuid", "uuid"]
+}
+Response (200 OK):
+
+{
+  "items": [...],
+  "total_added": 5
+}
+4.12 List Test Run Items
+Field	Value
+Endpoint	GET /test-runs/{run_id}/items
+Description	Get all items in test run
+4.13 Create Test Run Result
+Field	Value
+Endpoint	POST /test-run-results
+Description	Record test case execution result
+Request Body:
+
+{
+  "test_run_id": "uuid",
+  "test_run_item_id": "uuid",
+  "test_case_id": "uuid",
+  "iteration_number": 1,
+  "data_row_index": 0,
+  "data_row_values": {},
+  "status": "PASSED|FAILED|SKIPPED|ERROR",
+  "duration_ms": 5000,
+  "total_steps": 10,
+  "passed_steps": 10,
+  "failed_steps": 0,
+  "skipped_steps": 0,
+  "pass_rate": 100.0,
+  "error_message": "string (optional)",
+  "error_screenshot": "base64 (optional)",
+  "start_url": "string",
+  "final_url": "string",
+  "browser_name": "string",
+  "os_name": "string"
+}
+4.14 Create Schedule
+Field	Value
+Endpoint	POST /schedules
+Description	Create scheduled test run
+Request Body:
+
+{
+  "schedule_name": "string",
+  "test_plan_id": "uuid",
+  "status": "ACTIVE|PAUSED|COMPLETED",
+  "is_enabled": true,
+  "suite_path": "string",
+  "suite_name": "string",
+  "test_case_ids": ["uuid"],
+  "scheduled_datetime": "ISO8601",
+  "timezone": "UTC",
+  "repeat_type": "NONE|DAILY|WEEKLY|MONTHLY",
+  "repeat_interval": 1,
+  "repeat_days_of_week": [1, 2, 3],
+  "repeat_day_of_month": 15,
+  "repeat_end_date": "ISO8601",
+  "max_occurrences": 10,
+  "parallel_enabled": false,
+  "parallel_count": 1,
+  "retry_on_failure": false,
+  "retry_count": 0,
+  "notify_on_failure": true,
+  "notify_on_completion": false,
+  "notification_emails": ["email@example.com"]
+}
+4.15 List Schedules
+Field	Value
+Endpoint	GET /schedules
+Description	List schedules with filtering
+Query Parameters:
+
+test_plan_id: UUID
+status: ACTIVE|PAUSED|COMPLETED
+sort_by: string
+sort_order: asc|desc
+limit: integer
+offset: integer
+4.16 Get Pending Schedules
+Field	Value
+Endpoint	GET /schedules/pending
+Description	Get schedules ready to execute
+5. Defect Management
+5.1 List Defects
+Field	Value
+Endpoint	GET /defects
+Description	List defects with filtering
+Query Parameters:
+
+filter_id: UUID (saved filter)
+status: OPEN|IN_PROGRESS|RESOLVED|CLOSED|DEFERRED
+severity: CRITICAL|HIGH|MEDIUM|LOW
+priority: P1|P2|P3|P4
+type: BUG|ENHANCEMENT|TASK
+tags: comma-separated
+folder_id: UUID
+search: string
+date_from: ISO8601
+date_to: ISO8601
+page: integer
+per_page: integer
+sort_by: string
+sort_order: asc|desc
+Response (200 OK):
+
+{
+  "defects": [...],
+  "total": 100,
+  "page": 1,
+  "per_page": 50
+}
+5.2 Get Defect
+Field	Value
+Endpoint	GET /defects/{defect_id}
+Description	Get single defect with all details
+Response includes:
+
+Basic defect info
+Steps to reproduce
+Screenshots
+Console errors
+Network errors
+Test context (test case, test run info)
+5.3 Create Defect
+Field	Value
+Endpoint	POST /defects
+Description	Create new defect
+Request Body:
+
+{
+  "title": "string",
+  "summary": "string",
+  "description": "string",
+  "type": "BUG|ENHANCEMENT|TASK",
+  "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+  "priority": "P1|P2|P3|P4",
+  "status": "OPEN",
+  "tags": ["string"],
+  "owner": "string",
+  "is_auto_generated": false,
+  "test_context": {
+    "test_case_id": "uuid",
+    "test_run_id": "uuid",
+    "step_number": 5
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "description": "string",
+      "expected_result": "string",
+      "actual_result": "string"
+    }
+  ],
+  "console_errors": ["string"],
+  "network_errors": ["string"]
+}
+Response (201 Created):
+
+{
+  "id": "uuid",
+  "defect_number": "DEF-001",
+  ...
+}
+5.4 Bulk Update Defects
+Field	Value
+Endpoint	PATCH /defects/batch
+Description	Update multiple defects at once
+Request Body:
+
+{
+  "defect_ids": ["uuid", "uuid"],
+  "status": "RESOLVED",
+  "priority": "P2"
+}
+5.5 Bulk Delete Defects
+Field	Value
+Endpoint	DELETE /defects/batch
+Description	Delete multiple defects
+Request Body:
+
+{
+  "defect_ids": ["uuid", "uuid"]
+}
+5.6 Get Defect Statistics
+Field	Value
+Endpoint	GET /defects/statistics
+Description	Get defect metrics
+Query Parameters:
+
+date_from: ISO8601
+date_to: ISO8601
+folder_id: UUID
+5.7 List Defect Folders
+Field	Value
+Endpoint	GET /defects/folders
+Description	Get defect folder structure
+5.8 Create Defect Folder
+Field	Value
+Endpoint	POST /defects/folders
+Description	Create defect folder
+Request Body:
+
+{
+  "name": "string",
+  "parent_id": "uuid (optional)"
+}
+5.9 List Saved Filters
+Field	Value
+Endpoint	GET /defects/filters
+Description	Get saved defect filters
+5.10 Create Saved Filter
+Field	Value
+Endpoint	POST /defects/filters
+Description	Save defect filter
+5.11 Get Filter Templates
+Field	Value
+Endpoint	GET /defects/filter-templates
+Description	Get predefined filter templates
+5.12 Export Defects
+Field	Value
+Endpoint	GET /defects/export/json
+Description	Export defects as JSON
+6. Reports & Analytics
+6.1 Create Suite Run
+Field	Value
+Endpoint	POST /reports/suite-runs
+Description	Create test suite run report
+Request Body:
+
+{
+  "suite_name": "string",
+  "suite_path": "string",
+  "status": "PASSED|FAILED|ERROR",
+  "total_tests": 10,
+  "passed_tests": 8,
+  "failed_tests": 2,
+  "skipped_tests": 0,
+  "duration_ms": 60000,
+  "environment": "string",
+  "tags": [],
+  "metadata": {}
+}
+6.2 List Suite Runs
+Field	Value
+Endpoint	GET /reports/suite-runs
+Description	List suite runs with filtering
+6.3 Get Suite Run
+Field	Value
+Endpoint	GET /reports/suite-runs/{suite_run_id}
+Description	Get single suite run details
+7. User Settings
+7.1 Get Settings
+Field	Value
+Endpoint	GET /settings
+Description	Get all user settings
+Response (200 OK):
+
+{
+  "recording_auto_pause": true,
+  "recording_capture_screenshots": true,
+  "checkpoint_auto_generate": false,
+  "ai_enabled": true,
+  "ai_suggestion_threshold": 0.7,
+  "execution_timeout_seconds": 30,
+  "execution_retry_count": 3,
+  "jira_enabled": false,
+  "jira_url": "",
+  "azure_devops_enabled": false,
+  ...
+}
+7.2 Update Settings
+Field	Value
+Endpoint	PUT /settings
+Description	Update all user settings
+7.3 Reset Settings
+Field	Value
+Endpoint	POST /settings/reset
+Description	Reset to default settings
+Request Body:
+
+{
+  "confirm": true
+}
+7.4 Test Integration
+Field	Value
+Endpoint	POST /settings/integrations/test
+Description	Test Jira/Azure DevOps connection
+8. Test Run Tree
+8.1 Get Test Run Tree
+Field	Value
+Endpoint	GET /test-run-tree
+Description	Get test run folder hierarchy
+8.2 Create Test Run Folder
+Field	Value
+Endpoint	POST /test-run-tree/folders
+Description	Create folder in test run tree
+8.3 Organize Test Run
+Field	Value
+Endpoint	POST /test-run-tree/testruns
+Description	Place test run in folder
+Authentication Details
+Token Type
+Type: Bearer Token (JWT)
+Header: Authorization: Bearer {access_token}
+Token Lifetimes
+Token	Lifetime	Refresh Strategy
+Access Token	1 hour	Auto-refresh every 50 minutes
+Refresh Token	8 hours	Session expires when this expires
+Token Flow
+1. POST /auth/login
+   ├── Success: Receive access_token + refresh_token
+   └── Save tokens securely
+
+2. All API Requests
+   └── Include: Authorization: Bearer {access_token}
+
+3. Every 50 minutes (automatic)
+   ├── POST /auth/refresh with refresh_token
+   ├── Success: Update both tokens
+   └── Failure (401/402): Trigger session expiry
+
+4. POST /auth/logout
+   └── Revoke refresh_token on server
+Error Handling
+HTTP Status Codes
+Code	Meaning	Desktop App Behavior
+200	Success	Process response
+201	Created	Process response
+400	Bad Request	Show validation error
+401	Unauthorized	Trigger login flow
+402	Payment Required	Show subscription expired dialog
+403	Forbidden	Show limit reached dialog or access denied
+404	Not Found	Show "not found" message
+422	Validation Error	Show field-specific errors
+500	Server Error	Show generic error + retry option
+Error Response Format
+{
+  "error": "string",
+  "message": "Human readable message",
+  "details": {
+    "field_name": ["error1", "error2"]
+  }
+}
+Summary Statistics
+Category	Count
+Authentication Endpoints	8
+Workspace Management	1
+Test Plan Management	16
+Test Run Management	16
+Defect Management	12
+Reports	3
+Settings	4
+Test Run Tree	3
+Total Endpoints	63
+HTTP Methods Used
+GET (read operations)
+POST (create operations)
+PUT (full update operations)
+PATCH (partial update operations)
+DELETE (delete operations)
+API Base URL Configuration
+The desktop application uses environment-based API URL configuration:
+
+Environment	Base URL
+Development	http://localhost:8000/api/v1
+Staging	https://staging-api.testr.app/api/v1
+Production	https://api.testr.app/api/v1
+Contact
+For API-related questions or clarifications, please contact the Desktop Application team.
+
+Document generated: January 25, 2026
