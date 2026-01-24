@@ -1,179 +1,70 @@
- API Alignment Report: Frontend vs Backend
-                                                                                                                                                                                                                                                                 Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
-  After reviewing the frontend team's API Integration Report against the backend implementation, I found the APIs are largely aligned with a few notable discrepancies that need attention.                                                                      
-  ---
-  ✅ Well-Aligned Endpoints
+I need to test the whole functionality with all the updated new features, and for that, I want to create some data. Let's have two organisations created: it's called Google and Microsoft. So, there should be two organisations and two teams in each of the organisations. Let's call them Team A and Team B for Google, and Team C and Team D for Microsoft. Okay, for Google, we will create two team members:
+	1	Sundar@Gmail.com
+	2	Larry@Gmail.com
+For Microsoft team, we will create two team members:
+	1	Bill@Microsoft.com
+	2	Steve@Microsoft.com
+Sundar belongs to Team A, Larry belongs to Team B, Bill belongs to Team C, and Steve belongs to Team D. Let's presume the payment has been done, so we are mocking the payment scenario, okay? 
 
-  The following endpoint categories are fully aligned:
-  ┌────────────┬────────────────────┬────────────┐
-  │  Category  │   Backend Prefix   │   Status   │
-  ├────────────┼────────────────────┼────────────┤
-  │ Test Plans │ /api/v1/test-plans │ ✅ Aligned │
-  ├────────────┼────────────────────┼────────────┤
-  │ Test Cases │ /api/v1/test-cases │ ✅ Aligned │
-  ├────────────┼────────────────────┼────────────┤
-  │ Test Runs  │ /api/v1/test-runs  │ ✅ Aligned │
-  ├────────────┼────────────────────┼────────────┤
-  │ Defects    │ /api/v1/defects    │ ✅ Aligned │
-  ├────────────┼────────────────────┼────────────┤
-  │ Settings   │ /api/v1/settings   │ ✅ Aligned │
-  ├────────────┼────────────────────┼────────────┤
-  │ Schedules  │ /api/v1/schedules  │ ✅ Aligned │
-  └────────────┴────────────────────┴────────────┘
-  ---
-  ⚠️ Discrepancies Found
+Also, we have one more personal member. He is a personal member. His name is Elon. Let's presume his email is elon@tesla.com. Each of the two organisations, Google and Microsoft, has purchased 5 licences each. There is an org admin for both teams, and the org admin names are:
+	•	admin1@gmail.com (org admin for Google)
+	•	admin2@microsoft.com (org admin for Microsoft)
 
-  1. API Prefix
+Do you think this basic dataset up is enough? Do you need any more information? 
 
-  All backend routes use /api/v1/ prefix. Ensure the frontend includes this prefix.
 
-  ---
-  2. Login Response Structure (POST /api/v1/auth/login)
 
-  Frontend expects:
-  {
-    "access_token": "...",
-    "refresh_token": "...",
-    "user_id": "uuid",
-    "email": "user@example.com",
-    "username": "johndoe",
-    "is_paid": false
-  }
-
-  Backend returns:
-  {
-    "access_token": "...",
-    "refresh_token": "...",
-    "token_type": "bearer",
-    "expires_in": 3600,
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "username": "johndoe",
-      "is_paid": false,
-      "must_change_password": false,
-      ...
-    },
-    "workspaces": [...],
-    "teams": [...],
-    "login_mode": "personal"
-  }
-
-  Fix: Frontend should access user fields via response.user.id, response.user.email, etc.
-
-  ---
-  3. Register Response Structure (POST /api/v1/auth/register)
-
-  Frontend expects:
-  {
-    "user_id": "uuid",
-    "email": "user@example.com",
-    "workspace_id": "uuid"
-  }
-
-  Backend returns:
-  {
-    "message": "Registration successful",
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      ...
-    },
-    "workspace": {
-      "id": "uuid",
-      "name": "Personal Workspace",
-      ...
-    }
-  }
-
-  Fix: Frontend should access via response.user.id, response.workspace.id.
-
-  ---
-  4. Logout Response (POST /api/v1/auth/logout)
-
-  Frontend expects:
-  { "success": true }
-
-  Backend returns:
-  {
-    "message": "Successfully logged out",
-    "user_id": "uuid",
-    "tokens_revoked": 1
-  }
-
-  Fix: Frontend should check for presence of message field or HTTP 200 status.
-
-  ---
-  5. Workspace Limits Endpoint
-
-  Frontend expects: GET /workspace/limits
-  {
-    "current_count": 3,
-    "max_count": 5,
-    "remaining": 2,
-    "can_create": true
-  }
-
-  Backend provides: GET /api/v1/workspaces/current/usage
-  {
-    "workspace_id": "uuid",
-    "current_test_cases": 3,
-    "max_test_cases": 5,
-    "remaining": 2,
-    "can_add": true,
-    "is_unlimited": false
-  }
-
-  Discrepancies:
-  - Different path: /workspace/limits vs /api/v1/workspaces/current/usage
-  - Different field names: current_count → current_test_cases, max_count → max_test_cases, can_create → can_add
-
-  ---
-  6. Test Case Limit Endpoint
-
-  Backend also has: GET /api/v1/test-cases/limit which returns similar data:
-  {
-    "current_test_cases": 3,
-    "max_test_cases": 5,
-    "can_add": true,
-    "remaining": 2,
-    "is_unlimited": false
-  }
-
-  ---
-  Recommendations
-  ┌───────────────────────────┬────────────────────────────────────────────────────────────────┐
-  │           Issue           │                       Recommended Action                       │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ API prefix mismatch       │ Configure frontend base URL to include /api/v1                 │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ Login response nesting    │ Update frontend to use response.user.id pattern                │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ Register response nesting │ Update frontend to use response.user.id, response.workspace.id │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ Logout response           │ Check HTTP status 200 or presence of message field             │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ Workspace limits path     │ Update frontend to use /api/v1/workspaces/current/usage        │
-  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
-  │ Workspace limits fields   │ Map: current_count → current_test_cases, etc.                  │
-  └───────────────────────────┴────────────────────────────────────────────────────────────────┘
-  ---
-  Additional Backend Endpoints Available
-
-  The backend provides these endpoints that may be useful for the frontend:
-
-  1. Team Selection (POST /api/v1/auth/select-workspace) - For team/organization users
-  2. Password Change (POST /api/v1/auth/change-password)
-  3. Forgot Password Flow (POST /api/v1/auth/forgot-password/verify-email, /reset)
-  4. Test Plan Tree Sync (POST /api/v1/test-plans/{id}/tree/sync) - Batch update folder/case positions
-  5. Test Case Parameterization (/api/v1/test-cases/{id}/parameterization) - Data-driven testing
-  6. Test Case Audit Trail (/api/v1/test-cases/{id}/audit-trail)
-
-  ---
-  Conclusion
-
-  The backend API is well-structured and covers all 63+ endpoints the frontend needs. The main integration work required is:
-
-  1. Adjust response parsing for auth endpoints (nested user object)
-  2. Update workspace limits endpoint path and field mapping
-  3. Ensure /api/v1 prefix is used consistently
+All fixes have been applied. Here's a summary of the changes:                                                                                                                                                  
+                                                                                                                                                                                                                 
+  API Alignment Fixes Applied                                                                                                                                                                                    
+                                                                                                                                                                                                                 
+  1. API Prefix - Already Correct                                                                                                                                                                                
+                                                                                                                                                                                                                 
+  The api_config.py already constructs the full URL with /api/v1 prefix via api_base_url property.                                                                                                               
+                                                                                                                                                                                                                 
+  2. Login Response - Fixed                                                                                                                                                                                      
+                                                                                                                                                                                                                 
+  File: services/auth_service.py                                                                                                                                                                                 
+                                                                                                                                                                                                                 
+  Now correctly extracts user info from nested user object:                                                                                                                                                      
+  # Before: response.get("email", email)                                                                                                                                                                         
+  # After:  user_data.get("email", response.get("email", email))                                                                                                                                                 
+                                                                                                                                                                                                                 
+  Fields updated: email, username, is_active, is_paid                                                                                                                                                            
+                                                                                                                                                                                                                 
+  3. Register Response - Fixed                                                                                                                                                                                   
+                                                                                                                                                                                                                 
+  File: services/auth_service.py                                                                                                                                                                                 
+                                                                                                                                                                                                                 
+  Now extracts from nested user and workspace objects:                                                                                                                                                           
+  user_data = response.get("user", {})                                                                                                                                                                           
+  user_id = user_data.get("id", response.get("id", ""))                                                                                                                                                          
+  workspace_data = response.get("workspace", {})                                                                                                                                                                 
+  workspace_id = workspace_data.get("id", ...)                                                                                                                                                                   
+                                                                                                                                                                                                                 
+  Also added workspace_id field to SignupResult dataclass.                                                                                                                                                       
+                                                                                                                                                                                                                 
+  4. Logout Response - No Change Needed                                                                                                                                                                          
+                                                                                                                                                                                                                 
+  The logout already handles this gracefully (ignores response, checks HTTP status).                                                                                                                             
+                                                                                                                                                                                                                 
+  5. Workspace Limits - Fixed                                                                                                                                                                                    
+                                                                                                                                                                                                                 
+  File: services/workspace_service.py                                                                                                                                                                            
+  ┌───────────────┬───────────────────┬───────────────────────────┐                                                                                                                                              
+  │    Change     │      Before       │           After           │                                                                                                                                              
+  ├───────────────┼───────────────────┼───────────────────────────┤                                                                                                                                              
+  │ Endpoint      │ /workspace/limits │ /workspaces/current/usage │                                                                                                                                              
+  ├───────────────┼───────────────────┼───────────────────────────┤                                                                                                                                              
+  │ Field mapping │ can_add_more      │ can_add → can_add_more    │                                                                                                                                              
+  └───────────────┴───────────────────┴───────────────────────────┘                                                                                                                                              
+  Also updated handle_limit_error() to accept both old and new field names for backwards compatibility.                                                                                                          
+                                                                                                                                                                                                                 
+  6. Documentation Updated                                                                                                                                                                                       
+                                                                                                                                                                                                                 
+  File: docs/API_INTEGRATION_REPORT.md                                                                                                                                                                           
+                                                                                                                                                                                                                 
+  Updated the workspace limits endpoint documentation to match the backend.                                                                                                                                      
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  All files pass Python syntax validation. The frontend is now aligned with the backend API structure.    
