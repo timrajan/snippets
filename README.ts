@@ -1,36 +1,28 @@
- Issue: GET /api/v1/reports/suite-runs returns 0 results despite successful POST                                                                                                                                
-                                                                                                                                                                                                                 
-  What's Happening                                                                                                                                                                                               
-                                                                                                                                                                                                                 
-  1. POST /api/v1/reports/suite-runs creates a suite run successfully (201)                                                                                                                                      
-    - Suite run ID: ac47c028-df72-4455-9ceb-d395a746464c                                                                                                                                                         
-    - User ID from JWT: 9e584a24-0151-4abe-aa47-9c790c25514b                                                                                                                                                     
-  2. GET /api/v1/reports/suite-runs returns 0 results (200 OK but empty)                                                                                                                                         
-    - Same user ID from JWT: 9e584a24-0151-4abe-aa47-9c790c25514b                                                                                                                                                
-    - Query params: page=1, per_page=200, sort_by=started_at, sort_order=desc                                                                                                                                    
-                                                                                                                                                                                                                 
-  Request Bodies                                                                                                                                                                                                 
-                                                                                                                                                                                                                 
-  POST Request:                                                                                                                                                                                                  
-  {                                                                                                                                                                                                              
-    "suite_name": "Sat",                                                                                                                                                                                         
-    "suite_path": ["ROOT", "Sat"],                                                                                                                                                                               
-    "status": "Failed",                                                                                                                                                                                          
-    "total_tests": 1,                                                                                                                                                                                            
-    "passed_tests": 0,                                                                                                                                                                                           
-    "failed_tests": 1,                                                                                                                                                                                           
-    "skipped_tests": 0,                                                                                                                                                                                          
-    "duration_ms": 33332,                                                                                                                                                                                        
-    "metadata": {"run_timestamp": "Run_20260124_114423", "pass_rate": 0.0}                                                                                                                                       
-  }                                                                                                                                                                                                              
-                                                                                                                                                                                                                 
-  Investigation Needed                                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  1. Verify the suite run is being persisted to the database (check the suite_runs table for ID ac47c028-df72-4455-9ceb-d395a746464c)                                                                            
-  2. Check what user_id is stored on the created record - does it match 9e584a24-0151-4abe-aa47-9c790c25514b?                                                                                                    
-  3. Review the GET endpoint's query logic - is it filtering by user_id correctly?                                                                                                                               
-  4. Check server logs for the GET request to see the actual SQL query being executed                                                                                                                            
-                                                                                                                                                                                                                 
-  Expected Behavior                                                                                                                                                                                              
-                                                                                                                                                                                                                 
-  GET /api/v1/reports/suite-runs should return the suite run that was just created when authenticated as the same user who created it
+ Issue: Suite runs not displaying despite successful creation
+
+  Current Status:                         
+  - POST /api/v1/reports/suite-runs → 201 Created (working)
+  - POST /api/v1/reports/test-case-results → 201 Created (working)                                                                                                                                                                                               - GET /api/v1/reports/suite-runs → 200 OK but UI shows 0 results
+                                                                                                                                                                                                                                                               
+  Database Confirmed:
+  - Records exist in suite_runs table with correct user_id
+  - SQL query in server logs shows correct filter: WHERE user_id = '9e584a24-0151-4abe-aa47-9c790c25514b'::UUID
+
+  Investigation Needed (UI Team):
+
+  1. Check the actual HTTP response body in browser dev tools (Network tab):
+    - What does the response JSON look like?
+    - Is total > 0? Are there items in the items array?
+  2. Expected response format:
+  {
+    "total": 5,
+    "items": [
+      { "id": "...", "suite_name": "...", ... }
+    ]
+  }
+  3. Is the UI parsing the response correctly?
+    - Field names: total and items
+    - Is it expecting a different structure (e.g., data instead of items)?
+
+  Parallel Server Investigation:
+  We're adding debug logging to confirm what the API is actually returning. Will update once we have that info.
