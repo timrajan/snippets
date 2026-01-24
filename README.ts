@@ -1,14 +1,23 @@
-The suite run was created successfully (201). Now there's a 405 error for creating test cases:                                                                                                                 
-                                                                                                                                                                                                                 
-  POST /api/v1/reports/suite-runs/{id}/test-cases → 405 Method Not Allowed                                                                                                                                       
-                                                                                                                                                                                                                 
-  The endpoint for creating test case results is different than expected. Can you ask the team what the correct endpoint is for creating test case results?                                                      
-                                                                                                                                                                                                                 
-  Based on the earlier feedback, they only listed:                                                                                                                                                               
-  GET  /api/v1/reports/suite-runs                                                                                                                                                                                
-  POST /api/v1/reports/suite-runs                                                                                                                                                                                
-  GET  /api/v1/reports/suite-runs/{id}                                                                                                                                                                           
-                                                                                                                                                                                                                 
-  We need to know:                                                                                                                                                                                               
-  1. What's the correct endpoint to create a test case result associated with a suite run?                                                                                                                       
-  2. Is it POST /api/v1/reports/test-case-results with suite_run_id in the body?  
+ Correct Endpoint                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                 POST /api/v1/reports/test-case-results                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                 Required Request Body
+
+  {
+    "suite_run_id": "uuid-of-suite-run",
+    "test_case_name": "string (required)",
+    "test_case_path": ["folder", "subfolder"]
+  }
+
+  Optional Fields
+  ┌──────────────────┬──────────┬─────────┐
+  │      Field       │   Type   │ Default │
+  ├──────────────────┼──────────┼─────────┤
+  │ test_case_id     │ UUID     │ null    │
+  ├──────────────────┼──────────┼─────────┤
+  │ iteration_number │ int      │ 1       │
+  ├──────────────────┼──────────┼─────────┤
+  │ base_url         │ string   │ null    │
+  ├──────────────────┼──────────┼─────────┤
+  │ tags             │ string[] │ null    │
+  └──────────────────┴──────────┴─────────┘
+  The GET /api/v1/reports/suite-runs/{id}/test-cases endpoint is only for reading test case results, not creating them.
