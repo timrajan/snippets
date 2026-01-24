@@ -1,97 +1,78 @@
-Settings API Specification v2
-Overview
-This document specifies the REST API endpoints for synchronizing user settings between the Testr desktop application and the server. Settings allow logged-in users to persist their preferences, enabling consistent configuration across devices and sessions.
+# Settings API V2 - UI Integration Guide
 
-Workflow
-1. Default Settings (Guest Mode)
-When a user is not logged in, the application uses default settings stored locally in settings.json. These defaults are:
+## Overview
 
-{
-    "captures_per_minute": 60,
-    "replay_speed_fps": 1,
-    "autoplay": false,
-    "loop": true,
-    "show_actions_panel": false,
-    "run_mode": "visible",
-    "browser_window_mode": "maximised",
-    "default_url": "https://www.google.com",
-    "record_browser": "qtwebengine",
-    "checkpoint_line_thickness": "1",
-    "checkpoint_line_color": "#ff0000",
-    "use_ai": false,
-    "ai_api_endpoint": "",
-    "ai_api_key": "",
-    "ai_model": "llama-3.1-8b-instant",
-    "console_capture_enabled": true,
-    "network_capture_enabled": true,
-    "environment_capture_enabled": true,
-    "timing_capture_enabled": true,
-    "auto_generate_defect": true,
-    "auto_generate_detailed_defects": true,
-    "parallel_enabled": true,
-    "parallel_count": 2,
-    "wcag_level": "A",
-    "accessibility_enabled": true,
-    "responsive_panel_devices": [
-        "iPad Pro 12.9\"",
-        "iPad Air",
-        "Samsung S23 Ultra",
-        "iPad Mini",
-        "Galaxy Tab S9"
-    ],
-    "responsive_panel_resolutions": [
-        "1920×1080 (FHD)",
-        "1366×768 (HD)",
-        "1536×864",
-        "1440×900",
-        "2560×1440 (QHD)"
-    ],
-    "integration_type": "none",
-    "integration_auto_create_on_failure": true,
-    "integration_attach_screenshots": true,
-    "integration_max_screenshots": 5,
-    "jira_url": "",
-    "jira_username": "",
-    "jira_project_key": "",
-    "jira_issue_type": "Bug",
-    "jira_severity_field": "",
-    "azure_organization": "",
-    "azure_project": "",
-    "azure_work_item_type": "Bug"
-}
-2. User Login Flow
-When a user logs in:
+The Settings API provides endpoints for synchronizing user preferences between the Testr desktop application and the server. This document details all endpoints, request/response formats, and integration guidelines for the UI team.
 
-Application calls GET /api/v1/settings to fetch user settings from server
-If settings exist on server, they are applied to the application
-If no settings exist (first-time user), the default settings are used and synced to server via PUT /api/v1/settings
-3. Auto-Sync on Settings Change
-When a user changes any setting in the application:
+**Base URL:** `/api/v1/settings`
 
-Setting is immediately saved to local settings.json (as backup/cache)
-If user is logged in, application calls PUT /api/v1/settings to sync the entire settings payload to server
-Server stores the settings and returns success confirmation
-4. User Logout Flow
-When a user logs out:
+**Authentication:** All endpoints require Bearer token authentication.
 
-Application stops syncing with server
-Application reverts to local settings.json (which may retain last synced settings)
-On next guest session, default settings can be restored via "Reset to Defaults" action
-API Endpoints
-Base URL
-/api/v1/settings
-All endpoints require authentication via Bearer token in the Authorization header.
+```
+Authorization: Bearer <access_token>
+```
 
-1. Get User Settings
+---
+
+## Workflow
+
+### 1. User Login Flow
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   User Logs In  │────▶│  GET /settings  │────▶│  Apply Settings │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                               │
+                               ▼
+                        ┌─────────────────┐
+                        │  data == null?  │
+                        └─────────────────┘
+                          │           │
+                         Yes          No
+                          │           │
+                          ▼           ▼
+                   ┌────────────┐  ┌────────────┐
+                   │ Use local  │  │ Apply from │
+                   │ defaults & │  │  server    │
+                   │ PUT to     │  └────────────┘
+                   │ server     │
+                   └────────────┘
+```
+
+### 2. Settings Change Flow
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  User Changes   │────▶│  Save Locally   │────▶│  PUT /settings  │
+│    Setting      │     │  (backup)       │     │  (if logged in) │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+### 3. User Logout Flow
+
+- Stop syncing with server
+- Retain local settings.json
+- Option to "Reset to Defaults" available
+
+---
+
+## API Endpoints
+
+### 1. GET /api/v1/settings
+
 Retrieves all settings for the authenticated user.
 
-Endpoint
+#### Request
+
+```http
 GET /api/v1/settings
-Headers
 Authorization: Bearer <access_token>
 Content-Type: application/json
-Response
-Success (200 OK) - Settings Exist
+```
+
+#### Response - Settings Exist (200 OK)
+
+```json
 {
     "success": true,
     "data": {
@@ -102,13 +83,14 @@ Success (200 OK) - Settings Exist
         "show_actions_panel": false,
         "run_mode": "visible",
         "browser_window_mode": "maximised",
-        "default_url": "https://www.theage.com.au/",
+        "default_url": "https://www.google.com",
         "record_browser": "qtwebengine",
         "checkpoint_line_thickness": "1",
         "checkpoint_line_color": "#ff0000",
         "use_ai": false,
-        "ai_api_endpoint": "https://api.groq.com/openai/v1/chat/completions",
+        "ai_api_endpoint": "",
         "ai_model": "llama-3.1-8b-instant",
+        "has_ai_api_key": false,
         "console_capture_enabled": true,
         "network_capture_enabled": true,
         "environment_capture_enabled": true,
@@ -142,38 +124,59 @@ Success (200 OK) - Settings Exist
         "jira_project_key": "",
         "jira_issue_type": "Bug",
         "jira_severity_field": "",
+        "has_jira_api_token": false,
         "azure_organization": "",
         "azure_project": "",
-        "azure_work_item_type": "Bug"
+        "azure_work_item_type": "Bug",
+        "has_azure_pat": false
     },
     "metadata": {
         "last_updated": "2026-01-24T10:30:00Z",
         "version": 1
     }
 }
-Success (200 OK) - No Settings (First-Time User)
+```
+
+#### Response - First-Time User (200 OK)
+
+When a user has never saved settings before:
+
+```json
 {
     "success": true,
     "data": null,
-    "message": "No settings found for user"
+    "message": "No settings found for user",
+    "metadata": null
 }
-Error (401 Unauthorized)
-{
-    "success": false,
-    "error": {
-        "code": "UNAUTHORIZED",
-        "message": "Authentication required"
-    }
-}
-2. Update/Create User Settings
-Creates or updates all settings for the authenticated user. This is a full replacement - the entire settings object is stored.
+```
 
-Endpoint
+**UI Action:** When `data` is `null`, use local default settings and call `PUT /settings` to sync them to the server.
+
+#### Response - Unauthorized (401)
+
+```json
+{
+    "detail": "Not authenticated"
+}
+```
+
+---
+
+### 2. PUT /api/v1/settings
+
+Creates or updates all settings for the authenticated user. This is a **full replacement** - the entire settings object is stored.
+
+#### Request
+
+```http
 PUT /api/v1/settings
-Headers
 Authorization: Bearer <access_token>
 Content-Type: application/json
-Request Body
+```
+
+#### Request Body
+
+```json
 {
     "captures_per_minute": 60,
     "replay_speed_fps": 1,
@@ -182,13 +185,13 @@ Request Body
     "show_actions_panel": false,
     "run_mode": "visible",
     "browser_window_mode": "maximised",
-    "default_url": "https://www.theage.com.au/",
+    "default_url": "https://www.google.com",
     "record_browser": "qtwebengine",
     "checkpoint_line_thickness": "1",
     "checkpoint_line_color": "#ff0000",
     "use_ai": false,
-    "ai_api_endpoint": "https://api.groq.com/openai/v1/chat/completions",
-    "ai_api_key": "gsk_xxxxxxxxxxxxx",
+    "ai_api_endpoint": "",
+    "ai_api_key": "sk-xxxxx",
     "ai_model": "llama-3.1-8b-instant",
     "console_capture_enabled": true,
     "network_capture_enabled": true,
@@ -229,8 +232,11 @@ Request Body
     "azure_pat": "",
     "azure_work_item_type": "Bug"
 }
-Response
-Success (200 OK)
+```
+
+#### Response - Success (200 OK)
+
+```json
 {
     "success": true,
     "message": "Settings saved successfully",
@@ -239,38 +245,55 @@ Success (200 OK)
         "version": 2
     }
 }
-Error (400 Bad Request) - Validation Error
-{
-    "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "Invalid settings value",
-        "details": [
-            {
-                "field": "parallel_count",
-                "message": "Value must be between 1 and 10"
-            },
-            {
-                "field": "checkpoint_line_color",
-                "message": "Must be a valid hex color (e.g., #ff0000)"
-            }
-        ]
-    }
-}
-3. Reset Settings to Defaults
-Resets all settings to default values for the authenticated user.
+```
 
-Endpoint
+#### Response - Validation Error (422)
+
+```json
+{
+    "detail": "Invalid request format. Please check your input fields.",
+    "errors": [
+        {
+            "field": "body.parallel_count",
+            "message": "Input should be less than or equal to 10",
+            "type": "less_than_equal"
+        },
+        {
+            "field": "body.checkpoint_line_color",
+            "message": "String should match pattern '^#[0-9a-fA-F]{6}$'",
+            "type": "string_pattern_mismatch"
+        }
+    ]
+}
+```
+
+---
+
+### 3. POST /api/v1/settings/reset
+
+Resets all settings to default values. **This also clears all stored credentials.**
+
+#### Request
+
+```http
 POST /api/v1/settings/reset
-Headers
 Authorization: Bearer <access_token>
 Content-Type: application/json
-Request Body
+```
+
+#### Request Body
+
+```json
 {
     "confirm": true
 }
-Response
-Success (200 OK)
+```
+
+**Note:** The `confirm` field must be `true` for the reset to proceed.
+
+#### Response - Success (200 OK)
+
+```json
 {
     "success": true,
     "message": "Settings reset to defaults",
@@ -327,35 +350,59 @@ Success (200 OK)
         "azure_work_item_type": "Bug"
     }
 }
-4. Test Integration Connection
-Tests the connection to an external integration (Jira, Azure DevOps) using provided credentials.
+```
 
-Endpoint
+#### Response - Bad Request (400)
+
+```json
+{
+    "detail": "Reset requires confirm=true"
+}
+```
+
+---
+
+### 4. POST /api/v1/settings/integrations/test
+
+Tests the connection to an external integration (Jira or Azure DevOps) using provided credentials.
+
+#### Request - Jira
+
+```http
 POST /api/v1/settings/integrations/test
-Headers
 Authorization: Bearer <access_token>
 Content-Type: application/json
-Request Body - Jira
+```
+
+```json
 {
     "integration_type": "jira",
     "jira_url": "https://company.atlassian.net",
     "jira_username": "user@company.com",
     "jira_api_token": "ATATT3xFfGF0xxxxx"
 }
-Request Body - Azure DevOps
+```
+
+#### Request - Azure DevOps
+
+```json
 {
     "integration_type": "azure_devops",
     "azure_organization": "myorg",
     "azure_project": "MyProject",
     "azure_pat": "ghp_xxxx..."
 }
-Response
-Success (200 OK) - Connected
+```
+
+#### Response - Connection Successful (200 OK)
+
+```json
 {
     "success": true,
     "data": {
         "connected": true,
         "message": "Connected as: John Doe",
+        "error_code": null,
         "details": {
             "server_info": "Jira Cloud",
             "user_display_name": "John Doe",
@@ -363,284 +410,465 @@ Success (200 OK) - Connected
         }
     }
 }
-Success (200 OK) - Connection Failed
+```
+
+#### Response - Connection Failed (200 OK)
+
+```json
 {
     "success": true,
     "data": {
         "connected": false,
-        "message": "Authentication failed - check username/API token",
-        "error_code": "AUTH_FAILED"
+        "message": "Missing required fields: jira_url, jira_username, jira_api_token",
+        "error_code": "MISSING_CONFIG",
+        "details": null
     }
 }
-Settings Field Reference
-Recording Settings
-Field	Type	Default	Description	Constraints
-captures_per_minute	integer	60	Screenshot capture frequency	1-120
-replay_speed_fps	integer	1	Playback frames per second	1-60
-autoplay	boolean	false	Auto-play recordings	-
-loop	boolean	true	Loop playback	-
-show_actions_panel	boolean	false	Show actions panel during recording	-
-run_mode	string	"visible"	Test run mode	"visible", "headless"
-browser_window_mode	string	"maximised"	Browser window state	"maximised", "windowed", "fullscreen"
-default_url	string	"https://www.google.com"	Default start URL	Valid URL
-record_browser	string	"qtwebengine"	Recording browser engine	"qtwebengine", "playwright_chromium", "playwright_firefox", "playwright_webkit"
-Checkpoint Settings
-Field	Type	Default	Description	Constraints
-checkpoint_line_thickness	string	"1"	Visual checkpoint line thickness	"1"-"5"
-checkpoint_line_color	string	"#ff0000"	Checkpoint highlight color	Valid hex color
-AI/LLM Settings
-Field	Type	Default	Description	Constraints
-use_ai	boolean	false	Enable AI features	-
-ai_api_endpoint	string	""	AI API endpoint URL	Valid URL or empty
-ai_api_key	string	""	AI API key (encrypted at rest)	-
-ai_model	string	"llama-3.1-8b-instant"	AI model identifier	-
-Capture Settings
-Field	Type	Default	Description	Constraints
-console_capture_enabled	boolean	true	Capture browser console logs	-
-network_capture_enabled	boolean	true	Capture network requests	-
-environment_capture_enabled	boolean	true	Capture environment info	-
-timing_capture_enabled	boolean	true	Capture timing metrics	-
-Test Execution Settings
-Field	Type	Default	Description	Constraints
-auto_generate_defect	boolean	true	Auto-generate defects on failure	-
-auto_generate_detailed_defects	boolean	true	Include detailed info in defects	-
-parallel_enabled	boolean	true	Enable parallel test execution	-
-parallel_count	integer	2	Number of parallel workers	1-10
-wcag_level	string	"A"	WCAG accessibility level	"A", "AA", "AAA"
-accessibility_enabled	boolean	true	Enable accessibility checks	-
-Responsive Panel Settings
-Field	Type	Default	Description
-responsive_panel_devices	array[string]	["iPad Pro 12.9"", ...]	Device presets for responsive testing
-responsive_panel_resolutions	array[string]	["1920×1080 (FHD)", ...]	Resolution presets
-Integration Settings
-Field	Type	Default	Description	Constraints
-integration_type	string	"none"	Active integration	"none", "jira", "azure_devops"
-integration_auto_create_on_failure	boolean	true	Auto-create defects on test failure	-
-integration_attach_screenshots	boolean	true	Attach screenshots to defects	-
-integration_max_screenshots	integer	5	Max screenshots per defect	1-20
-Jira Integration
-Field	Type	Default	Description
-jira_url	string	""	Jira instance URL
-jira_username	string	""	Jira username/email
-jira_api_token	string	""	Jira API token (encrypted at rest)
-jira_project_key	string	""	Default project key
-jira_issue_type	string	"Bug"	Default issue type
-jira_severity_field	string	""	Custom field ID for severity
-Azure DevOps Integration
-Field	Type	Default	Description
-azure_organization	string	""	Azure DevOps organization
-azure_project	string	""	Project name
-azure_pat	string	""	Personal Access Token (encrypted at rest)
-azure_work_item_type	string	"Bug"	Default work item type
-Database Schema
-Table: user_settings
-CREATE TABLE user_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+```
 
-    -- Settings stored as JSONB for flexibility
-    settings JSONB NOT NULL DEFAULT '{}',
+**Note:** Connection test always returns 200 OK. Check `data.connected` to determine success.
 
-    -- Metadata
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+---
 
-    -- Constraints
-    UNIQUE(user_id)
-);
+## Settings Field Reference
 
--- Index for fast lookup by user
-CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
+### Recording Settings
 
--- Trigger for updated_at
-CREATE OR REPLACE FUNCTION update_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    NEW.version = OLD.version + 1;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+| Field | Type | Default | Constraints | Description |
+|-------|------|---------|-------------|-------------|
+| `captures_per_minute` | integer | 60 | 1-120 | Screenshot capture frequency |
+| `replay_speed_fps` | integer | 1 | 1-60 | Playback frames per second |
+| `autoplay` | boolean | false | - | Auto-play recordings |
+| `loop` | boolean | true | - | Loop playback |
+| `show_actions_panel` | boolean | false | - | Show actions panel during recording |
+| `run_mode` | string | "visible" | "visible", "headless" | Test run mode |
+| `browser_window_mode` | string | "maximised" | "maximised", "windowed", "fullscreen" | Browser window state |
+| `default_url` | string | "https://www.google.com" | Valid URL | Default start URL |
+| `record_browser` | string | "qtwebengine" | "qtwebengine", "playwright_chromium", "playwright_firefox", "playwright_webkit" | Recording browser engine |
 
-CREATE TRIGGER update_user_settings_timestamp
-    BEFORE UPDATE ON user_settings
-    FOR EACH ROW
-    EXECUTE FUNCTION update_timestamp();
-Table: user_credentials (Separate for Security)
-Stores encrypted sensitive credentials (API tokens, passwords).
+### Checkpoint Settings
 
-CREATE TABLE user_credentials (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+| Field | Type | Default | Constraints | Description |
+|-------|------|---------|-------------|-------------|
+| `checkpoint_line_thickness` | string | "1" | "1"-"5" | Visual checkpoint line thickness |
+| `checkpoint_line_color` | string | "#ff0000" | Valid hex color (e.g., #ff0000) | Checkpoint highlight color |
 
-    -- Credential type
-    credential_type VARCHAR(50) NOT NULL, -- 'ai_api_key', 'jira_api_token', 'azure_pat'
+### AI/LLM Settings
 
-    -- Encrypted value (use server-side encryption)
-    encrypted_value BYTEA NOT NULL,
+| Field | Type | Default | Constraints | Description |
+|-------|------|---------|-------------|-------------|
+| `use_ai` | boolean | false | - | Enable AI features |
+| `ai_api_endpoint` | string | "" | Valid URL or empty | AI API endpoint URL |
+| `ai_api_key` | string | null | **INPUT ONLY** | AI API key (never returned in GET) |
+| `ai_model` | string | "llama-3.1-8b-instant" | - | AI model identifier |
 
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+**Response-only field:**
+| `has_ai_api_key` | boolean | false | **OUTPUT ONLY** | Indicates if API key is stored |
 
-    -- Constraints
-    UNIQUE(user_id, credential_type)
-);
+### Capture Settings
 
-CREATE INDEX idx_user_credentials_user ON user_credentials(user_id);
-Pydantic Models (Python)
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Literal
-from datetime import datetime
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `console_capture_enabled` | boolean | true | Capture browser console logs |
+| `network_capture_enabled` | boolean | true | Capture network requests |
+| `environment_capture_enabled` | boolean | true | Capture environment info |
+| `timing_capture_enabled` | boolean | true | Capture timing metrics |
 
+### Test Execution Settings
 
-class UserSettings(BaseModel):
-    """Complete user settings model"""
+| Field | Type | Default | Constraints | Description |
+|-------|------|---------|-------------|-------------|
+| `auto_generate_defect` | boolean | true | - | Auto-generate defects on failure |
+| `auto_generate_detailed_defects` | boolean | true | - | Include detailed info in defects |
+| `parallel_enabled` | boolean | true | - | Enable parallel test execution |
+| `parallel_count` | integer | 2 | 1-10 | Number of parallel workers |
+| `wcag_level` | string | "A" | "A", "AA", "AAA" | WCAG accessibility level |
+| `accessibility_enabled` | boolean | true | - | Enable accessibility checks |
 
-    # Recording Settings
-    captures_per_minute: int = Field(60, ge=1, le=120)
-    replay_speed_fps: int = Field(1, ge=1, le=60)
-    autoplay: bool = False
-    loop: bool = True
-    show_actions_panel: bool = False
-    run_mode: Literal["visible", "headless"] = "visible"
-    browser_window_mode: Literal["maximised", "windowed", "fullscreen"] = "maximised"
-    default_url: str = "https://www.google.com"
-    record_browser: Literal["qtwebengine", "playwright_chromium", "playwright_firefox", "playwright_webkit"] = "qtwebengine"
+### Responsive Panel Settings
 
-    # Checkpoint Settings
-    checkpoint_line_thickness: str = Field("1", pattern=r"^[1-5]$")
-    checkpoint_line_color: str = Field("#ff0000", pattern=r"^#[0-9a-fA-F]{6}$")
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `responsive_panel_devices` | array[string] | ["iPad Pro 12.9\"", ...] | Device presets for responsive testing |
+| `responsive_panel_resolutions` | array[string] | ["1920×1080 (FHD)", ...] | Resolution presets |
 
-    # AI Settings
-    use_ai: bool = False
-    ai_api_endpoint: str = ""
-    ai_api_key: Optional[str] = None  # Only for input, never returned
-    ai_model: str = "llama-3.1-8b-instant"
+### Integration Settings
 
-    # Capture Settings
-    console_capture_enabled: bool = True
-    network_capture_enabled: bool = True
-    environment_capture_enabled: bool = True
-    timing_capture_enabled: bool = True
+| Field | Type | Default | Constraints | Description |
+|-------|------|---------|-------------|-------------|
+| `integration_type` | string | "none" | "none", "jira", "azure_devops" | Active integration |
+| `integration_auto_create_on_failure` | boolean | true | - | Auto-create defects on test failure |
+| `integration_attach_screenshots` | boolean | true | - | Attach screenshots to defects |
+| `integration_max_screenshots` | integer | 5 | 1-20 | Max screenshots per defect |
 
-    # Test Execution Settings
-    auto_generate_defect: bool = True
-    auto_generate_detailed_defects: bool = True
-    parallel_enabled: bool = True
-    parallel_count: int = Field(2, ge=1, le=10)
-    wcag_level: Literal["A", "AA", "AAA"] = "A"
-    accessibility_enabled: bool = True
+### Jira Integration
 
-    # Responsive Panel Settings
-    responsive_panel_devices: List[str] = [
-        "iPad Pro 12.9\"",
-        "iPad Air",
-        "Samsung S23 Ultra",
-        "iPad Mini",
-        "Galaxy Tab S9"
-    ]
-    responsive_panel_resolutions: List[str] = [
-        "1920×1080 (FHD)",
-        "1366×768 (HD)",
-        "1536×864",
-        "1440×900",
-        "2560×1440 (QHD)"
-    ]
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `jira_url` | string | "" | Jira instance URL (e.g., https://company.atlassian.net) |
+| `jira_username` | string | "" | Jira username/email |
+| `jira_api_token` | string | null | **INPUT ONLY** - Jira API token |
+| `jira_project_key` | string | "" | Default project key |
+| `jira_issue_type` | string | "Bug" | Default issue type |
+| `jira_severity_field` | string | "" | Custom field ID for severity |
 
-    # Integration Settings
-    integration_type: Literal["none", "jira", "azure_devops"] = "none"
-    integration_auto_create_on_failure: bool = True
-    integration_attach_screenshots: bool = True
-    integration_max_screenshots: int = Field(5, ge=1, le=20)
+**Response-only field:**
+| `has_jira_api_token` | boolean | false | **OUTPUT ONLY** | Indicates if API token is stored |
 
-    # Jira Settings
-    jira_url: str = ""
-    jira_username: str = ""
-    jira_api_token: Optional[str] = None  # Only for input
-    jira_project_key: str = ""
-    jira_issue_type: str = "Bug"
-    jira_severity_field: str = ""
+### Azure DevOps Integration
 
-    # Azure DevOps Settings
-    azure_organization: str = ""
-    azure_project: str = ""
-    azure_pat: Optional[str] = None  # Only for input
-    azure_work_item_type: str = "Bug"
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `azure_organization` | string | "" | Azure DevOps organization |
+| `azure_project` | string | "" | Project name |
+| `azure_pat` | string | null | **INPUT ONLY** - Personal Access Token |
+| `azure_work_item_type` | string | "Bug" | Default work item type |
 
-    @field_validator('checkpoint_line_color')
-    @classmethod
-    def validate_hex_color(cls, v):
-        if not v.startswith('#') or len(v) != 7:
-            raise ValueError('Must be a valid hex color (e.g., #ff0000)')
-        return v.lower()
+**Response-only field:**
+| `has_azure_pat` | boolean | false | **OUTPUT ONLY** | Indicates if PAT is stored |
 
+---
 
-class SettingsResponse(BaseModel):
-    """Response model for GET /settings"""
-    success: bool
-    data: Optional[UserSettings] = None
-    message: Optional[str] = None
-    metadata: Optional[dict] = None
+## Important Notes for UI Team
 
+### 1. Credential Handling
 
-class SettingsUpdateResponse(BaseModel):
-    """Response model for PUT /settings"""
-    success: bool
-    message: str
-    data: Optional[dict] = None
+**IMPORTANT:** Sensitive credentials are handled specially:
 
+| Input Field (PUT) | Output Field (GET) | Description |
+|-------------------|-------------------|-------------|
+| `ai_api_key` | `has_ai_api_key` | Send key in PUT, receive boolean in GET |
+| `jira_api_token` | `has_jira_api_token` | Send token in PUT, receive boolean in GET |
+| `azure_pat` | `has_azure_pat` | Send PAT in PUT, receive boolean in GET |
 
-class SettingsResetRequest(BaseModel):
-    """Request model for POST /settings/reset"""
-    confirm: bool = True
+**Example UI Pattern:**
 
-
-class IntegrationTestRequest(BaseModel):
-    """Request model for POST /settings/integrations/test"""
-    integration_type: Literal["jira", "azure_devops"]
-
-    # Jira fields
-    jira_url: Optional[str] = None
-    jira_username: Optional[str] = None
-    jira_api_token: Optional[str] = None
-
-    # Azure DevOps fields
-    azure_organization: Optional[str] = None
-    azure_project: Optional[str] = None
-    azure_pat: Optional[str] = None
-
-
-class IntegrationTestResponse(BaseModel):
-    """Response model for integration test"""
-    success: bool
-    data: dict
-Security Considerations
-Credential Encryption: All sensitive fields (ai_api_key, jira_api_token, azure_pat) must be encrypted at rest using server-side encryption (e.g., AWS KMS, Vault)
-
-Never Return Secrets: When returning settings via GET, sensitive fields should be omitted or replaced with indicators:
-
-{
-    "ai_api_key": null,
-    "has_ai_api_key": true,
-    "jira_api_token": null,
-    "has_jira_api_token": true
+```javascript
+// When displaying settings form
+if (settings.has_jira_api_token) {
+    showMaskedToken("••••••••••••");  // Show placeholder
+} else {
+    showEmptyField();
 }
-Rate Limiting: Limit settings update frequency (e.g., 30 requests/minute per user)
 
-Audit Logging: Log all settings changes with user ID and timestamp
+// When saving settings
+const payload = {
+    ...otherSettings,
+    jira_api_token: hasUserEnteredNewToken ? newTokenValue : null
+};
+// Only send token if user explicitly entered a new one
+```
 
-Input Validation: Validate all settings against expected types, ranges, and patterns
+### 2. Full Replacement Model
 
-Error Codes
-Code	HTTP Status	Description
-UNAUTHORIZED	401	Authentication required
-FORBIDDEN	403	Insufficient permissions
-VALIDATION_ERROR	400	Invalid settings value
-NOT_FOUND	404	User settings not found
-RATE_LIMITED	429	Too many requests
-SERVER_ERROR	500	Internal server error
-Revision History
-Version	Date	Author	Changes
-2.0.0	2026-01-24	Testr Team	Simplified flat structure matching app's settings.json
+The PUT endpoint performs a **full replacement** of settings. This means:
+
+- **Always send the complete settings object**
+- If you only send partial data, missing fields will be set to their default values
+- Use the current settings from GET as the base, modify what changed, then PUT the entire object
+
+**Example:**
+
+```javascript
+// CORRECT: Full replacement
+const currentSettings = await getSettings();
+currentSettings.parallel_count = 4;  // Change one value
+await putSettings(currentSettings);  // Send everything
+
+// INCORRECT: Partial update (will reset other fields!)
+await putSettings({ parallel_count: 4 });  // DON'T DO THIS
+```
+
+### 3. First-Time User Handling
+
+```javascript
+async function initializeSettings() {
+    const response = await fetch('/api/v1/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+
+    if (result.data === null) {
+        // First-time user - sync local defaults to server
+        const localDefaults = loadLocalSettings();
+        await fetch('/api/v1/settings', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(localDefaults)
+        });
+        return localDefaults;
+    }
+
+    return result.data;
+}
+```
+
+### 4. Error Handling
+
+| HTTP Status | Meaning | UI Action |
+|-------------|---------|-----------|
+| 200 | Success | Update UI with response data |
+| 400 | Bad Request | Show error message to user |
+| 401 | Unauthorized | Redirect to login |
+| 422 | Validation Error | Show field-specific errors |
+| 500 | Server Error | Show generic error, retry later |
+
+### 5. Version Tracking
+
+The `metadata.version` field increments with each update. This can be used for:
+- Optimistic concurrency control
+- Detecting if settings changed on another device
+- Debugging sync issues
+
+---
+
+## TypeScript Interfaces
+
+```typescript
+// Request Types
+interface UserSettingsRequest {
+    // Recording
+    captures_per_minute: number;
+    replay_speed_fps: number;
+    autoplay: boolean;
+    loop: boolean;
+    show_actions_panel: boolean;
+    run_mode: 'visible' | 'headless';
+    browser_window_mode: 'maximised' | 'windowed' | 'fullscreen';
+    default_url: string;
+    record_browser: 'qtwebengine' | 'playwright_chromium' | 'playwright_firefox' | 'playwright_webkit';
+
+    // Checkpoints
+    checkpoint_line_thickness: '1' | '2' | '3' | '4' | '5';
+    checkpoint_line_color: string;  // Hex color e.g., "#ff0000"
+
+    // AI
+    use_ai: boolean;
+    ai_api_endpoint: string;
+    ai_api_key?: string | null;  // Only for input
+    ai_model: string;
+
+    // Capture
+    console_capture_enabled: boolean;
+    network_capture_enabled: boolean;
+    environment_capture_enabled: boolean;
+    timing_capture_enabled: boolean;
+
+    // Test Execution
+    auto_generate_defect: boolean;
+    auto_generate_detailed_defects: boolean;
+    parallel_enabled: boolean;
+    parallel_count: number;
+    wcag_level: 'A' | 'AA' | 'AAA';
+    accessibility_enabled: boolean;
+
+    // Responsive Panel
+    responsive_panel_devices: string[];
+    responsive_panel_resolutions: string[];
+
+    // Integration
+    integration_type: 'none' | 'jira' | 'azure_devops';
+    integration_auto_create_on_failure: boolean;
+    integration_attach_screenshots: boolean;
+    integration_max_screenshots: number;
+
+    // Jira
+    jira_url: string;
+    jira_username: string;
+    jira_api_token?: string | null;  // Only for input
+    jira_project_key: string;
+    jira_issue_type: string;
+    jira_severity_field: string;
+
+    // Azure DevOps
+    azure_organization: string;
+    azure_project: string;
+    azure_pat?: string | null;  // Only for input
+    azure_work_item_type: string;
+}
+
+// Response Types
+interface UserSettingsResponse {
+    success: boolean;
+    data: UserSettingsData | null;
+    message?: string;
+    metadata?: {
+        last_updated: string;  // ISO datetime
+        version: number;
+    };
+}
+
+interface UserSettingsData extends Omit<UserSettingsRequest, 'ai_api_key' | 'jira_api_token' | 'azure_pat'> {
+    // Credential flags instead of actual values
+    has_ai_api_key: boolean;
+    has_jira_api_token: boolean;
+    has_azure_pat: boolean;
+}
+
+interface SettingsUpdateResponse {
+    success: boolean;
+    message: string;
+    data?: {
+        updated_at: string;
+        version: number;
+    };
+}
+
+interface IntegrationTestRequest {
+    integration_type: 'jira' | 'azure_devops';
+    // Jira fields
+    jira_url?: string;
+    jira_username?: string;
+    jira_api_token?: string;
+    // Azure fields
+    azure_organization?: string;
+    azure_project?: string;
+    azure_pat?: string;
+}
+
+interface IntegrationTestResponse {
+    success: boolean;
+    data: {
+        connected: boolean;
+        message: string;
+        error_code?: string;
+        details?: Record<string, any>;
+    };
+}
+```
+
+---
+
+## Example API Calls
+
+### JavaScript/Fetch
+
+```javascript
+// GET Settings
+async function getSettings() {
+    const response = await fetch('/api/v1/settings', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    return response.json();
+}
+
+// PUT Settings
+async function saveSettings(settings) {
+    const response = await fetch('/api/v1/settings', {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    });
+    return response.json();
+}
+
+// Reset Settings
+async function resetSettings() {
+    const response = await fetch('/api/v1/settings/reset', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ confirm: true })
+    });
+    return response.json();
+}
+
+// Test Jira Connection
+async function testJiraConnection(url, username, apiToken) {
+    const response = await fetch('/api/v1/settings/integrations/test', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            integration_type: 'jira',
+            jira_url: url,
+            jira_username: username,
+            jira_api_token: apiToken
+        })
+    });
+    return response.json();
+}
+```
+
+### Python/Requests
+
+```python
+import requests
+
+BASE_URL = "http://localhost:8000/api/v1"
+headers = {
+    "Authorization": f"Bearer {access_token}",
+    "Content-Type": "application/json"
+}
+
+# GET Settings
+response = requests.get(f"{BASE_URL}/settings", headers=headers)
+settings = response.json()
+
+# PUT Settings
+response = requests.put(
+    f"{BASE_URL}/settings",
+    headers=headers,
+    json=settings_payload
+)
+
+# Reset Settings
+response = requests.post(
+    f"{BASE_URL}/settings/reset",
+    headers=headers,
+    json={"confirm": True}
+)
+
+# Test Integration
+response = requests.post(
+    f"{BASE_URL}/settings/integrations/test",
+    headers=headers,
+    json={
+        "integration_type": "jira",
+        "jira_url": "https://company.atlassian.net",
+        "jira_username": "user@company.com",
+        "jira_api_token": "ATATT3xFfGF0xxxxx"
+    }
+)
+```
+
+---
+
+## Validation Rules Summary
+
+| Field | Rule |
+|-------|------|
+| `captures_per_minute` | Integer, 1-120 |
+| `replay_speed_fps` | Integer, 1-60 |
+| `parallel_count` | Integer, 1-10 |
+| `integration_max_screenshots` | Integer, 1-20 |
+| `checkpoint_line_thickness` | String, "1"-"5" |
+| `checkpoint_line_color` | Hex color, e.g., "#ff0000" |
+| `run_mode` | Enum: "visible", "headless" |
+| `browser_window_mode` | Enum: "maximised", "windowed", "fullscreen" |
+| `record_browser` | Enum: "qtwebengine", "playwright_chromium", "playwright_firefox", "playwright_webkit" |
+| `wcag_level` | Enum: "A", "AA", "AAA" |
+| `integration_type` | Enum: "none", "jira", "azure_devops" |
+
+---
+
+## Contact
+
+For API issues or questions, contact the backend team.
+
+**Document Version:** 2.0.0
+**Last Updated:** 2026-01-24
