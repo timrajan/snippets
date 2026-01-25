@@ -1,41 +1,93 @@
- The seed data has been created successfully. Here's the summary:                                                                                                                                                                                             
-                                                                                                                                                                                                                                                                 ---
-  Seed Data Created Successfully                                                                                                                                                                                                                               
-  
-  Organizations                                                                                                                                                                                                                                                  ┌───────────┬───────────┬─────────────────────┐
-  │   Name    │   Slug    │ Licenses (Max/Used) │                                                                                                                                                                                                              
-  ├───────────┼───────────┼─────────────────────┤
-  │ Google    │ google    │ 5 / 1               │
-  ├───────────┼───────────┼─────────────────────┤
-  │ Microsoft │ microsoft │ 5 / 1               │
-  └───────────┴───────────┴─────────────────────┘
-  Teams
-  ┌────────┬──────────────┐
-  │  Team  │ Organization │
-  ├────────┼──────────────┤
-  │ Team A │ Google       │
-  ├────────┼──────────────┤
-  │ Team B │ Google       │
-  ├────────┼──────────────┤
-  │ Team C │ Microsoft    │
-  ├────────┼──────────────┤
-  │ Team D │ Microsoft    │
-  └────────┴──────────────┘
-  Users & Credentials
-  ┌──────────────────────┬───────────────────┬──────────────────────────────┬──────────────┐
-  │        Email         │       Role        │      Organization/Team       │   Password   │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ admin1@gmail.com     │ Org/Billing Admin │ Google                       │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ admin2@microsoft.com │ Org/Billing Admin │ Microsoft                    │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ sundar@gmail.com     │ Team Member       │ Google / Team A              │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ larry@gmail.com      │ Team Member       │ Google / Team B              │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ bill@microsoft.com   │ Team Member       │ Microsoft / Team C           │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ steve@microsoft.com  │ Team Member       │ Microsoft / Team D           │ Password123! │
-  ├──────────────────────┼───────────────────┼──────────────────────────────┼──────────────┤
-  │ elon@tesla.com       │ Free User         │ Personal (5 test case limit) │ Password123! │
-  └──────────────────────┴───────────────────┴──────────────────────────────┴──────────────┘
+ API Enhancement Request: Per-User Location Preference                                                                                                                                                          
+                                                                                                                                                                                                                 
+  Feature: Location & Timezone Simulation                                                                                                                                                                        
+  Priority: Medium                                                                                                                                                                                               
+  Requested By: Desktop Application Team                                                                                                                                                                         
+  Date: January 25, 2026                                                                                                                                                                                         
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Summary                                                                                                                                                                                                        
+                                                                                                                                                                                                                 
+  The desktop application now supports geolocation and timezone simulation for testing purposes. Users can select a location (e.g., Paris, Mumbai, New York) to simulate being in that location when testing web 
+  applications. This preference needs to be persisted per-user on the server.                                                                                                                                    
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  API Change Required                                                                                                                                                                                            
+                                                                                                                                                                                                                 
+  Endpoint: GET /settings and PUT /settings                                                                                                                                                                      
+                                                                                                                                                                                                                 
+  New Field to Add:                                                                                                                                                                                              
+  ┌─────────────────────────────┬────────┬────────────┬─────────────────────────────────────────────────────────────────────────┐                                                                                
+  │            Field            │  Type  │  Default   │                               Description                               │                                                                                
+  ├─────────────────────────────┼────────┼────────────┼─────────────────────────────────────────────────────────────────────────┤                                                                                
+  │ selected_location_preset_id │ string │ "detected" │ The user's selected location preset for geolocation/timezone simulation │                                                                                
+  └─────────────────────────────┴────────┴────────────┴─────────────────────────────────────────────────────────────────────────┘                                                                                
+  ---                                                                                                                                                                                                            
+  Valid Values                                                                                                                                                                                                   
+  ┌─────────────────┬───────────────────────────────────────────────────────┐                                                                                                                                    
+  │      Value      │                      Description                      │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "detected"      │ Use auto-detected location (default)                  │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "us_california" │ San Francisco, USA                                    │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "us_newyork"    │ New York, USA                                         │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "uk_london"     │ London, UK                                            │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "fr_paris"      │ Paris, France                                         │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "de_berlin"     │ Berlin, Germany                                       │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "in_mumbai"     │ Mumbai, India                                         │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "in_bangalore"  │ Bangalore, India                                      │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "jp_tokyo"      │ Tokyo, Japan                                          │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "au_sydney"     │ Sydney, Australia                                     │                                                                                                                                    
+  ├─────────────────┼───────────────────────────────────────────────────────┤                                                                                                                                    
+  │ "custom_*"      │ Custom user-defined locations (e.g., "custom_abc123") │                                                                                                                                    
+  └─────────────────┴───────────────────────────────────────────────────────┘                                                                                                                                    
+  ---                                                                                                                                                                                                            
+  Example Request/Response                                                                                                                                                                                       
+                                                                                                                                                                                                                 
+  GET /settings Response:                                                                                                                                                                                        
+  {                                                                                                                                                                                                              
+    "captures_per_minute": 60,                                                                                                                                                                                   
+    "use_ai": false,                                                                                                                                                                                             
+    "show_cross_browser_toolbar": true,                                                                                                                                                                          
+    "selected_location_preset_id": "fr_paris",                                                                                                                                                                   
+    ... other existing fields ...                                                                                                                                                                                
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  PUT /settings Request:                                                                                                                                                                                         
+  {                                                                                                                                                                                                              
+    "selected_location_preset_id": "in_mumbai"                                                                                                                                                                   
+  }                                                                                                                                                                                                              
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Database Schema                                                                                                                                                                                                
+                                                                                                                                                                                                                 
+  Add to user settings table:                                                                                                                                                                                    
+  ALTER TABLE user_settings                                                                                                                                                                                      
+  ADD COLUMN selected_location_preset_id VARCHAR(50) DEFAULT 'detected';                                                                                                                                         
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Notes                                                                                                                                                                                                          
+                                                                                                                                                                                                                 
+  1. This field should be treated like any other user setting - stored per user and returned with GET /settings                                                                                                  
+  2. The desktop app handles all location validation locally; the server just needs to store the string value                                                                                                    
+  3. If the field is missing from the response, the desktop app will default to "detected"                                                                                                                       
+  4. No validation required on the server side - just store and return the value as-is                                                                                                                           
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Testing                                                                                                                                                                                                        
+                                                                                                                                                                                                                 
+  After implementation, verify:                                                                                                                                                                                  
+  1. GET /settings returns selected_location_preset_id field                                                                                                                                                     
+  2. PUT /settings with {"selected_location_preset_id": "fr_paris"} persists the value                                                                                                                           
+  3. Different users can have different values for this field                                                                                                                                                    
+                                                                                                                                                                                                                 
+  ---                                                                                                                                                                                                            
+  Please let me know if you have any questions or need additional information.    
