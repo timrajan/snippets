@@ -1,395 +1,620 @@
-# Bookmark API Documentation
+# Payment Flow API Documentation
 
-**Version:** 1.0.0
-**Base URL:** `/api/v1`
-**Last Updated:** 2026-01-25
+Complete API reference for Organization, Subscription, Team Management, and Authentication endpoints for the Testr Web Portal.
+
+**Base URL:** `https://api.testr.io` (production) | `http://localhost:8000` (development)
+
+**API Version:** v1
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Authentication](#authentication)
-3. [Common Response Format](#common-response-format)
-4. [Personal Bookmarks](#personal-bookmarks)
-5. [Team Bookmarks](#team-bookmarks)
-6. [Bookmark Folders](#bookmark-folders)
-7. [Tags System](#tags-system)
-8. [Search](#search)
-9. [Import/Export](#importexport)
-10. [Analytics](#analytics)
-11. [Sync API](#sync-api)
-12. [Data Models](#data-models)
-13. [Error Codes](#error-codes)
+1. [Authentication](#1-authentication)
+2. [Organization & Subscription](#2-organization--subscription)
+3. [Team Management](#3-team-management)
+4. [Organization Admin Management](#4-organization-admin-management)
+5. [Billing Admin Management](#5-billing-admin-management)
+6. [Payment Webhooks](#6-payment-webhooks)
+7. [Data Models](#7-data-models)
+8. [Error Codes](#8-error-codes)
+9. [Flow Diagrams](#9-flow-diagrams)
 
 ---
 
-## Overview
+## 1. Authentication
 
-The Bookmark API provides functionality for:
-- **Personal Bookmarks**: User-owned bookmarks for private use
-- **Team Bookmarks**: Shared bookmarks accessible to team members
-- **Folders**: Hierarchical organization (nested folders supported)
-- **Tags**: Categorization with up to 20 tags per bookmark
-- **Sync**: Bidirectional synchronization for desktop clients
-- **Import/Export**: Support for Chrome, Firefox, JSON, CSV formats
-- **Analytics**: Usage statistics and insights
+All endpoints (except webhooks) require JWT Bearer token authentication.
 
----
-
-## Authentication
-
-All endpoints require JWT authentication via the `Authorization` header:
+### Headers
 
 ```
 Authorization: Bearer <access_token>
+Content-Type: application/json
 ```
 
-Obtain tokens via `/api/v1/auth/login`.
+### Token Lifecycle
+
+| Token Type | Expiry | Purpose |
+|------------|--------|---------|
+| Access Token | 1 hour | API authentication |
+| Refresh Token | 8 hours | Get new access token |
 
 ---
 
-## Common Response Format
+### 1.1 Register User
 
-### Success Response
-```json
-{
-  "success": true,
-  "message": "Operation completed",
-  "data": { ... }
-}
-```
-
-### List Response
-```json
-{
-  "success": true,
-  "data": [ ... ],
-  "total": 100,
-  "page": 1,
-  "page_size": 50
-}
-```
-
-### Error Response
-```json
-{
-  "detail": "Error message"
-}
-```
-
----
-
-## Personal Bookmarks
-
-### List Personal Bookmarks
+Create a new user account.
 
 ```
-GET /bookmarks
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `folder_id` | UUID | null | Filter by folder |
-| `include_deleted` | boolean | false | Include trashed bookmarks |
-| `page` | integer | 1 | Page number |
-| `page_size` | integer | 50 | Items per page (max 100) |
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440001",
-      "url": "https://example.com",
-      "title": "Example Site",
-      "description": "A useful website",
-      "favicon_url": "https://example.com/favicon.ico",
-      "tags": ["work", "reference"],
-      "folder_id": "550e8400-e29b-41d4-a716-446655440002",
-      "user_id": "550e8400-e29b-41d4-a716-446655440000",
-      "team_id": null,
-      "created_by": {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "user@example.com",
-        "full_name": "John Doe"
-      },
-      "sort_order": 0,
-      "is_deleted": false,
-      "is_shared": false,
-      "created_at": "2026-01-25T10:00:00Z",
-      "updated_at": "2026-01-25T10:00:00Z",
-      "deleted_at": null
-    }
-  ],
-  "total": 42,
-  "page": 1,
-  "page_size": 50
-}
-```
-
----
-
-### Create Personal Bookmark
-
-```
-POST /bookmarks
+POST /api/v1/auth/register
 ```
 
 **Request Body:**
+
 ```json
 {
-  "url": "https://example.com",
-  "title": "Example Site",
-  "description": "Optional description",
-  "favicon_url": "https://example.com/favicon.ico",
-  "tags": ["work", "reference"],
-  "folder_id": "550e8400-e29b-41d4-a716-446655440002"
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
 }
 ```
 
-**Field Constraints:**
-| Field | Required | Max Length | Notes |
-|-------|----------|------------|-------|
-| `url` | Yes | 2048 | Must start with http:// or https:// |
-| `title` | Yes | 500 | |
-| `description` | No | 5000 | |
-| `favicon_url` | No | 2048 | |
-| `tags` | No | 20 items | Each tag max 50 chars, auto-lowercased |
-| `folder_id` | No | - | Must be user's folder |
+**Password Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one number (0-9)
+- At least one special character (!@#$%^&*(),.?":{}|<>)
 
 **Response:** `201 Created`
+
 ```json
 {
-  "success": true,
-  "message": "Bookmark created",
-  "data": { ... }
+  "message": "Registration successful",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": null,
+    "email": "user@example.com",
+    "full_name": null,
+    "is_admin": false,
+    "is_active": true,
+    "is_paid": false,
+    "email_verified": false,
+    "must_change_password": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "last_login_at": null
+  },
+  "workspace": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Personal Workspace",
+    "type": "PERSONAL",
+    "max_test_cases": 5,
+    "current_test_cases": 0
+  }
 }
 ```
 
-**Errors:**
-- `409 Conflict`: URL already bookmarked
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 400 | Email already registered |
+| 422 | Password doesn't meet requirements |
 
 ---
 
-### Get Bookmark by ID
+### 1.2 Login
+
+Authenticate and get tokens.
 
 ```
-GET /bookmarks/{bookmark_id}
+POST /api/v1/auth/login
 ```
 
-**Response:**
+**Request Body:**
+
 ```json
 {
-  "success": true,
-  "data": { ... }
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "is_paid": true,
+    "must_change_password": false,
+    "email_verified": true
+  },
+  "workspaces": [
+    {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "name": "Personal Workspace",
+      "type": "PERSONAL",
+      "max_test_cases": 5,
+      "current_test_cases": 2
+    }
+  ],
+  "teams": [
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440002",
+      "name": "Engineering Team",
+      "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+      "organization_name": "Acme Corp",
+      "role": "member",
+      "workspace_id": "990e8400-e29b-41d4-a716-446655440004"
+    }
+  ],
+  "login_mode": "team"
+}
+```
+
+**Login Modes:**
+
+| Mode | Description | Next Step |
+|------|-------------|-----------|
+| `personal` | User has no team memberships | Use personal workspace |
+| `team` | User has team memberships | Call `/select-workspace` |
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 401 | Incorrect email or password |
+| 403 | User account is inactive |
+
+---
+
+### 1.3 Select Workspace (Team Users)
+
+After login with `login_mode='team'`, select which team workspace to work in.
+
+```
+POST /api/v1/auth/select-workspace
+```
+
+**Request Body:**
+
+```json
+{
+  "workspace_id": "770e8400-e29b-41d4-a716-446655440002"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "workspace_id": "770e8400-e29b-41d4-a716-446655440002",
+  "workspace_name": "Engineering Team",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "organization_name": "Acme Corp"
+}
+```
+
+**JWT Claims (embedded in new tokens):**
+
+```json
+{
+  "sub": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "workspace_id": "770e8400-e29b-41d4-a716-446655440002",
+  "workspace_type": "TEAM",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "role": "member"
+}
+```
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 403 | You are not a member of this team |
+| 403 | This team is no longer active |
+| 402 | Subscription expired |
+| 404 | Team not found |
+
+---
+
+### 1.4 Refresh Token
+
+Get new access token using refresh token.
+
+```
+POST /api/v1/auth/refresh
+```
+
+**Request Body:**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
+```
+
+**Security Features:**
+- Old refresh token is revoked (one-time use)
+- Subscription status is validated for team tokens
+- Workspace context is preserved in new tokens
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 401 | Invalid refresh token |
+| 401 | Refresh token has been revoked or expired |
+| 402 | Subscription expired (for team workspace tokens) |
+
+---
+
+### 1.5 Logout
+
+Revoke refresh tokens.
+
+```
+POST /api/v1/auth/logout
+```
+
+**Request Body (optional):**
+
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Successfully logged out",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "tokens_revoked": 1
+}
+```
+
+**Behavior:**
+- With `refresh_token`: Revokes only that specific token
+- Without `refresh_token`: Revokes ALL user's tokens (logout from all devices)
+
+---
+
+### 1.6 Get Current User
+
+Get authenticated user information.
+
+```
+GET /api/v1/auth/me
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "johndoe",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "is_admin": false,
+  "is_active": true,
+  "is_paid": true,
+  "email_verified": true,
+  "must_change_password": false,
+  "created_at": "2024-01-15T10:30:00Z",
+  "last_login_at": "2024-01-20T08:15:00Z"
 }
 ```
 
 ---
 
-### Update Bookmark
+### 1.7 Change Password
+
+Change the current user's password.
 
 ```
-PUT /bookmarks/{bookmark_id}
+POST /api/v1/auth/change-password
 ```
 
-**Request Body:** (all fields optional)
+**Request Body:**
+
 ```json
 {
-  "url": "https://new-url.com",
-  "title": "Updated Title",
-  "description": "Updated description",
-  "tags": ["new", "tags"],
-  "folder_id": "new-folder-id",
-  "sort_order": 5
+  "current_password": "OldPassword123!",
+  "new_password": "NewSecurePass456!"
 }
 ```
 
-**Response:**
+**Response:** `200 OK`
+
 ```json
 {
-  "success": true,
-  "message": "Bookmark updated",
-  "data": { ... }
+  "message": "Password changed successfully. Please login again.",
+  "must_change_password": false
+}
+```
+
+**Side Effects:**
+- Password is updated
+- `must_change_password` is set to `false`
+- All existing refresh tokens are revoked
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 401 | Current password is incorrect |
+| 400 | New password must be different from current password |
+
+---
+
+### 1.8 Forgot Password - Verify Email
+
+Step 1 of password reset flow.
+
+```
+POST /api/v1/auth/forgot-password/verify-email
+```
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Email verified. You can now reset your password.",
+  "email": "user@example.com"
+}
+```
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 404 | Email not found |
+| 403 | Account is inactive |
+
+---
+
+### 1.9 Forgot Password - Reset
+
+Step 2 of password reset flow.
+
+```
+POST /api/v1/auth/forgot-password/reset
+```
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "new_password": "NewSecurePass456!"
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Password reset successful. You can now login with your new password."
 }
 ```
 
 ---
 
-### Delete Bookmark
+## 2. Organization & Subscription
+
+### 2.1 Get Subscription Details
+
+Get subscription details for an organization.
 
 ```
-DELETE /bookmarks/{bookmark_id}
+GET /api/v1/subscriptions/organization/{organization_id}
 ```
 
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `permanent` | boolean | false | If true, permanently delete |
+**Path Parameters:**
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Bookmark moved to trash"
-}
-```
-
----
-
-### Restore Deleted Bookmark
-
-```
-POST /bookmarks/{bookmark_id}/restore
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Bookmark restored",
-  "data": { ... }
-}
-```
-
----
-
-### List Deleted Bookmarks (Trash)
-
-```
-GET /bookmarks/deleted
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | integer | 1 | Page number |
-| `page_size` | integer | 50 | Items per page |
-
----
-
-## Team Bookmarks
-
-Team bookmarks are shared among all team members.
-
-### List Team Bookmarks
-
-```
-GET /teams/{team_id}/bookmarks
-```
-
-**Query Parameters:** Same as personal bookmarks
-
-**Authorization:** User must be an active team member
-
----
-
-### Create Team Bookmark
-
-```
-POST /teams/{team_id}/bookmarks
-```
-
-**Request Body:** Same as personal bookmark
-
-**Authorization:** User must be a team member
-
----
-
-### Get Team Bookmark
-
-```
-GET /teams/{team_id}/bookmarks/{bookmark_id}
-```
-
----
-
-### Update Team Bookmark
-
-```
-PUT /teams/{team_id}/bookmarks/{bookmark_id}
-```
-
-**Authorization:** Any team member can update
-
----
-
-### Delete Team Bookmark
-
-```
-DELETE /teams/{team_id}/bookmarks/{bookmark_id}
-```
-
-**Authorization:** Only creator OR team admin can delete
-
----
-
-### Search Team Bookmarks
-
-```
-GET /teams/{team_id}/bookmarks/search
-```
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `q` | string | Yes | Search query (1-200 chars) |
-| `tags` | string[] | No | Filter by tags |
-| `page` | integer | No | Page number |
-| `page_size` | integer | No | Items per page |
-
----
-
-## Bookmark Folders
-
-Folders support unlimited nesting depth (recommended max: 10 levels).
-
-### Personal Folders
-
-#### List Folders
-
-```
-GET /bookmarks/folders
-```
-
-**Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `parent_folder_id` | UUID | Filter by parent (null = root level) |
+| organization_id | UUID | Organization UUID |
+
+**Response:** `200 OK`
+
+```json
+{
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "organization_name": "Acme Corp",
+  "max_licenses": 50,
+  "used_licenses": 23,
+  "available_licenses": 27,
+  "is_active": true,
+  "plan_type": "professional",
+  "billing_cycle": "monthly",
+  "amount": 99.00,
+  "currency": "USD",
+  "started_at": "2024-01-01T00:00:00Z",
+  "next_billing_date": "2024-02-01",
+  "cancelled_at": null
+}
+```
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 404 | Organization not found |
+| 404 | Subscription not found |
 
 ---
 
-#### Get Folder Hierarchy (Tree)
+### 2.2 Get Subscription Status
+
+Get detailed subscription status including days remaining.
 
 ```
-GET /bookmarks/folders/hierarchy
+GET /api/v1/subscriptions/organization/{organization_id}/status
 ```
 
-**Response:**
+**Response:** `200 OK`
+
 ```json
 {
-  "success": true,
-  "data": [
+  "status": "active",
+  "days_remaining": 25,
+  "is_active": true,
+  "max_licenses": 50,
+  "used_licenses": 23,
+  "available_licenses": 27,
+  "next_billing_date": "2024-02-01",
+  "plan_type": "professional"
+}
+```
+
+**Possible Status Values:**
+
+| Status | Description |
+|--------|-------------|
+| `active` | Subscription is active and current |
+| `expiring_soon` | Less than 7 days until expiration |
+| `expired` | Subscription has expired |
+| `cancelled` | Subscription was cancelled |
+| `past_due` | Payment is past due |
+
+---
+
+### 2.3 Update License Count
+
+Update maximum license count for subscription.
+
+```
+PUT /api/v1/subscriptions/organization/{organization_id}/licenses
+```
+
+**Permissions:** Billing Admin only
+
+**Request Body:**
+
+```json
+{
+  "max_licenses": 75
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "updated",
+  "old_max_licenses": 50,
+  "new_max_licenses": 75,
+  "used_licenses": 23
+}
+```
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 403 | Only billing admins can update license count |
+| 400 | Cannot reduce licenses below current usage (23) |
+
+---
+
+### 2.4 Reactivate Subscription
+
+Reactivate subscription after payment failure.
+
+```
+POST /api/v1/subscriptions/organization/{organization_id}/reactivate
+```
+
+**Permissions:** Billing Admin only
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "reactivated",
+  "subscription_id": "990e8400-e29b-41d4-a716-446655440004",
+  "affected_users": 23
+}
+```
+
+**Side Effects:**
+- `subscription.is_active = TRUE`
+- `subscription.expired_at = NULL`
+- `subscription.cancelled_at = NULL`
+- All team members: `user.is_paid = TRUE`
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| 403 | Only billing admins can reactivate subscriptions |
+| 400 | Subscription is already active |
+
+---
+
+### 2.5 Get Current User's Subscriptions
+
+Get subscription info for all organizations where user is admin.
+
+```
+GET /api/v1/subscriptions/user/current
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "subscriptions": [
     {
-      "id": "folder-1",
-      "name": "Work",
-      "description": "Work-related bookmarks",
-      "parent_folder_id": null,
-      "level": 0,
-      "bookmark_count": 15,
-      "children": [
-        {
-          "id": "folder-2",
-          "name": "Projects",
-          "parent_folder_id": "folder-1",
-          "level": 1,
-          "bookmark_count": 8,
-          "children": []
-        }
-      ]
+      "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+      "organization_name": "Acme Corp",
+      "role": "billing_admin",
+      "max_licenses": 50,
+      "used_licenses": 23,
+      "is_active": true,
+      "plan_type": "professional"
+    },
+    {
+      "organization_id": "990e8400-e29b-41d4-a716-446655440004",
+      "organization_name": "Beta Inc",
+      "role": "org_admin",
+      "max_licenses": 25,
+      "used_licenses": 10,
+      "is_active": true,
+      "plan_type": "starter"
     }
   ]
 }
@@ -397,816 +622,875 @@ GET /bookmarks/folders/hierarchy
 
 ---
 
-#### Create Folder
+## 3. Team Management
+
+### 3.1 Create Team
+
+Create a new team within an organization.
 
 ```
-POST /bookmarks/folders
+POST /api/v1/teams
 ```
+
+**Permissions:** Organization Admin
 
 **Request Body:**
+
 ```json
 {
-  "name": "New Folder",
-  "description": "Optional description",
-  "parent_folder_id": "parent-uuid-or-null"
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "name": "QA Team",
+  "description": "Quality Assurance team"
 }
 ```
 
-**Field Constraints:**
-| Field | Required | Max Length |
-|-------|----------|------------|
-| `name` | Yes | 255 |
-| `description` | No | 2000 |
+**Response:** `201 Created`
 
-**Errors:**
-- `400`: Duplicate name in same parent folder
-- `404`: Parent folder not found
-
----
-
-#### Get Folder
-
-```
-GET /bookmarks/folders/{folder_id}
-```
-
----
-
-#### Update Folder
-
-```
-PUT /bookmarks/folders/{folder_id}
-```
-
-**Request Body:**
 ```json
 {
-  "name": "Renamed Folder",
-  "description": "Updated description"
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "name": "QA Team",
+  "description": "Quality Assurance team",
+  "workspace_id": "aa0e8400-e29b-41d4-a716-446655440005",
+  "is_active": true,
+  "member_count": 0,
+  "created_at": "2024-01-20T10:00:00Z",
+  "updated_at": "2024-01-20T10:00:00Z"
 }
 ```
 
 ---
 
-#### Move Folder
+### 3.2 Get Team
+
+Get team by ID.
 
 ```
-PATCH /bookmarks/folders/{folder_id}/move
+GET /api/v1/teams/{team_id}
 ```
 
-**Request Body:**
+**Response:** `200 OK`
+
 ```json
 {
-  "new_parent_id": "target-parent-uuid-or-null"
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "name": "QA Team",
+  "description": "Quality Assurance team",
+  "workspace_id": "aa0e8400-e29b-41d4-a716-446655440005",
+  "is_active": true,
+  "member_count": 5,
+  "created_at": "2024-01-20T10:00:00Z",
+  "updated_at": "2024-01-20T10:00:00Z"
 }
 ```
 
-**Errors:**
-- `400`: Cannot move folder into itself or its descendants (circular reference)
-- `400`: Duplicate name in target location
-
 ---
 
-#### Delete Folder
+### 3.3 List Teams in Organization
+
+Get all teams in an organization.
 
 ```
-DELETE /bookmarks/folders/{folder_id}
+GET /api/v1/teams/organization/{organization_id}
 ```
 
 **Query Parameters:**
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `delete_bookmarks` | boolean | false | If true, delete all bookmarks. If false, move to parent. |
+| include_inactive | boolean | false | Include inactive teams |
+
+**Response:** `200 OK`
+
+```json
+[
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+    "name": "QA Team",
+    "description": "Quality Assurance team",
+    "workspace_id": "aa0e8400-e29b-41d4-a716-446655440005",
+    "is_active": true,
+    "member_count": 5,
+    "created_at": "2024-01-20T10:00:00Z",
+    "updated_at": "2024-01-20T10:00:00Z"
+  },
+  {
+    "id": "bb0e8400-e29b-41d4-a716-446655440006",
+    "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+    "name": "Dev Team",
+    "description": "Development team",
+    "workspace_id": "cc0e8400-e29b-41d4-a716-446655440007",
+    "is_active": true,
+    "member_count": 12,
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-18T15:30:00Z"
+  }
+]
+```
 
 ---
 
-### Team Folders
+### 3.4 Update Team
 
-Team folder endpoints mirror personal folders with team authorization:
-
-```
-POST   /teams/{team_id}/bookmarks/folders
-GET    /teams/{team_id}/bookmarks/folders
-GET    /teams/{team_id}/bookmarks/folders/hierarchy
-GET    /teams/{team_id}/bookmarks/folders/{folder_id}
-PUT    /teams/{team_id}/bookmarks/folders/{folder_id}
-PATCH  /teams/{team_id}/bookmarks/folders/{folder_id}/move
-DELETE /teams/{team_id}/bookmarks/folders/{folder_id}
-```
-
-**Authorization:**
-- View: Any team member
-- Create/Update/Delete: Team admin only
-
----
-
-## Tags System
-
-Tags provide flexible categorization. Each bookmark can have up to 20 tags.
-
-### Get All Tags
+Update team details.
 
 ```
-GET /bookmarks/tags
+PUT /api/v1/teams/{team_id}
 ```
 
-Returns unique tags from personal bookmarks only.
+**Permissions:** Organization Admin
 
-**Response:**
+**Request Body:**
+
 ```json
 {
-  "success": true,
-  "data": ["documentation", "python", "tutorial", "work"],
-  "total": 4
+  "name": "Quality Assurance",
+  "description": "Updated description",
+  "is_active": true
+}
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "name": "Quality Assurance",
+  "description": "Updated description",
+  "workspace_id": "aa0e8400-e29b-41d4-a716-446655440005",
+  "is_active": true,
+  "member_count": 5,
+  "created_at": "2024-01-20T10:00:00Z",
+  "updated_at": "2024-01-21T09:00:00Z"
 }
 ```
 
 ---
 
-### Get All Tags (Personal + Team)
+### 3.5 Delete Team
+
+Delete a team and all its data.
 
 ```
-GET /bookmarks/all-tags
+DELETE /api/v1/teams/{team_id}
 ```
 
-Returns combined unique tags from all accessible bookmarks.
+**Permissions:** Organization Admin
+
+**Response:** `204 No Content`
+
+**Warning:** This will delete all team members and workspace data.
 
 ---
 
-### Get Team Tags
+### 3.6 Add Team Member
+
+Add a user to a team.
 
 ```
-GET /teams/{team_id}/bookmarks/tags
+POST /api/v1/teams/{team_id}/members
 ```
+
+**Permissions:** Organization Admin
+
+**Request Body:**
+
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "role": "member"
+}
+```
+
+**Available Roles:**
+
+| Role | Description |
+|------|-------------|
+| `owner` | Full control, cannot be removed |
+| `admin` | Can manage team members |
+| `member` | Standard access |
+| `viewer` | Read-only access |
+
+**Response:** `201 Created`
+
+```json
+{
+  "member_id": "dd0e8400-e29b-41d4-a716-446655440008",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "role": "member",
+  "status": "active",
+  "joined_at": "2024-01-21T10:00:00Z"
+}
+```
+
+**Side Effects:**
+- `user.is_paid = TRUE`
+- `subscription.used_licenses += 1`
+
+**Validation:**
+- License limit not exceeded
+- User exists
+- User not already in team
+- Subscription is active
 
 ---
 
-### Search by Tags
+### 3.7 List Team Members
+
+Get all members of a team.
 
 ```
-GET /bookmarks/by-tags
+GET /api/v1/teams/{team_id}/members
 ```
 
 **Query Parameters:**
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `tags` | string | Required | Comma-separated tags |
-| `match_all` | boolean | true | true=AND logic, false=OR logic |
-| `page` | integer | 1 | Page number |
-| `page_size` | integer | 50 | Items per page |
+| include_inactive | boolean | false | Include inactive members |
 
-**Examples:**
-```
-# Bookmarks with BOTH "python" AND "tutorial" tags
-GET /bookmarks/by-tags?tags=python,tutorial&match_all=true
+**Response:** `200 OK`
 
-# Bookmarks with EITHER "python" OR "javascript" tag
-GET /bookmarks/by-tags?tags=python,javascript&match_all=false
+```json
+[
+  {
+    "member_id": "dd0e8400-e29b-41d4-a716-446655440008",
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "full_name": "John Doe",
+    "role": "member",
+    "status": "active",
+    "joined_at": "2024-01-21T10:00:00Z"
+  },
+  {
+    "member_id": "ee0e8400-e29b-41d4-a716-446655440009",
+    "user_id": "ff0e8400-e29b-41d4-a716-44665544000a",
+    "email": "admin@example.com",
+    "full_name": "Jane Admin",
+    "role": "admin",
+    "status": "active",
+    "joined_at": "2024-01-15T10:00:00Z"
+  }
+]
 ```
 
 ---
 
-### Add Tag to Bookmark
+### 3.8 Update Team Member Role
+
+Update a member's role in the team.
 
 ```
-POST /bookmarks/{bookmark_id}/tags/{tag}
+PUT /api/v1/teams/{team_id}/members/{user_id}
 ```
 
-**Response:**
+**Permissions:** Organization Admin
+
+**Request Body:**
+
 ```json
 {
-  "success": true,
-  "message": "Tag 'python' added",
-  "data": { ... }
+  "role": "admin"
 }
 ```
 
-**Errors:**
-- `400`: Tag too long (max 50 chars)
-- `400`: Max tags reached (20)
-- `404`: Bookmark not found
+**Response:** `200 OK`
 
----
-
-### Remove Tag from Bookmark
-
-```
-DELETE /bookmarks/{bookmark_id}/tags/{tag}
-```
-
----
-
-### Team Bookmark Tags
-
-```
-POST   /teams/{team_id}/bookmarks/{bookmark_id}/tags/{tag}
-DELETE /teams/{team_id}/bookmarks/{bookmark_id}/tags/{tag}
+```json
+{
+  "member_id": "dd0e8400-e29b-41d4-a716-446655440008",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "role": "admin",
+  "status": "active",
+  "joined_at": "2024-01-21T10:00:00Z"
+}
 ```
 
 ---
 
-## Search
+### 3.9 Remove Team Member
 
-### Search Personal Bookmarks
+Remove a user from a team.
 
 ```
-GET /bookmarks/search
+DELETE /api/v1/teams/{team_id}/members/{user_id}
 ```
 
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `q` | string | Yes | Search in title, URL, description |
-| `tags` | string[] | No | Filter by tags (OR logic) |
-| `include_deleted` | boolean | No | Include trashed bookmarks |
-| `page` | integer | No | Page number |
-| `page_size` | integer | No | Items per page |
+**Permissions:** Organization Admin
 
-**Example:**
+**Response:** `204 No Content`
+
+**Side Effects:**
+- `user.is_paid = FALSE` (if no other team memberships)
+- `subscription.used_licenses -= 1`
+
+---
+
+### 3.10 Get License Usage
+
+Get license usage for an organization.
+
 ```
-GET /bookmarks/search?q=python&tags=tutorial&tags=docs
+GET /api/v1/teams/organization/{organization_id}/licenses
+```
+
+**Response:** `200 OK`
+
+```json
+{
+  "max_licenses": 50,
+  "used_licenses": 23,
+  "available_licenses": 27
+}
 ```
 
 ---
 
-## Import/Export
+## 4. Organization Admin Management
 
-### Import Bookmarks
+Organization admins are nominated during payment and can manage teams and members.
+
+### 4.1 Organization Admin Schema
+
+```json
+{
+  "id": "aa0e8400-e29b-41d4-a716-446655440010",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "email": "admin@example.com",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "active",
+  "can_manage_teams": true,
+  "can_manage_members": true,
+  "can_view_billing": false,
+  "can_manage_billing": false,
+  "nominated_by": "payer@example.com",
+  "nominated_at": "2024-01-01T00:00:00Z",
+  "activated_at": "2024-01-02T10:00:00Z"
+}
+```
+
+### 4.2 Admin Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `can_manage_teams` | Create, update, delete teams |
+| `can_manage_members` | Add, remove, update team members |
+| `can_view_billing` | View subscription and billing info |
+| `can_manage_billing` | Update payment methods, licenses |
+
+### 4.3 Admin Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Nominated but not yet activated |
+| `active` | Active admin |
+| `inactive` | Deactivated |
+
+---
+
+## 5. Billing Admin Management
+
+Billing admins manage subscriptions and payments.
+
+### 5.1 Billing Admin Capabilities
+
+- View subscription details
+- Update license count
+- Reactivate expired subscriptions
+- Manage payment methods (via Stripe portal)
+- View billing history
+
+### 5.2 Billing Admin Creation
+
+Billing admin is automatically created when:
+1. Organization is created via payment webhook
+2. The payer becomes the billing admin
+
+---
+
+## 6. Payment Webhooks
+
+Stripe webhook endpoint for handling payment events.
+
+### 6.1 Webhook Endpoint
 
 ```
-POST /bookmarks/import
+POST /api/v1/webhooks/stripe
 ```
 
-**Content-Type:** `multipart/form-data`
+**Security:** In production, verify Stripe signature.
 
-**Form Fields:**
+### 6.2 Handled Events
+
+| Event | Action |
+|-------|--------|
+| `payment_intent.succeeded` | Create organization + subscription |
+| `invoice.payment_failed` | Deactivate subscription |
+| `customer.subscription.deleted` | Cancel subscription |
+| `customer.subscription.updated` | Update subscription details |
+
+---
+
+### 6.3 payment_intent.succeeded
+
+Creates organization, subscription, and admin accounts.
+
+**Required Metadata in payment_intent:**
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `file` | File | Yes | HTML, JSON, or CSV file (max 10MB) |
-| `folder_id` | UUID | No | Import into specific folder |
-| `skip_duplicates` | boolean | No | Skip existing URLs (default: true) |
+| organization_name | string | Yes | Organization name |
+| max_licenses | integer | No | Number of licenses (default: 10) |
+| plan_type | string | No | Plan type (default: "professional") |
+| billing_cycle | string | No | "monthly" or "annual" |
+| amount | decimal | No | Amount charged (default: 99.00) |
+| payer_email | string | Yes | Payer's email |
+| payer_name | string | No | Payer's full name |
+| admin_emails | string | No | Comma-separated admin emails (max 3) |
+| payer_is_admin | string | No | "true" if payer is also admin |
 
-**Supported Formats:**
+**Example Stripe Metadata:**
 
-1. **HTML** (Chrome/Firefox/Edge export)
-   - Netscape Bookmark format
-   - Preserves folder structure (in tags)
-
-2. **JSON**
-   ```json
-   [
-     {
-       "url": "https://example.com",
-       "title": "Example",
-       "description": "Optional",
-       "tags": ["tag1", "tag2"]
-     }
-   ]
-   ```
-
-3. **CSV**
-   ```csv
-   URL,Title,Description,Tags
-   https://example.com,Example,Description,"tag1,tag2"
-   ```
-
-**Response:**
 ```json
 {
-  "success": true,
-  "message": "Imported 45 bookmarks",
-  "data": {
-    "total": 50,
-    "imported": 45,
-    "skipped": 5,
-    "errors": ["https://invalid-url: Invalid URL format"]
-  }
+  "organization_name": "Acme Corp",
+  "max_licenses": "50",
+  "plan_type": "professional",
+  "billing_cycle": "monthly",
+  "amount": "499.00",
+  "payer_email": "billing@acme.com",
+  "payer_name": "John Billing",
+  "admin_emails": "admin1@acme.com,admin2@acme.com",
+  "payer_is_admin": "true"
 }
 ```
 
----
-
-### Preview Import
-
-```
-POST /bookmarks/import/preview
-```
-
-Preview what will be imported without actually importing.
-
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "format": "html",
-    "total_found": 150,
-    "preview": [ ... first 20 bookmarks ... ],
-    "preview_count": 20
-  }
-}
-```
-
----
-
-### Export Bookmarks
-
-```
-GET /bookmarks/export
-```
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `format` | string | Yes | `json`, `html`, or `csv` |
-| `scope` | string | No | `all`, `personal`, or `team` (default: all) |
-| `team_id` | UUID | No | Required if scope=team |
-| `include_folders` | boolean | No | Include folder data (JSON only) |
-
-**Response:** File download with appropriate Content-Type
-
-**Examples:**
-```
-# Export all bookmarks as JSON
-GET /bookmarks/export?format=json&scope=all
-
-# Export personal bookmarks as HTML (browser-importable)
-GET /bookmarks/export?format=html&scope=personal
-
-# Export team bookmarks as CSV
-GET /bookmarks/export?format=csv&scope=team&team_id=xxx
-```
-
----
-
-### Preview Export
-
-```
-GET /bookmarks/export/preview
-```
-
-Get counts before exporting.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "scope": "all",
-    "counts": {
-      "personal_bookmarks": 50,
-      "team_bookmarks": 25,
-      "personal_folders": 5,
-      "team_folders": 3
+  "status": "success",
+  "organization_id": "880e8400-e29b-41d4-a716-446655440003",
+  "subscription_id": "990e8400-e29b-41d4-a716-446655440004",
+  "admins_created": [
+    {
+      "email": "billing@acme.com",
+      "user_id": "aa0e8400-e29b-41d4-a716-446655440010"
     },
-    "total_bookmarks": 75,
-    "total_folders": 8
-  }
-}
-```
-
----
-
-## Analytics
-
-### Get Statistics
-
-```
-GET /bookmarks/analytics/stats
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "total_bookmarks": 150,
-    "personal_bookmarks": 100,
-    "team_bookmarks": 50,
-    "deleted_bookmarks": 5,
-    "personal_folders": 10,
-    "team_folders": 3,
-    "total_folders": 13,
-    "added_today": 3,
-    "added_this_week": 15,
-    "added_this_month": 42,
-    "average_per_day": 1.5
-  }
-}
-```
-
----
-
-### Get Popular Tags
-
-```
-GET /bookmarks/analytics/popular-tags
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | integer | 10 | Max tags to return (1-50) |
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {"tag": "python", "count": 25},
-    {"tag": "documentation", "count": 18},
-    {"tag": "tutorial", "count": 12}
-  ],
-  "total": 3
-}
-```
-
----
-
-### Get Recent Bookmarks
-
-```
-GET /bookmarks/analytics/recent
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | integer | 10 | Max bookmarks (1-50) |
-
----
-
-### Get Top Domains
-
-```
-GET /bookmarks/analytics/domains
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {"domain": "github.com", "count": 35},
-    {"domain": "stackoverflow.com", "count": 28},
-    {"domain": "docs.python.org", "count": 15}
+    {
+      "email": "admin1@acme.com",
+      "user_id": "bb0e8400-e29b-41d4-a716-446655440011"
+    }
   ]
 }
 ```
 
+**Side Effects:**
+1. Creates organization with unique slug
+2. Creates subscription with license limits
+3. Creates billing admin record for payer
+4. Creates org admin records for nominated admins
+5. Auto-creates user accounts if they don't exist
+6. Sets `must_change_password = TRUE` for auto-created accounts
+7. Sets `is_paid = TRUE` for all admin users
+8. Sends admin nomination emails
+9. Sends payment confirmation email
+
 ---
 
-### Get Activity Timeline
+### 6.4 invoice.payment_failed
 
-```
-GET /bookmarks/analytics/activity
-```
-
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `days` | integer | 30 | Days to include (7-365) |
+Deactivates subscription when payment fails.
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": [
-    {"date": "2026-01-20", "count": 5},
-    {"date": "2026-01-21", "count": 3},
-    {"date": "2026-01-22", "count": 8}
-  ],
-  "days": 30,
-  "total_entries": 25
+  "status": "subscription_deactivated",
+  "subscription_id": "990e8400-e29b-41d4-a716-446655440004",
+  "affected_users": 23
 }
 ```
 
+**Side Effects:**
+- `subscription.is_active = FALSE`
+- `subscription.expired_at = now()`
+- All team members: `user.is_paid = FALSE`
+- Sends subscription expired email to billing admin
+
 ---
 
-### Get Folder Statistics
+### 6.5 customer.subscription.deleted
 
-```
-GET /bookmarks/analytics/folders
-```
+Permanently cancels subscription.
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "data": [
-    {"id": null, "name": "Unfiled", "is_shared": false, "bookmark_count": 25},
-    {"id": "uuid-1", "name": "Work", "is_shared": false, "bookmark_count": 42},
-    {"id": "uuid-2", "name": "Team Resources", "is_shared": true, "bookmark_count": 18}
-  ],
-  "total_folders": 2
+  "status": "subscription_cancelled",
+  "subscription_id": "990e8400-e29b-41d4-a716-446655440004",
+  "affected_users": 23
 }
 ```
 
----
-
-### Get Complete Summary
-
-```
-GET /bookmarks/analytics/summary
-```
-
-Returns all analytics in one call (efficient for dashboards).
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "stats": { ... },
-    "popular_tags": [ ... top 5 ... ],
-    "top_domains": [ ... top 5 ... ],
-    "recent_bookmarks": [ ... last 5 ... ]
-  }
-}
-```
+**Side Effects:**
+- `subscription.is_active = FALSE`
+- `subscription.cancelled_at = now()`
+- All team members: `user.is_paid = FALSE`
+- Sends subscription cancelled email to billing admin
 
 ---
 
-## Sync API
+### 6.6 Test Endpoint (Development Only)
 
-For desktop client synchronization. Uses delta sync with last-write-wins conflict resolution.
-
-### Bidirectional Sync
+Manual endpoint to test organization setup.
 
 ```
-POST /sync/
+POST /api/v1/webhooks/test-organization-setup
 ```
 
 **Request Body:**
+
 ```json
 {
-  "last_sync": "2026-01-25T10:00:00Z",
-  "client_changes": {
-    "bookmarks": {
-      "created": [
-        {
-          "id": "client-generated-uuid",
-          "url": "https://example.com",
-          "title": "New Bookmark",
-          "user_id": "user-uuid",
-          "created_by": "user-uuid",
-          "tags": [],
-          "sort_order": 0,
-          "created_at": "2026-01-25T10:15:00Z",
-          "updated_at": "2026-01-25T10:15:00Z"
-        }
-      ],
-      "updated": [
-        {
-          "id": "existing-bookmark-uuid",
-          "title": "Updated Title",
-          "updated_at": "2026-01-25T10:20:00Z"
-        }
-      ],
-      "deleted": ["bookmark-id-to-delete"]
-    },
-    "folders": {
-      "created": [],
-      "updated": [],
-      "deleted": []
-    }
-  }
+  "organization_name": "Test Org",
+  "max_licenses": 10,
+  "payer_email": "payer@example.com",
+  "payer_name": "John Doe",
+  "admin_emails": ["admin1@example.com", "admin2@example.com"],
+  "payer_is_admin": true,
+  "plan_type": "professional",
+  "billing_cycle": "monthly",
+  "amount": 99.00
 }
 ```
 
-**Response:**
+---
+
+## 7. Data Models
+
+### 7.1 Organization
+
 ```json
 {
-  "server_changes": {
-    "bookmarks": {
-      "created": [ ... new server bookmarks ... ],
-      "updated": [ ... updated server bookmarks ... ],
-      "deleted": [
-        {"id": "deleted-uuid", "deleted_at": "2026-01-25T10:30:00Z"}
-      ]
-    },
-    "folders": {
-      "created": [],
-      "updated": [],
-      "deleted": []
-    },
-    "sync_timestamp": "2026-01-25T11:00:00Z"
-  },
-  "conflicts": {
-    "bookmarks": [
-      {
-        "id": "conflicting-uuid",
-        "type": "concurrent_update",
-        "client_version": { ... },
-        "server_version": { ... }
-      }
-    ],
-    "folders": []
-  },
-  "sync_timestamp": "2026-01-25T11:00:00Z"
+  "id": "UUID",
+  "name": "string (max 255)",
+  "slug": "string (unique, max 100)",
+  "owner_user_id": "UUID (FK to users)",
+  "created_by": "UUID (FK to users)",
+  "status": "string (active|suspended|cancelled)",
+  "created_at": "datetime",
+  "updated_at": "datetime"
 }
 ```
 
-**Conflict Types:**
-| Type | Description | Resolution |
-|------|-------------|------------|
-| `duplicate_create` | Item with same ID exists | Server version kept |
-| `concurrent_update` | Server has newer version | Server wins (last-write-wins) |
-| `update_missing` | Item doesn't exist on server | Returned as conflict |
-| `update_deleted` | Item was deleted on server | Returned as conflict |
+### 7.2 Subscription
 
-**Sync Flow:**
-1. Client sends `last_sync` timestamp + local changes
-2. Server applies client changes (conflicts returned, not applied)
-3. Server returns all changes since `last_sync`
-4. Client applies server changes
-5. Client stores new `sync_timestamp` for next sync
-
-**Initial Sync:** Set `last_sync: null` to get all items.
-
----
-
-### Get Sync Status
-
-```
-GET /sync/status
-```
-
-**Response:**
 ```json
 {
-  "user_id": "user-uuid",
-  "counts": {
-    "personal_bookmarks": 50,
-    "personal_folders": 5,
-    "team_bookmarks": 25,
-    "team_folders": 3
-  },
-  "teams": ["team-uuid-1", "team-uuid-2"],
-  "server_time": "2026-01-25T11:00:00Z"
+  "id": "UUID",
+  "organization_id": "UUID (FK, unique)",
+  "max_licenses": "integer",
+  "used_licenses": "integer (default 0)",
+  "is_active": "boolean (default true)",
+  "payer_name": "string (max 255)",
+  "payer_email": "string (max 255)",
+  "billing_address": "text",
+  "plan_type": "string (starter|professional|enterprise)",
+  "billing_cycle": "string (monthly|annual)",
+  "amount": "decimal(10,2)",
+  "currency": "string (default USD)",
+  "started_at": "datetime",
+  "next_billing_date": "date",
+  "cancelled_at": "datetime (nullable)",
+  "expired_at": "datetime (nullable)",
+  "stripe_customer_id": "string (max 255)",
+  "stripe_subscription_id": "string (max 255)",
+  "created_at": "datetime",
+  "updated_at": "datetime"
+}
+```
+
+### 7.3 Team
+
+```json
+{
+  "id": "UUID",
+  "organization_id": "UUID (FK)",
+  "name": "string (max 255)",
+  "description": "string (max 1000)",
+  "workspace_id": "UUID (FK)",
+  "is_active": "boolean (default true)",
+  "created_at": "datetime",
+  "updated_at": "datetime"
+}
+```
+
+### 7.4 TeamMember
+
+```json
+{
+  "id": "UUID",
+  "team_id": "UUID (FK)",
+  "user_id": "UUID (FK)",
+  "role": "string (owner|admin|member|viewer)",
+  "status": "string (active|inactive|removed)",
+  "invited_by": "UUID (FK)",
+  "joined_at": "datetime"
+}
+```
+
+### 7.5 User
+
+```json
+{
+  "id": "UUID",
+  "email": "string (unique, max 255)",
+  "username": "string (optional, max 100)",
+  "full_name": "string (optional, max 255)",
+  "password_hash": "string",
+  "is_admin": "boolean (default false)",
+  "is_active": "boolean (default true)",
+  "is_paid": "boolean (default false)",
+  "email_verified": "boolean (default false)",
+  "must_change_password": "boolean (default false)",
+  "created_at": "datetime",
+  "updated_at": "datetime",
+  "last_login_at": "datetime (nullable)"
 }
 ```
 
 ---
 
-### Force Full Sync
+## 8. Error Codes
 
-```
-POST /sync/force-full
-```
+### HTTP Status Codes
 
-Returns all items regardless of timestamps. Use when client cache is corrupted.
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Created |
+| 204 | No Content (successful delete) |
+| 400 | Bad Request - Invalid input |
+| 401 | Unauthorized - Invalid/missing token |
+| 402 | Payment Required - Subscription expired |
+| 403 | Forbidden - Insufficient permissions |
+| 404 | Not Found |
+| 422 | Validation Error |
+| 500 | Internal Server Error |
 
----
+### Error Response Format
 
-## Data Models
-
-### Bookmark
-
-```typescript
-interface Bookmark {
-  id: string;                    // UUID
-  url: string;                   // Max 2048 chars
-  title: string;                 // Max 500 chars
-  description: string | null;    // Max 5000 chars
-  favicon_url: string | null;    // Max 2048 chars
-  tags: string[];                // Max 20 items, each max 50 chars
-  folder_id: string | null;      // UUID or null
-  user_id: string | null;        // UUID (personal) or null (team)
-  team_id: string | null;        // UUID (team) or null (personal)
-  created_by: string;            // UUID of creator
-  sort_order: number;            // For custom ordering
-  is_deleted: boolean;           // Soft delete flag
-  is_shared: boolean;            // True if team_id is set
-  created_at: string;            // ISO 8601 timestamp
-  updated_at: string;            // ISO 8601 timestamp
-  deleted_at: string | null;     // ISO 8601 timestamp or null
-  sync_version: number;          // Incremented on each update
+```json
+{
+  "detail": "Error message here"
 }
 ```
 
-### Bookmark Folder
+### Validation Error Format
 
-```typescript
-interface BookmarkFolder {
-  id: string;                    // UUID
-  name: string;                  // Max 255 chars
-  description: string | null;    // Max 2000 chars
-  parent_folder_id: string | null; // UUID or null (root level)
-  user_id: string | null;        // UUID (personal) or null (team)
-  team_id: string | null;        // UUID (team) or null (personal)
-  sort_order: number;            // For custom ordering
-  is_shared: boolean;            // True if team_id is set
-  bookmark_count: number;        // Number of bookmarks in folder
-  created_at: string;            // ISO 8601 timestamp
-  updated_at: string;            // ISO 8601 timestamp
-  sync_version: number;          // Incremented on each update
-}
-```
-
-### Folder Tree Node (Hierarchy)
-
-```typescript
-interface FolderTreeNode extends BookmarkFolder {
-  level: number;                 // Nesting depth (0 = root)
-  children: FolderTreeNode[];    // Nested subfolders
-}
-```
-
----
-
-## Error Codes
-
-| Status Code | Description |
-|-------------|-------------|
-| `400` | Bad Request - Invalid input |
-| `401` | Unauthorized - Missing or invalid token |
-| `403` | Forbidden - Not authorized for this resource |
-| `404` | Not Found - Resource doesn't exist |
-| `409` | Conflict - Duplicate URL |
-| `422` | Validation Error - Invalid field values |
-| `500` | Server Error |
-
-### Common Error Responses
-
-**Validation Error (422):**
 ```json
 {
   "detail": "Invalid request format. Please check your input fields.",
   "errors": [
     {
-      "field": "body.url",
-      "message": "URL must start with http:// or https://",
+      "field": "body.email",
+      "message": "Invalid email format",
       "type": "value_error"
     }
   ]
 }
 ```
 
-**Not Found (404):**
-```json
-{
-  "detail": "Bookmark not found"
-}
+---
+
+## 9. Flow Diagrams
+
+### 9.1 Payment & Organization Setup Flow
+
+```
+[Stripe Checkout]
+       |
+       v
+[payment_intent.succeeded webhook]
+       |
+       +---> Create Organization
+       |           |
+       |           v
+       +---> Create Subscription (with licenses)
+       |           |
+       |           v
+       +---> Create/Find Payer User
+       |           |
+       |           v
+       +---> Create Billing Admin Record
+       |           |
+       |           v
+       +---> For each nominated admin:
+       |           |
+       |           +---> Create/Find User Account
+       |           |
+       |           +---> Create Org Admin Record
+       |           |
+       |           +---> Set is_paid = TRUE
+       |           |
+       |           +---> Set must_change_password = TRUE
+       |
+       v
+[Send Emails]
+       |
+       +---> Admin Nomination Emails
+       +---> Payment Confirmation Email
 ```
 
-**Conflict (409):**
-```json
-{
-  "detail": "URL already bookmarked: https://example.com"
-}
+### 9.2 Team Login Flow
+
+```
+[User enters email/password]
+       |
+       v
+[POST /auth/login]
+       |
+       +---> Validate credentials
+       |
+       +---> Check team memberships
+       |           |
+       |           +---> No teams? -> login_mode = "personal"
+       |           |
+       |           +---> Has teams? -> login_mode = "team"
+       |
+       v
+[Return tokens + teams list]
+       |
+       v
+[If login_mode = "team"]
+       |
+       +---> UI shows team dropdown
+       |
+       +---> User selects team
+       |
+       v
+[POST /auth/select-workspace]
+       |
+       +---> Validate membership
+       |
+       +---> Check subscription active
+       |
+       +---> Generate workspace-scoped tokens
+       |
+       v
+[Return new tokens with workspace context]
+       |
+       v
+[Use new tokens for API calls]
+```
+
+### 9.3 Subscription Expiration Flow
+
+```
+[invoice.payment_failed webhook]
+       |
+       v
+[Find subscription by stripe_subscription_id]
+       |
+       v
+[subscription.is_active = FALSE]
+       |
+       v
+[subscription.expired_at = now()]
+       |
+       v
+[For each team in organization:]
+       |
+       +---> For each member:
+       |           |
+       |           +---> Check other org memberships
+       |           |
+       |           +---> If none: user.is_paid = FALSE
+       |
+       v
+[Send subscription expired email]
+       |
+       v
+[Users lose access on next token refresh]
+```
+
+### 9.4 Token Refresh with Subscription Check
+
+```
+[POST /auth/refresh with refresh_token]
+       |
+       v
+[Validate JWT signature]
+       |
+       v
+[Check token in database (not revoked)]
+       |
+       v
+[If workspace_type = "TEAM":]
+       |
+       +---> Check subscription.is_active
+       |           |
+       |           +---> FALSE? -> 402 Payment Required
+       |           |
+       |           +---> TRUE? -> Continue
+       |
+       v
+[Revoke old refresh token]
+       |
+       v
+[Generate new token pair]
+       |
+       v
+[Store new refresh token]
+       |
+       v
+[Return new tokens]
 ```
 
 ---
 
-## Rate Limits
+## Quick Reference
 
-| Endpoint Category | Limit |
-|-------------------|-------|
-| General API | 100 requests/minute |
-| Import | 10 requests/minute |
-| Export | 20 requests/minute |
-| Sync | 60 requests/minute |
+### Endpoint Summary
 
----
-
-## Best Practices
-
-### For UI Implementation
-
-1. **Pagination**: Always use pagination for list endpoints. Default page_size is 50.
-
-2. **Optimistic Updates**: For better UX, update UI immediately and handle errors.
-
-3. **Tag Autocomplete**: Use `GET /bookmarks/all-tags` to populate tag suggestions.
-
-4. **Folder Tree**: Cache the hierarchy response and refresh when folders change.
-
-5. **Search Debounce**: Debounce search input (300ms recommended) to reduce API calls.
-
-6. **Sync Strategy**:
-   - Store `sync_timestamp` from each sync response
-   - Sync on app startup and periodically (every 5 minutes)
-   - Handle conflicts by showing user both versions
-
-7. **Error Handling**:
-   - Show user-friendly messages for common errors
-   - Retry failed requests with exponential backoff
-
-8. **Import Large Files**:
-   - Use preview endpoint first to show user what will be imported
-   - Show progress during import
-   - Handle partial failures gracefully
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /auth/register | Create account | No |
+| POST | /auth/login | Login | No |
+| POST | /auth/refresh | Refresh token | No |
+| POST | /auth/logout | Logout | Yes |
+| GET | /auth/me | Get current user | Yes |
+| POST | /auth/select-workspace | Select team workspace | Yes |
+| POST | /auth/change-password | Change password | Yes |
+| POST | /auth/forgot-password/verify-email | Verify email for reset | No |
+| POST | /auth/forgot-password/reset | Reset password | No |
+| GET | /subscriptions/organization/{id} | Get subscription | Yes |
+| GET | /subscriptions/organization/{id}/status | Get status | Yes |
+| PUT | /subscriptions/organization/{id}/licenses | Update licenses | Billing Admin |
+| POST | /subscriptions/organization/{id}/reactivate | Reactivate | Billing Admin |
+| GET | /subscriptions/user/current | Get user's subscriptions | Yes |
+| POST | /teams | Create team | Org Admin |
+| GET | /teams/{id} | Get team | Yes |
+| GET | /teams/organization/{id} | List teams | Yes |
+| PUT | /teams/{id} | Update team | Org Admin |
+| DELETE | /teams/{id} | Delete team | Org Admin |
+| POST | /teams/{id}/members | Add member | Org Admin |
+| GET | /teams/{id}/members | List members | Yes |
+| PUT | /teams/{id}/members/{user_id} | Update member role | Org Admin |
+| DELETE | /teams/{id}/members/{user_id} | Remove member | Org Admin |
+| GET | /teams/organization/{id}/licenses | Get license usage | Yes |
+| POST | /webhooks/stripe | Stripe webhook | Stripe Sig |
 
 ---
 
-## Changelog
-
-### v1.0.0 (2026-01-25)
-- Initial release
-- Personal and team bookmarks
-- Folder management with nesting
-- Tags system with search
-- Import/Export (HTML, JSON, CSV)
-- Analytics dashboard
-- Bidirectional sync API
+*Generated for Testr API v1.0.0*
