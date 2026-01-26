@@ -1,3 +1,5 @@
+https://ibm.box.com/s/xyoxq57c7fmhr6ecnj1o247g5hqre2jn
+
 Yes, check34.png shows the exact same scoring issue. The user drew a rectangle around "Work feels simpler with the right tool" (an h1 heading) but the checkpoint dialog shows "GuidejarForWindows_Link"       
   instead.                                                                                                                                                                                                       
                                                                                                                                                                                                                  
