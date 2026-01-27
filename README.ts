@@ -1,16 +1,3 @@
-You are in 'detached HEAD' state. You can look around, make experimental
-changes and commit them, and you can discard any commits you make in this
-state without impacting any branches by switching back to a branch.
-
-If you want to create a new branch to retain commits you create, you may
-do so (now or later) by using -c with the switch command. Example:
-
-  git switch -c <new-branch-name>
-
-Or undo this operation with:
-
-  git switch -
-
 Yes, check34.png shows the exact same scoring issue. The user drew a rectangle around "Work feels simpler with the right tool" (an h1 heading) but the checkpoint dialog shows "GuidejarForWindows_Link"       
   instead.                                                                                                                                                                                                       
                                                                                                                                                                                                                  
