@@ -1,4 +1,6 @@
- The Key Question: What Are We Actually Testing?                                                                                                                                                              
+Error occurred while executing task: Failed while attempting to download JFrog CLI from
+
+The Key Question: What Are We Actually Testing?                                                                                                                                                              
                                                                                                                                                                                                                
   Scenario 1: User fills form → clicks Submit → success message appears                                                                                                                                        
   - Do we need to capture every loading spinner frame? No                                                                                                                                                      
