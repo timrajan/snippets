@@ -1,9 +1,6 @@
-{
-  "compilerOptions": {
-    "resolveJsonModule": true,
-    "esModuleInterop": true
-  }
-}
+const mappings = JSON.parse(
+  fs.readFileSync(path.resolve(process.cwd(), "mappings.json"), "utf-8")
+);
 
 
 {
