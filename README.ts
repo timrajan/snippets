@@ -1,74 +1,50 @@
-Error occurred while executing task: Failed while attempting to download JFrog CLI from
+import * as GitApi from "azure-devops-node-api/GitApi";
+import { GitVersionType } from "azure-devops-node-api/interfaces/GitInterfaces";
+import * as XLSX from "xlsx";
 
-The Key Question: What Are We Actually Testing?                                                                                                                                                              
-                                                                                                                                                                                                               
-  Scenario 1: User fills form → clicks Submit → success message appears                                                                                                                                        
-  - Do we need to capture every loading spinner frame? No                                                                                                                                                      
-  - Do we need to capture the success message? Yes, if it's a checkpoint                                                                                                                                       
-                                                                                                                                                                                                               
-  Scenario 2: Page loads → data table populates asynchronously → user clicks a row                                                                                                                             
-  - Do we need to capture the empty table? Maybe                                                                                                                                                               
-  - Do we need to capture the populated table? Yes, because user interacted with it                                                                                                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  The Real Insight:                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  For Recording: Capture what the user SAW when they ACTED.                                                                                                                                                    
-                                                                                                                                                                                                               
-  When user clicks a button, the screenshot captures:                                                                                                                                                          
-  - The button they clicked                                                                                                                                                                                    
-  - Everything visible at that moment                                                                                                                                                                          
-  - If a modal had appeared async, it's in the screenshot                                                                                                                                                      
-                                                                                                                                                                                                               
-  For Playback: The async content isn't "missed" - we just need to WAIT for it.                                                                                                                                
-                                                                                                                                                                                                               
-  Playback step: Click "Submit" button                                                                                                                                                                         
-    → Wait for button to be visible (handles async loading)                                                                                                                                                    
-    → Click it                                                                                                                                                                                                 
-    → Wait for DOM to stabilize                                                                                                                                                                                
-    → Proceed to next step                                                                                                                                                                                     
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  What We Actually Risk Missing:                                                                                                                                                                               
-  ┌──────────────────────────────────────┬─────────────────────────────────┬──────────────────────────────────┐                                                                                                
-  │               Scenario               │       Pure Action Capture       │             Problem?             │                                                                                                
-  ├──────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────┤                                                                                                
-  │ Spinner appears/disappears           │ Not captured                    │ No problem - irrelevant for test │                                                                                                
-  ├──────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────┤                                                                                                
-  │ Modal pops up, user clicks it        │ Captured (click includes modal) │ No problem                       │                                                                                                
-  ├──────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────┤                                                                                                
-  │ Toast shows success, user ignores it │ Not captured                    │ Problem if it's an assertion     │                                                                                                
-  ├──────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────┤                                                                                                
-  │ Table loads async, user clicks row   │ Captured (click includes table) │ No problem                       │                                                                                                
-  ├──────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────┤                                                                                                
-  │ Error message appears, user ignores  │ Not captured                    │ Problem if it's an assertion     │                                                                                                
-  └──────────────────────────────────────┴─────────────────────────────────┴──────────────────────────────────┘                                                                                                
-  ---                                                                                                                                                                                                          
-  The Real Gap: Assertions vs Actions                                                                                                                                                                          
-                                                                                                                                                                                                               
-  Actions (clicks, types) → Automatically captured when user acts                                                                                                                                              
-  Assertions (verify text, check element exists) → Need explicit capture                                                                                                                                       
-                                                                                                                                                                                                               
-  If the user wants to verify "Success message appeared" but doesn't click on it, we need a way to capture that. This is what the checkpoint feature should be for.                                            
-                                                                                                                                                                                                               
-  ---                                                                                                                                                                                                          
-  My Revised Recommendation:                                                                                                                                                                                   
-                                                                                                                                                                                                               
-  Capture on:                                                                                                                                                                                                  
-  1. Page load (keyframe)                                                                                                                                                                                      
-  2. User ACTION (click, type, select) - capture BEFORE the action                                                                                                                                             
-  3. User creates CHECKPOINT (explicit "capture this state")                                                                                                                                                   
-  4. Navigation (new page keyframe)                                                                                                                                                                            
-  5. Recording stop                                                                                                                                                                                            
-                                                                                                                                                                                                               
-  DON'T capture on:                                                                                                                                                                                            
-  - Every DOM mutation                                                                                                                                                                                         
-  - Timers/intervals                                                                                                                                                                                           
-  - Async content loading (unless user interacts or checkpoints)                                                                                                                                               
-                                                                                                                                                                                                               
-  This way:                                                                                                                                                                                                    
-  - 10-minute test with 15 actions + 5 checkpoints = ~20 captures                                                                                                                                              
-  - Not 100+ mutation captures                                                                                                                                                                                 
-  - User explicitly marks what matters (checkpoints)                                                                                                                                                           
-                                                                                                                                                                                                               
-  Does this address your concern? The key is: async content is captured when the user interacts with it, or explicitly checkpoints it. 
+export interface TestCaseAttachment {
+  id: string;
+  fileName: string;
+  url: string;
+  size: number;
+}
+
+async function getFileContent(
+  gitApi: GitApi.IGitApi,
+  fileName: string
+): Promise<TestCaseAttachment> {
+  const project = "your-project";
+  const repoName = "your-repo";
+  const filePath = `/path/to/attachments/${fileName}`;
+
+  const item = await gitApi.getItemContent(
+    repoName,
+    filePath,
+    project,
+    undefined,
+    undefined,
+    true,
+    undefined,
+    undefined,
+    {
+      version: "master",
+      versionType: GitVersionType.Branch,
+    }
+  );
+
+  const chunks: Buffer[] = [];
+  for await (const chunk of item) {
+    chunks.push(Buffer.from(chunk));
+  }
+  const content = Buffer.concat(chunks);
+
+  const orgUrl = "https://dev.azure.com/your-organization";
+  const url = `${orgUrl}/${project}/_apis/git/repositories/${repoName}/items?path=${encodeURIComponent(filePath)}&versionDescriptor.version=master&versionDescriptor.versionType=branch&api-version=7.1`;
+
+  return {
+    id: `${repoName}:${filePath}`,
+    fileName,
+    url,
+    size: content.length,
+  };
+}
