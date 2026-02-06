@@ -1,3 +1,12 @@
+
+const readable = item as unknown as NodeJS.ReadableStream;
+const chunks: Buffer[] = [];
+for await (const chunk of readable) {
+  chunks.push(Buffer.from(chunk as Uint8Array));
+}
+const content = Buffer.concat(chunks);
+
+
 import * as GitApi from "azure-devops-node-api/GitApi";
 import { GitVersionType } from "azure-devops-node-api/interfaces/GitInterfaces";
 import * as XLSX from "xlsx";
