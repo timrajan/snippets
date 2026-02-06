@@ -1,4 +1,12 @@
 {
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
+}
+
+
+{
   "mappings": [
     {
       "label": "ATest",
