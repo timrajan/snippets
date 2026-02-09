@@ -1,3 +1,8 @@
+  const allKeys = Array.from(
+                        new Set(rows.flatMap((record) => Object.keys(record)).filter((key) => key.startsWith("col")))
+                    );
+
+
 // Save to a temp location and open it
 const outputPath = path.resolve(process.cwd(), "temp_download.xlsx");
 fs.writeFileSync(outputPath, buffer);
