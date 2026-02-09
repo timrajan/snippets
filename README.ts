@@ -1,31 +1,31 @@
-const mappings = JSON.parse(
-  fs.readFileSync(path.resolve(process.cwd(), "mappings.json"), "utf-8")
-);
+ const stream = //this is where the I want to use the gitURL
 
+    const chunks: Buffer[] = [];
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", () => resolve(Buffer.concat(chunks)));
+        stream.on("error", reject);
+    });
 
-{
-  "mappings": [
-    {
-      "label": "ATest",
-      "numbers": [111111, 222222]
-    },
-    {
-      "label": "BTest",
-      "numbers": [333333, 444444, 555555]
+    // Read Excel workbook
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+
+    // Check if sheet exists
+    if (!workbook.SheetNames.includes(sheetName)) {
+        throw new Error(`Sheet "${sheetName}" not found in the Excel file`);
     }
-  ]
-}
 
-import mappings from "./mappings.json";
+    const worksheet = workbook.Sheets[sheetName];
 
-function getLabel(number: number): string | undefined {
-  const match = mappings.mappings.find((entry) =>
-    entry.numbers.includes(number)
-  );
-  return match?.label;
-}
+    // Convert sheet to array of row objects
+    const rows: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
 
-// Usage
-console.log(getLabel(111111)); // "ATest"
-console.log(getLabel(444444)); // "BTest"
-console.log(getLabel(999999)); // undefined
+    // Loop through rows and find matching TestCaseID
+    for (const row of rows) {
+        const testCaseID = row["ID"];
+        if (testCaseID?.toString() === id.toString()) {
+            return row;
+        }
+    }
+
+    return null;
