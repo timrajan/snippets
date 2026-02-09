@@ -1,3 +1,9 @@
+// Save to a temp location and open it
+const outputPath = path.resolve(process.cwd(), "temp_download.xlsx");
+fs.writeFileSync(outputPath, buffer);
+console.log(`Excel saved to: ${outputPath}`);
+
+
 console.log("project:", project, "repo:", repoName, "filePath:", filePath);
 
 // Parse the git URL
