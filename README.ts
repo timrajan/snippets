@@ -1,3 +1,5 @@
+console.log("project:", project, "repo:", repoName, "filePath:", filePath);
+
 // Parse the git URL
 const url = new URL(gitUrl);
 const pathParts = url.pathname.split("/");
