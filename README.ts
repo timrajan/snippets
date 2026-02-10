@@ -1,61 +1,19 @@
-  const allKeys = Array.from(
-                        new Set(rows.flatMap((record) => Object.keys(record)).filter((key) => key.startsWith("col")))
-                    );
+async function gotoWithRetry(page, url, options = {}, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    await page.goto(url, options);
 
+    const currentUrl = page.url();
 
-// Save to a temp location and open it
-const outputPath = path.resolve(process.cwd(), "temp_download.xlsx");
-fs.writeFileSync(outputPath, buffer);
-console.log(`Excel saved to: ${outputPath}`);
+    if (currentUrl === url) {
+      return; // URL matches, we're good
+    }
 
+    console.warn(`Attempt ${attempt}: Expected ${url} but got ${currentUrl}, retrying...`);
 
-console.log("project:", project, "repo:", repoName, "filePath:", filePath);
-
-// Parse the git URL
-const url = new URL(gitUrl);
-const pathParts = url.pathname.split("/");
-const project = pathParts[2];
-const repoName = pathParts[4];
-const filePath = url.searchParams.get("path") || "";
-
-const item = await gitApi.getItemContent(
-  repoName,
-  filePath,
-  project,
-  undefined,
-  undefined,
-  true,
-  undefined,
-  undefined,
-  {
-    version: "master",
-    versionType: GitVersionType.Branch,
+    if (attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
   }
-);
 
-const stream = item as unknown as NodeJS.ReadableStream;
-
-const chunks: Buffer[] = [];
-const buffer = await new Promise<Buffer>((resolve, reject) => {
-  stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-  stream.on("end", () => resolve(Buffer.concat(chunks)));
-  stream.on("error", reject);
-});
-
-// Read Excel workbook
-const workbook = XLSX.read(buffer, { type: "buffer" });
-
-if (!workbook.SheetNames.includes(sheetName)) {
-  throw new Error(`Sheet "${sheetName}" not found in the Excel file`);
+  throw new Error(`Failed to navigate to ${url} after ${maxRetries} attempts. Ended up at ${page.url()}`);
 }
-
-const worksheet = workbook.Sheets[sheetName];
-const rows: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
-
-for (const row of rows) {
-  const testCaseID = row["ID"];
-  if (testCaseID?.toString() === id.toString()) {
-    return row;
-  }
-}
-return null;
