@@ -1,4 +1,3 @@
-public static string Concatenate(params string[] args)
-{
-    return string.Concat(args);
-}
+ '--no-sandbox',
+    '--disable-blink-features=AutomationControlled',
+    '--disable-infobars',
