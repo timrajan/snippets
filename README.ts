@@ -1,7 +1,9 @@
-const allowedKeys = ["col1", "col2", "name", "status"]; // your string array
+public static string DecimalToHex(long decimalValue, int? digits = null)
+{
+    string hex = decimalValue.ToString("X");
 
-const allKeys = Array.from(
-  new Set(
-    rows.flatMap((record) => Object.keys(record)).filter((key) => allowedKeys.includes(key))
-  )
-);
+    if (digits.HasValue)
+        return hex.PadLeft(digits.Value, '0');
+
+    return hex;
+}
