@@ -1,4 +1,4 @@
-public static int GetFirstCharAscii(string inputText)
+public static string Concatenate(params string[] args)
 {
-    return (int)inputText[0];
+    return string.Concat(args);
 }
