@@ -1,9 +1,4 @@
-public static string DecimalToHex(long decimalValue, int? digits = null)
+public static int GetFirstCharAscii(string inputText)
 {
-    string hex = decimalValue.ToString("X");
-
-    if (digits.HasValue)
-        return hex.PadLeft(digits.Value, '0');
-
-    return hex;
+    return (int)inputText[0];
 }
