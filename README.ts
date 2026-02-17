@@ -1,3 +1,1 @@
- '--no-sandbox',
-    '--disable-blink-features=AutomationControlled',
-    '--disable-infobars',
+ '--disable-blink-features=AutomationControlled',
