@@ -1,109 +1,29 @@
-public static bool IsNumeric(string inputText)
-{
-    if (inputText == null)
-        return false;
-
-    return decimal.TryParse(inputText.Trim(), out _);
-}
-
-public static bool TextCompare(string text1, string text2)
-{
-    return string.Equals(text1, text2, StringComparison.OrdinalIgnoreCase);
-}
-
-public static string IfFunc(bool condition, string trueText, string falseText)
-{
-    return condition ? trueText : falseText;
-}
-
-
-
-public static string Substitute(string inputText, string oldText, string newText, int? instanceNumber = null)
-{
-    if (instanceNumber == null)
-        return inputText.Replace(oldText, newText);
-
-    int count = 0;
-    int index = 0;
-
-    while ((index = inputText.IndexOf(oldText, index)) != -1)
-    {
-        count++;
-        if (count == instanceNumber.Value)
-        {
-            return inputText.Substring(0, index) 
-                 + newText 
-                 + inputText.Substring(index + oldText.Length);
-        }
-        index += oldText.Length;
-    }
-
-    // Instance not found, return original
-    return inputText;
-}
-
--------
-
- public static string TrimFunc(string inputText)
-{
-    return inputText?.Trim();
-}
-
----------
-
- public static string Mid(string inputText, int startPosition, int numberOfCharacters)
-{
-    if (string.IsNullOrEmpty(inputText) || startPosition < 1)
-        return string.Empty;
-
-    int start = startPosition - 1;
-    int length = Math.Min(numberOfCharacters, inputText.Length - start);
-
-    return inputText.Substring(start, length);
-}
-
-------
-
- public static bool IsNumber(string inputText)
-{
-    return decimal.TryParse(inputText?.Trim(), out _);
-}
-
-----
- public static bool IsBlank(string inputText)
-{
-    return string.IsNullOrWhiteSpace(inputText);
-}
-
----
- public static string TrimFunc(string inputText)
-{
-    return inputText?.Trim();
-}
-
-----
- public static string Substitute(string inputText, string oldText, string newText, int? instanceNumber = null)
-{
-    if (instanceNumber == null)
-        return inputText.Replace(oldText, newText);
-
-    int count = 0;
-    int index = 0;
-
-    while ((index = inputText.IndexOf(oldText, index)) != -1)
-    {
-        count++;
-        if (count == instanceNumber.Value)
-        {
-            return inputText.Substring(0, index) 
-                 + newText 
-                 + inputText.Substring(index + oldText.Length);
-        }
-        index += oldText.Length;
-    }
-
-    // Instance not found, return original
-    return inputText;
-}
-
-
+-- TEXT_FUNC: Format date as text with specified format
+CREATE OR REPLACE FUNCTION TEXT_FUNC(input_value TEXT, format_string TEXT) 
+RETURNS TEXT AS $$
+DECLARE
+    parsed_date DATE;
+BEGIN
+    IF input_value IS NULL OR TRIM(input_value) = '' THEN 
+        RETURN ''; 
+    END IF;
+    
+    -- Try to parse the date from various formats
+    BEGIN
+        -- Handle M/D/YYYY, M/DD/YYYY, MM/D/YYYY, MM/DD/YYYY formats
+        parsed_date := input_value::DATE;
+        
+        -- Format according to the format string
+        IF format_string = 'yyyy,mm,dd' THEN
+            RETURN TO_CHAR(parsed_date, 'YYYY,MM,DD');
+        ELSE
+            -- Default formatting or other formats can be added here
+            RETURN TO_CHAR(parsed_date, 'YYYY-MM-DD');
+        END IF;
+        
+    EXCEPTION WHEN OTHERS THEN
+        -- If parsing fails, return empty string or original value
+        RETURN '';
+    END;
+END;
+$$ LANGUAGE plpgsql;
