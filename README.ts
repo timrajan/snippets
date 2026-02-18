@@ -1,3 +1,23 @@
+public static bool IsNumeric(string inputText)
+{
+    if (inputText == null)
+        return false;
+
+    return decimal.TryParse(inputText.Trim(), out _);
+}
+
+public static bool TextCompare(string text1, string text2)
+{
+    return string.Equals(text1, text2, StringComparison.OrdinalIgnoreCase);
+}
+
+public static string IfFunc(bool condition, string trueText, string falseText)
+{
+    return condition ? trueText : falseText;
+}
+
+
+
 public static string Substitute(string inputText, string oldText, string newText, int? instanceNumber = null)
 {
     if (instanceNumber == null)
