@@ -1,3 +1,17 @@
+pLookup.ParameterName = "@lookupValue";
+
+// Pass the correct type so PostgreSQL doesn't get a string for bigint columns
+if (long.TryParse(lookupValue, out var longVal))
+    pLookup.Value = longVal;
+else if (int.TryParse(lookupValue, out var intVal))
+    pLookup.Value = intVal;
+else
+    pLookup.Value = lookupValue;
+
+command.Parameters.Add(pLookup);
+
+
+
 public int RowFunc(string tableName)
 {
     var count = _context.Database
