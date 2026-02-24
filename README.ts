@@ -1,3 +1,33 @@
+var sql = $"""
+        SELECT CAST("{columnName}" AS TEXT)
+        FROM "{tableName}"
+        ORDER BY "CT_ID"
+        LIMIT 1 OFFSET @offset
+        """;
+
+    using var command = context.Database.GetDbConnection().CreateCommand();
+    command.CommandText = sql;
+
+    var pOffset = command.CreateParameter();
+    pOffset.ParameterName = "@offset";
+    pOffset.Value = rowNumber.Value;
+    command.Parameters.Add(pOffset);
+
+    context.Database.OpenConnection();
+    try
+    {
+        var result = command.ExecuteScalar();
+        return result == null || result == DBNull.Value
+            ? null
+            : result.ToString();
+    }
+    finally
+    {
+        context.Database.CloseConnection();
+    }
+
+
+
 CREATE OR REPLACE FUNCTION MATCH_FUNC(table_name TEXT, column_name TEXT, lookup_value TEXT, match_type INTEGER DEFAULT 1)  --TODO
 RETURNS INTEGER AS $$
 DECLARE
