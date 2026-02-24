@@ -1,3 +1,36 @@
+CREATE OR REPLACE FUNCTION MATCH_FUNC(table_name TEXT, column_name TEXT, lookup_value TEXT, match_type INTEGER DEFAULT 1)  --TODO
+RETURNS INTEGER AS $$
+DECLARE
+    result_position INTEGER;
+    sql_query TEXT;
+BEGIN
+    RAISE NOTICE 'CALLING1  MATCH_FUNC';
+    IF table_name IS NULL OR column_name IS NULL OR lookup_value IS NULL THEN 
+        RETURN NULL; 
+    END IF;
+    
+    -- Build dynamic query to find the position of the value in the specified column
+    -- Using ROW_NUMBER() to get the position
+    sql_query := format('
+        SELECT position FROM (
+            SELECT ROW_NUMBER() OVER (ORDER BY id) as position, %I as col_value
+            FROM %I
+        ) t WHERE t.col_value = $1 LIMIT 1',
+        column_name, table_name);
+
+    -- Execute query
+    RAISE NOTICE 'CALLING2 %',sql_query;
+    EXECUTE sql_query USING lookup_value INTO result_position;
+    RAISE NOTICE 'CALLING3';
+    RAISE NOTICE 'Result %',result_position;
+    RETURN result_position;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'ERROR OCCURED: %', SQLERRM;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+
 -- GET_VALUE_FUNC: Get value from specific row and column
 CREATE OR REPLACE FUNCTION GET_VALUE_FUNC(    --TODO
     table_name TEXT, 
