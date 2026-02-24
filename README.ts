@@ -1,3 +1,57 @@
+-- GET_VALUE_FUNC: Get value from specific row and column
+CREATE OR REPLACE FUNCTION GET_VALUE_FUNC(    --TODO
+    table_name TEXT, 
+    column_name TEXT, 
+    row_number INTEGER
+)
+RETURNS TEXT AS $$
+DECLARE
+    result_value TEXT;
+    sql_query TEXT;
+BEGIN
+    -- Build dynamic SQL query with LIMIT and OFFSET
+    sql_query := format(
+        'SELECT %I FROM %I ORDER BY ctid LIMIT 1 OFFSET %s', 
+        column_name, 
+        table_name, 
+        row_number  -- Convert to 0-based offset
+    );
+    RAISE NOTICE 'SQL QUERY GET_VALUE_FUNC : %', sql_query;
+    -- Execute and get the result
+    EXECUTE sql_query INTO result_value;
+    
+    RETURN result_value;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'ERROR OCCURED: %', SQLERRM;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION ROW_FUNC(table_name TEXT)   --TODO
+RETURNS INTEGER AS $$
+DECLARE
+    next_row_num INTEGER;
+    sql_query TEXT;
+BEGIN
+    sql_query := format('SELECT COUNT(*) - 1 FROM %I', table_name);
+    EXECUTE sql_query INTO next_row_num;
+    RETURN next_row_num;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION PREV_ROW_FUNC(table_name TEXT)  --TODO
+RETURNS INTEGER AS $$
+DECLARE
+    next_row_num INTEGER;
+    sql_query TEXT;
+BEGIN
+    sql_query := format('SELECT COUNT(*) - 2 FROM %I', table_name);
+    EXECUTE sql_query INTO next_row_num;
+    RETURN next_row_num;
+END;
+$$ LANGUAGE plpgsql;
+
 public static string? GetValueAtPosition(
     DbContext context,
     string tableName,
