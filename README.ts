@@ -27,17 +27,15 @@ parameters:
       - production
 
 variables:
-  - name: testSuiteId
-    ${{ if and(eq(parameters.mode, 'smoke'), eq(parameters.type, 'ui'), eq(parameters.environment, 'dev')) }}:
-      value: '1,2,3,4,5'
-    ${{ elseif and(eq(parameters.mode, 'smoke'), eq(parameters.type, 'api'), eq(parameters.environment, 'dev')) }}:
-      value: '10,11,12'
-    ${{ elseif and(eq(parameters.mode, 'regression'), eq(parameters.type, 'ui'), eq(parameters.environment, 'staging')) }}:
-      value: '20,21,22,23,24,25'
-    ${{ elseif and(eq(parameters.mode, 'full'), eq(parameters.type, 'ui'), eq(parameters.environment, 'production')) }}:
-      value: '1,2,3,4,5,10,11,12,20,21,22,23,24,25'
-    ${{ else }}:
-      value: '1,2,3'
+  - group: 'Automation' 
+  ${{ if and(eq(parameters.Type, 'Smoke'), eq(parameters.Mode, 'KK') }}:
+    TestSuiteId: '111111111'
+  ${{ elseif and(eq(parameters.Type, 'Smoke'), eq(parameters.Mode, 'SS') }}:
+    TestSuiteId: '22222222'
+  ${{ elseif and(eq(parameters.Type, 'Sit'), eq(parameters.Mode, 'KK') }}:
+    TestSuiteId: '333333,444444'
+  ${{ elseif and(eq(parameters.Type, 'Sit'), eq(parameters.Mode, 'SS') }}:
+    TestSuiteId: '555555,666666'
 
 steps:
   - script: |
