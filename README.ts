@@ -45,3 +45,20 @@ Also — is your proxy `http://` or `https://`? This matters. If the proxy itsel
 ```
 http://proxy.company.com:8080    ← correct for most proxies
 https://proxy.company.com:8080   ← usually wrong
+
+
+
+
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const https = require('https');
+
+const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+console.log('Using proxy:', proxy);
+
+const agent = new HttpsProxyAgent(proxy);
+
+https.get('https://dev.azure.com', { agent }, (res) => {
+  console.log('Status:', res.statusCode);
+}).on('error', (e) => {
+  console.log('Error:', e.message);
+});
