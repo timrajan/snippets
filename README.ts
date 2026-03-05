@@ -1,4 +1,20 @@
 import * as azdev from 'azure-devops-node-api';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
+const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+const agent = new HttpsProxyAgent(proxy);
+
+const authHandler = azdev.getPersonalAccessTokenHandler(pat);
+const connection = new azdev.WebApi(orgUrl, authHandler);
+
+// Override the request options to use the proxy agent
+connection.rest.client.requestOptions = {
+  agent: agent
+};
+
+
+
+import * as azdev from 'azure-devops-node-api';
 
 const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 
