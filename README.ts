@@ -1,4 +1,13 @@
 import https from 'https';
+
+const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxy && proxy.trim() !== '') {
+  const { HttpsProxyAgent } = require('https-proxy-agent');
+  https.globalAgent = new HttpsProxyAgent(proxy);
+}
+
+
+import https from 'https';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
 const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
