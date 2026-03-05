@@ -1,3 +1,22 @@
+import https from 'https';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
+const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxy) {
+  https.globalAgent = new HttpsProxyAgent(proxy);
+}
+
+// Then your existing code below
+import * as azdev from 'azure-devops-node-api';
+
+const authHandler = azdev.getPersonalAccessTokenHandler(pat);
+const connection = new azdev.WebApi(orgUrl, authHandler);
+
+
+
+
+
+
 import * as azdev from 'azure-devops-node-api';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
