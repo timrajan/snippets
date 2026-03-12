@@ -1,3 +1,12 @@
+
+let input = document.getElementById('txtName');
+let styles = window.getComputedStyle(input);
+console.log('color:', styles.color);
+console.log('background:', styles.backgroundColor);
+console.log('opacity:', styles.opacity);
+console.log('visibility:', styles.visibility);
+
+
 import https from 'https';
 
 const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
