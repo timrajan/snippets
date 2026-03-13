@@ -1,27 +1,43 @@
-public static long CountIf(DbContext context, string tableName, string columnName, string criteria, int? excludeId = null)
+public static int? MatchFunction(DbContext context,string tableName,string columnName,string lookupValue,int matchType = 1)
 {
-    var sql = excludeId.HasValue
-        ? $""" SELECT COUNT(*) FROM "{tableName}" WHERE "{columnName}" = @criteria AND "id" <> @excludeId AND "id" <> (SELECT MAX("ID") FROM "{tableName}") """
-        : $""" SELECT COUNT(*) FROM "{tableName}" WHERE "{columnName}" = @criteria AND "id" <> (SELECT MAX("id") FROM "{tableName}") """;
+
+    
+    var sql = $"""
+    SELECT position FROM (SELECT "{columnName}",ROW_NUMBER() OVER (ORDER BY "id") AS position FROM "{tableName}") sub WHERE "{columnName}" = @lookupValue LIMIT 1 OFFSET @offset
+    """;
 
     using var command = context.Database.GetDbConnection().CreateCommand();
     command.CommandText = sql;
-    var pCriteria = command.CreateParameter();
-    pCriteria.ParameterName = "@criteria";
-    pCriteria.Value = criteria;
-    command.Parameters.Add(pCriteria);
-    if (excludeId.HasValue)
-    {
-        var pExclude = command.CreateParameter();
-        pExclude.ParameterName = "@excludeId";
-        pExclude.Value = excludeId.Value;
-        command.Parameters.Add(pExclude);
-    }
+
+    var pLookup = command.CreateParameter();
+    pLookup.ParameterName = "@lookupValue";
+
+    // Pass the correct type so PostgreSQL doesn't get a string for bigint columns
+    if (long.TryParse(lookupValue, out var longVal))
+        pLookup.Value = longVal;
+    else if (int.TryParse(lookupValue, out var intVal))
+        pLookup.Value = intVal;
+    else
+        pLookup.Value = lookupValue;
+
+    command.Parameters.Add(pLookup);
+
+
+    //pLookup.Value = lookupValue;
+    //command.Parameters.Add(pLookup);
+
+    var pOffset = command.CreateParameter();
+    pOffset.ParameterName = "@offset";
+    pOffset.Value = Math.Max(0,matchType - 1);
+    command.Parameters.Add(pOffset);
+
     context.Database.OpenConnection();
     try
     {
         var result = command.ExecuteScalar();
-        return Convert.ToInt64(result);
+        return result == null || result == DBNull.Value
+            ? null
+            : Convert.ToInt32(result);
     }
     finally
     {
