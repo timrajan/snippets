@@ -1,3 +1,5 @@
+WHERE "id" <> (SELECT MAX("id") FROM "{tableName}")
+
 public static int? MatchFunction(DbContext context,string tableName,string columnName,string lookupValue,int matchType = 1)
 {
 
