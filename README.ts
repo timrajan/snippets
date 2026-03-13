@@ -16,3 +16,8 @@ var payload = new
         }
     }
 };
+
+
+var response = httpClient.PostAsync(url, content).GetAwaiter().GetResult();
+var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+Console.WriteLine(responseBody);
