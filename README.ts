@@ -1,5 +1,5 @@
 var url = $"https://dev.azure.com/{_org}/{_project}/_apis/pipelines/{_pipelineId}/runs?api-version=6.0-preview";
-
+var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 
 var payload = new
 {
