@@ -1,23 +1,16 @@
-var url = $"https://dev.azure.com/{_org}/{_project}/_apis/pipelines/{_pipelineId}/runs?api-version=6.0-preview";
-var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+// Add this
+builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
 
-var payload = new
-{
-    templateParameters = new Dictionary<string, string>
-    {
-        { "param1", param1value },
-        { "param2", param2value }
-    },
-    resources = new
-    {
-        repositories = new
-        {
-            self = new { refName = $"refs/heads/{_branch}" }
-        }
-    }
-};
+// You already have this most likely
+builder.Services.AddControllersWithViews();
+
+And make sure this using is at the top:
+csharpusing Microsoft.AspNetCore.Server.IISIntegration;
 
 
-var response = httpClient.PostAsync(url, content).GetAwaiter().GetResult();
-var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-Console.WriteLine(responseBody);
+var isAuth = User?.Identity?.IsAuthenticated;
+    var name = User?.Identity?.Name;
+    
+    // Breakpoint here and check these values
+    Console.WriteLine($"IsAuthenticated: {isAuth}");
+    Console.WriteLine($"Name: {name}");
