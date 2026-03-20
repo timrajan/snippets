@@ -1,16 +1,1 @@
-// Add this
-builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
-
-// You already have this most likely
-builder.Services.AddControllersWithViews();
-
-And make sure this using is at the top:
-csharpusing Microsoft.AspNetCore.Server.IISIntegration;
-
-
-var isAuth = User?.Identity?.IsAuthenticated;
-    var name = User?.Identity?.Name;
-    
-    // Breakpoint here and check these values
-    Console.WriteLine($"IsAuthenticated: {isAuth}");
-    Console.WriteLine($"Name: {name}");
+I'm so sorry to hear about your father's passing. I hope you're surrounded by loved ones right now, and that the memories you shared bring you some comfort in the days ahead. My heartfelt condolences to you and your family.
