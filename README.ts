@@ -1,1 +1,2 @@
-24/03/2026 9:39:03 AM: ERROR=No such host is known. (dev.azure.com:443), Stack=   at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+File.AppendAllText(@"C:\temp\devops_debug.txt", 
+    $"{DateTime.Now}: URL=[{url}]{Environment.NewLine}");
