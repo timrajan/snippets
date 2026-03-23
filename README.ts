@@ -1,47 +1,13 @@
-// ❌ Before
-public void TriggerBuild()
-{
-    var response = Task.Run(() => _httpClient.PostAsync(url, content))
-                       .GetAwaiter().GetResult();
-}
+// Add this after your HTTP call
+File.AppendAllText(@"C:\temp\devops_debug.txt", 
+    $"{DateTime.Now}: Status={response.StatusCode}, Body={body}{Environment.NewLine}");
 
-// ✅ After
-public async Task TriggerBuildAsync()
-{
-    var response = await _httpClient.PostAsync(url, content);
-    var body = await response.Content.ReadAsStringAsync();
-    
-    if (!response.IsSuccessStatusCode)
-        throw new Exception($"DevOps returned {response.StatusCode}: {body}");
-}
+// Add this inside your catch block
+File.AppendAllText(@"C:\temp\devops_debug.txt", 
+    $"{DateTime.Now}: ERROR={ex.Message}, Stack={ex.StackTrace}{Environment.NewLine}");
 
 
+mkdir C:\temp
+icacls "C:\temp" /grant "IIS AppPool\YourAppPoolName:(OI)(CI)F"
 
-
-// ❌ Before
-public IActionResult RunBuild()
-{
-    _service.TriggerBuild();
-    return Ok();
-}
-
-// ✅ After
-public async Task<IActionResult> RunBuild()
-{
-    await _service.TriggerBuildAsync();
-    return Ok();
-}
-```
-
----
-
-## The Rule
-```
-Controller (async Task<IActionResult>)
-    ↓ await
-Service method (async Task)
-    ↓ await
-HttpClient.PostAsync()
-
-
-Every single level must be async/await. No .Result, no .Wait(), no .GetAwaiter().GetResult(), no Task.Run wrapper — anywhere in the chain.
+Get-Content C:\temp\devops_debug.txt
