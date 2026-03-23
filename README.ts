@@ -1,6 +1,8 @@
 File.AppendAllText(@"C:\temp\devops_debug.txt", 
     $"{DateTime.Now}: URL=[{url}]{Environment.NewLine}");
-
+// Temporary — just to confirm constructor is being called
+    File.AppendAllText(@"C:\temp\devops_debug.txt",
+        $"{DateTime.Now}: AzureDevOpsService constructor called. HttpClient null={httpClient == null}{Environment.NewLine}");
 
 public class AzureDevOpsService
 {
