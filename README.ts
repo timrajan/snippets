@@ -1,45 +1,47 @@
-& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -p 28000 -c "SHOW hba_file;"
+// ❌ Before
+public void TriggerBuild()
+{
+    var response = Task.Run(() => _httpClient.PostAsync(url, content))
+                       .GetAwaiter().GetResult();
+}
 
-On Windows Server, here's exactly what to do:
-Find pg_hba.conf
-Open PowerShell or cmd and run:
-powershellpsql -U postgres -p 28000 -c "SHOW hba_file;"
-```
+// ✅ After
+public async Task TriggerBuildAsync()
+{
+    var response = await _httpClient.PostAsync(url, content);
+    var body = await response.Content.ReadAsStringAsync();
+    
+    if (!response.IsSuccessStatusCode)
+        throw new Exception($"DevOps returned {response.StatusCode}: {body}");
+}
 
-It'll return something like:
-```
-C:/Program Files/PostgreSQL/16/data/pg_hba.conf
-```
 
-If you can't connect at all, browse there manually:
+
+
+// ❌ Before
+public IActionResult RunBuild()
+{
+    _service.TriggerBuild();
+    return Ok();
+}
+
+// ✅ After
+public async Task<IActionResult> RunBuild()
+{
+    await _service.TriggerBuildAsync();
+    return Ok();
+}
 ```
-C:\Program Files\PostgreSQL\16\data\pg_hba.conf
-```
-(replace `16` with your version)
 
 ---
 
-## Edit the File
-
-Open **Notepad as Administrator** (right-click → Run as administrator), then open the file.
-
-Scroll to the bottom and add:
+## The Rule
 ```
-host    all             all             127.0.0.1/32        scram-sha-256
-```
+Controller (async Task<IActionResult>)
+    ↓ await
+Service method (async Task)
+    ↓ await
+HttpClient.PostAsync()
 
-If the app is connecting from another machine, replace `127.0.0.1/32` with that machine's IP, e.g.:
-```
-host    all             all             192.168.1.50/32     scram-sha-256
 
-Reload PostgreSQL
-In PowerShell (as Administrator):
-powershell# Find the service name first
-Get-Service | Where-Object { $_.Name -like "postgresql*" }
-
-# Then restart it (replace with your actual service name)
-Restart-Service postgresql-x64-16
-Or via Services (services.msc) — find PostgreSQL, right-click → Restart.
-
-Confirm It Worked
-powershellpsql -U postgres -p 28000 -c "SELECT 1;"
+Every single level must be async/await. No .Result, no .Wait(), no .GetAwaiter().GetResult(), no Task.Run wrapper — anywhere in the chain.
