@@ -1,3 +1,5 @@
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -p 28000 -c "SHOW hba_file;"
+
 On Windows Server, here's exactly what to do:
 Find pg_hba.conf
 Open PowerShell or cmd and run:
