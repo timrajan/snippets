@@ -1,10 +1,30 @@
-$pat = "your-pat"
+$pat = "your-actual-pat"
+$pipelineId = 42  # your actual pipeline ID
+
 $base64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+$headers = @{ 
+    Authorization = "Basic $base64"
+    "Content-Type" = "application/json"
+}
 
-$body = @{ definition = @{ id = YOUR_DEFINITION_ID } } | ConvertTo-Json
+$body = @{ 
+    resources = @{ 
+        repositories = @{ 
+            self = @{ 
+                refName = "refs/heads/main" 
+            } 
+        } 
+    } 
+} | ConvertTo-Json -Depth 5
 
-Invoke-RestMethod `
-  -Uri "https://dev.azure.com/{org}/{project}/_apis/build/builds?api-version=7.1" `
-  -Method Post `
-  -Headers @{ Authorization = "Basic $base64"; "Content-Type" = "application/json" } `
-  -Body $body
+Write-Host "Testing pipelines URL..."
+try {
+    $response = Invoke-RestMethod `
+        -Uri "https://dev.azure.com/yourorg/yourproject/_apis/pipelines/$pipelineId/runs?api-version=7.1" `
+        -Method Post `
+        -Headers $headers `
+        -Body $body
+    Write-Host "SUCCESS: Run ID=$($response.id)"
+} catch {
+    Write-Host "FAILED: $($_.Exception.Message)"
+}
