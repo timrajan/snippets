@@ -1,3 +1,19 @@
+// Add HttpClient with proxy
+builder.Services.AddHttpClient<AzureDevOpsService>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var proxy = WebRequest.GetSystemWebProxy();
+        proxy.Credentials = CredentialCache.DefaultCredentials;
+
+        return new HttpClientHandler
+        {
+            UseProxy = true,
+            Proxy = proxy,
+            UseDefaultCredentials = true
+        };
+    });
+
+
 public AzureDevOpsService(HttpClient httpClient)
 {
     _httpClient = httpClient;
