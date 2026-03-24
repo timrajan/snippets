@@ -1,11 +1,5 @@
-<PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
-
-Microsoft.TeamFoundationServer.Client
-Microsoft.VisualStudio.Services.Client
-
 using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.VisualStudio.Services.Common;
-using Microsoft.VisualStudio.Services.Client;
 
 public class AzureDevOpsService
 {
@@ -16,7 +10,7 @@ public class AzureDevOpsService
         _configuration = configuration;
     }
 
-    public async Task<(bool Success, string Message)> TriggerBuildAsync()
+    public async Task<(bool Success, string Message)> TriggerBuildAsync(Dictionary<string, string> parameters)
     {
         try
         {
@@ -29,10 +23,12 @@ public class AzureDevOpsService
             var connection = new VssConnection(new Uri(orgUrl), credentials);
 
             var buildClient = connection.GetClient<BuildHttpClient>();
+
             var build = await buildClient.QueueBuildAsync(
                 new Build
                 {
-                    Definition = new DefinitionReference { Id = pipelineId }
+                    Definition = new DefinitionReference { Id = pipelineId },
+                    Parameters = System.Text.Json.JsonSerializer.Serialize(parameters)
                 },
                 project);
 
@@ -44,21 +40,3 @@ public class AzureDevOpsService
         }
     }
 }
-
-
-
-{
-  "AzureDevOps": {
-    "OrgUrl": "https://dev.azure.com/yourorg",
-    "Project": "yourproject",
-    "PipelineId": "42",
-    "Pat": "your-pat-here"
-  }
-}
-
-// Remove this entire block
-builder.Services.AddHttpClient<AzureDevOpsService>()
-    .ConfigurePrimaryHttpMessageHandler(() => ...);
-
-// Replace with this
-builder.Services.AddScoped<AzureDevOpsService>();
