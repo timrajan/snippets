@@ -1,3 +1,6 @@
+# Search for azure devops URL inside the deployed files
+Select-String -Path "C:\inetpub\wwwroot\OtherApp\*" -Pattern "visualstudio|dev.azure" -Recurse
+
 $pat = "your-actual-pat"
 $pipelineId = 42  # your actual pipeline ID
 
