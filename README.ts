@@ -1,3 +1,5 @@
+<PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+
 Microsoft.TeamFoundationServer.Client
 Microsoft.VisualStudio.Services.Client
 
