@@ -1,5 +1,1 @@
-  TempData["Message"] = "Record saved successfully!";
-    TempData["MessageType"] = "success";
-    TempData["RedirectUrl"] = Url.Action("Index", "Home", new { area = "" });
-
-    return View(model);  // stay on same page
+style="z-index: 9999; min-width: 600px; top: 75%; background-color: #28a745; color: white; border: none;">
