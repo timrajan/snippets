@@ -1,19 +1,64 @@
-var templateParameters = new Dictionary<string, string>
-{
-    { "myParam1", "value1" },
-    { "myParam2", "value2" }
-    // all your existing params here
-};
+@{
+    ViewData["Title"] = "Before You Begin";
+}
 
-var requestBody = new { templateParameters };
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
 
-var json = JsonSerializer.Serialize(requestBody);
-var content = new StringContent(json, Encoding.UTF8, "application/json");
+            <!-- Header Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Important Information
+                    </h3>
+                </div>
 
-httpClient.DefaultRequestHeaders.Authorization =
-    new AuthenticationHeaderValue("Bearer", pat);
+                <div class="card-body">
+                    <p class="lead">
+                        Please read the following information carefully before proceeding with your application.
+                    </p>
 
-var response = await httpClient.PostAsync(
-    $"https://dev.azure.com/{org}/{project}/_apis/pipelines/{pipelineId}/runs?api-version=7.1",
-    content
-);
+                    <hr />
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Ensure all your personal details are up to date before filling in the forms.
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            You will need to provide a valid government-issued ID number in the next step.
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            All fields marked with an asterisk (*) are mandatory and must be completed.
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Your information is kept secure and will not be shared with third parties.
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Once submitted, changes cannot be made without contacting the administrator.
+                        </li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-4" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> This process cannot be saved midway. Please ensure you have all required information ready before continuing.
+                    </div>
+
+                </div>
+
+                <div class="card-footer text-end">
+                    <a asp-controller="YourController" asp-action="FirstForm" class="btn btn-primary px-4">
+                        Continue <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
