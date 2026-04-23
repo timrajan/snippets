@@ -1,3 +1,8 @@
+// Add this
+var buildDetails = JsonSerializer.Deserialize<JsonElement>(responseBody);
+var buildRunId = buildDetails.GetProperty("id").GetInt32();
+
+
 Test Recorder — Project Description
 What It Is
 Test Recorder is a lightweight Windows desktop application built on WPF .NET 8 that automates the creation of Puppeteer-based test scripts for our QA automation framework.
