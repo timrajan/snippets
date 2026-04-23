@@ -2,6 +2,14 @@
 var buildDetails = JsonSerializer.Deserialize<JsonElement>(responseBody);
 var buildRunId = buildDetails.GetProperty("id").GetInt32();
 
+var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+if (user != null)
+{
+    user.Status = result == "succeeded" ? "Success" : "Failure";
+    await _context.SaveChangesAsync();
+}
+
 
 Test Recorder — Project Description
 What It Is
