@@ -1,3 +1,5 @@
+Get-CimInstance Win32_Service -Filter "Name like 'vstsagent%'" | Select-Object Name, PathName
+
 // Add this
 var buildDetails = JsonSerializer.Deserialize<JsonElement>(responseBody);
 var buildRunId = buildDetails.GetProperty("id").GetInt32();
