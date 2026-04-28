@@ -1,4 +1,6 @@
-Get-CimInstance Win32_Service -Filter "Name like 'vstsagent%'" | Select-Object Name, PathName
+$jfrog = "https://your-internal-jfrog.company.com"
+$repo = "<your cliInstallationRepo value>"
+Invoke-WebRequest "$jfrog/artifactory/$repo/v2-jf/2.102.0/jfrog-cli-windows-amd64/jf.exe" -UseDefaultCredentials -OutFile $env:TEMP\jf-test.exe
 
 // Add this
 var buildDetails = JsonSerializer.Deserialize<JsonElement>(responseBody);
