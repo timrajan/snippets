@@ -2,6 +2,8 @@ $jfrog = "https://your-internal-jfrog.company.com"
 $repo = "<your cliInstallationRepo value>"
 Invoke-WebRequest "$jfrog/artifactory/$repo/v2-jf/2.102.0/jfrog-cli-windows-amd64/jf.exe" -UseDefaultCredentials -OutFile $env:TEMP\jf-test.exe
 
+Bluetooth: bluetooth_adapter_winrt.cc:1072 Getting Default Adapter failed.
+
 // Add this
 var buildDetails = JsonSerializer.Deserialize<JsonElement>(responseBody);
 var buildRunId = buildDetails.GetProperty("id").GetInt32();
