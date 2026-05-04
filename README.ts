@@ -1,5 +1,6 @@
-Get-NetFirewallRule -DisplayName "File and Printer Sharing (Echo Request - ICMPv4-In)" |
-    Format-Table DisplayName, Enabled, Profile, Action, PolicyStoreSourceType
+netsh winhttp set proxy proxy-server="http://<proxy-host>:<proxy-port>" bypass-list="<local>;*.<your-internal-domain>"
+
+netsh winhttp set proxy proxy-server="http://proxy.company.com:8080" bypass-list="<local>;*.company.local;*.company.com"
 
 
 Test Recorder — Project Description
