@@ -1,40 +1,11 @@
-/**
- * Checks whether a given string is currently visible within the browser viewport.
- *
- * Iterates over every element in the DOM, determines which ones are at least
- * partially within the visible viewport (using `getBoundingClientRect`), and
- * checks whether any of those elements directly contain the search text as a
- * text node child. Only the element's own text is considered — text from deeper
- * descendants is ignored — to avoid false positives where a wrapping element
- * (like `<body>` or a form container) technically "contains" the string but
- * isn't itself displaying it.
- *
- * Useful for verifying that a validation message, warning, or any expected
- * label has been scrolled into view, for example after an error-summary link
- * traverses the page to a specific section.
- *
- * @param page - The Puppeteer Page instance to query.
- * @param searchText - The exact text to look for. Matched as a case-sensitive
- *                     substring (uses `String.prototype.includes`). Whitespace
- *                     around the rendered text is trimmed before comparison.
- * @returns A Promise resolving to `true` if the text is found inside any
- *          element currently within the viewport, otherwise `false`.
- *
- * @example
- * // After clicking an error-summary link that scrolls to the Age field
- * const visible = await isTextInViewport(page, 'this Field is required.');
- * expect(visible).toBe(true);
- *
- * @remarks
- * - Viewport detection uses "any part of the element is on screen", not
- *   "fully inside", so tall sections extending past the fold still count.
- * - Elements with zero width or height are excluded, which filters out most
- *   hidden or collapsed nodes.
- * - This does NOT check `display: none`, `visibility: hidden`, or `opacity: 0`.
- *   Add a `getComputedStyle` check if you need to handle those cases.
- * - Matching is case-sensitive. Normalize both sides with `.toLowerCase()`
- *   if you need case-insensitive matching.
- */
+
+  for (let i = 0; i < allParts.length; i++) {                        
+                        var expectedText= allParts[i];                        
+                        await getElementWithText(page,"You are not eligible.");                                                            
+                        await getElementWithText(page,expectedText);
+                    }
+
+
 async function isTextInViewport(
   page: Page,
   searchText: string
