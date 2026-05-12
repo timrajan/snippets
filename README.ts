@@ -1,7 +1,41 @@
-netsh winhttp set proxy proxy-server="http://<proxy-host>:<proxy-port>" bypass-list="<local>;*.<your-internal-domain>"
+vimport { Page } from 'puppeteer';
 
-netsh winhttp set proxy proxy-server="http://proxy.company.com:8080" bypass-list="<local>;*.company.local;*.company.com"
+async function isTextInViewport(
+  page: Page,
+  searchText: string
+): Promise<boolean> {
+  return await page.evaluate((text) => {
+    const elements = document.querySelectorAll('*');
 
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+
+      // Is this element currently on screen?
+      const inViewport =
+        rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.width > 0 &&
+        rect.height > 0;
+
+      if (!inViewport) continue;
+
+      // Does this element directly contain the text? (not via deep descendants)
+      const ownText = Array.from(el.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE)
+        .map(n => n.textContent ?? '')
+        .join('')
+        .trim();
+
+      if (ownText.includes(text)) return true;
+    }
+
+    return false;
+  }, searchText);
+}
+
+// Usage
+const visible = await isTextInViewport(page, 'Age is required');
+expect(visible).toBe(true);
 
 Test Recorder — Project Description
 What It Is
