@@ -1,4 +1,14 @@
 
+const allParts = rawCellValue
+    .split('|')
+    .map(p => p
+        .replace(/\u00A0/g, ' ')   // nbsp -> space
+        .replace(/\s+/g, ' ')      // collapse runs of whitespace
+        .trim()
+    )
+    .filter(p => p.length > 0);    // drop empties from trailing | or ||
+
+
   for (let i = 0; i < allParts.length; i++) {                        
                         var expectedText= allParts[i];                        
                         await getElementWithText(page,"You are not eligible.");                                                            
