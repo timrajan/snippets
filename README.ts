@@ -1,47 +1,36 @@
-import { IGitApi } from "azure-devops-node-api/GitApi";
-import * as GitInterfaces from "azure-devops-node-api/interfaces/GitInterfaces";
+ console.log("[START] Step 6: Processing row modification verification loops sequentially...");
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const excelRowNo = i + 1;
 
-async function downloadExcelBuffer(
-    gitClient: IGitApi,
-    repositoryId: string,
-    projectId: string,
-    filePath: string,
-    branchRef: string
-): Promise<Buffer> {
-    console.log(`[START] Step 3: Streaming "${filePath}" from branch "${branchRef}"...`);
+            const adoidValue = String(row[idColIndex]).trim();
+            const testTitleValue = String(row[testNameColIndex]).trim();
 
-    const stream = await gitClient.getItemContent(
-        repositoryId,
-        filePath,
-        projectId,                                                       // project
-        undefined,                                                       // scopePath
-        undefined,                                                       // recursionLevel
-        undefined,                                                       // includeContentMetadata
-        undefined,                                                       // latestProcessedChange
-        false,                                                           // download (false = inline)
-        { version: branchRef, versionType: GitInterfaces.GitVersionType.Branch },
-        true,                                                            // includeContent
-        false,                                                           // resolveLfs
-        false                                                            // sanitize
-    );
+            if (adoidValue === "") {
+                if (testTitleValue === "") {
+                    console.log(`  -> Row ${excelRowNo}: Skipped. Cell data maps to a completely blank row template.`);
+                    continue;
+                }
 
-    if (!stream) {
-        throw new Error(
-            `Azure DevOps returned an empty stream for "${filePath}". ` +
-            `Verify the file exists on branch "${branchRef}".`
-        );
-    }
+                console.log(`  -> Row ${excelRowNo}: Missing ADOID detected. Commencing Test Case generation for "${testTitleValue}"...`);
+                try {
+                    const newId = await createAdoTestCase(witClient, PROJECT_ID, testTitleValue);
+                    createdIdsBatch.push(newId);
 
-    return await new Promise<Buffer>((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        stream.on("data", (chunk: Buffer | string) => {
-            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-        });
-        stream.on("end", () => {
-            const buffer = Buffer.concat(chunks);
-            console.log(`[DEBUG] Download complete: ${buffer.length} bytes.`);
-            resolve(buffer);
-        });
-        stream.on("error", reject);
-    });
-}
+                    row[idColIndex] = newId;
+                    changesMade = true;
+
+                    console.log(`  -> Row ${excelRowNo}: Successfully generated Test Case ID: ${newId}`);
+                    await new Promise(resolve => setTimeout(resolve, 150)); 
+                } catch (apiErr: any) {
+                    console.error(`  -> Row ${excelRowNo}: FAILED. Sequence interrupted due to API communication break: ${apiErr.message}`);
+                    break; 
+                }
+            } else {
+                console.log(`  -> Row ${excelRowNo}: Skipped. Already maps to active tracking entry ID: ${adoidValue}`);
+            }
+        }
+        console.log("[SUCCESS] Step 6: Row processing evaluation sequence is COMPLETE.\n");
+
+
+FAILED. Sequence interrupted due to API communication break: Failed to retrieve work item ID for title:
