@@ -2,6 +2,8 @@ Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Nam
 
 Stop-Process -Name explorer -Force; Start-Process explorer
 
+Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Sort-Object WorkingSetSize -Desc | Select-Object @{N='Memory(MB)';E={[math]::Round($_.WorkingSetSize/1MB,1)}}, ProcessId, CommandLine | Format-List
+
 
 const allParts = rawCellValue
     .split('|')
