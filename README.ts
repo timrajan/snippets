@@ -1,3 +1,29 @@
+$paths = @(
+  "$env:TEMP\*",
+  "$env:LOCALAPPDATA\Microsoft\Windows\INetCache\*",
+  "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache_*.db",
+  "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache_*.db",
+  "$env:LOCALAPPDATA\CrashDumps\*",
+  "$env:LOCALAPPDATA\Microsoft\Windows\WER\ReportArchive\*",
+  "$env:LOCALAPPDATA\Microsoft\Windows\WER\ReportQueue\*",
+  "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Code Cache\*",
+  "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Service Worker\*",
+  "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Code Cache\*",
+  "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Service Worker\*",
+  "$env:APPDATA\Code\Cache\*",
+  "$env:APPDATA\Code\CachedData\*",
+  "$env:APPDATA\Code\Service Worker\*",
+  "$env:LOCALAPPDATA\Slack\Cache\*",
+  "$env:LOCALAPPDATA\Slack\GPUCache\*"
+)
+foreach ($p in $paths) {
+  Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+}
+Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+Write-Host "Cleanup complete."
+
+
+
 $teamsPath = "$env:LOCALAPPDATA\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams"
 Get-ChildItem -Path $teamsPath -Include 'Cache','Code Cache','GPUCache','Service Worker','blob_storage','tmp' -Recurse -Directory -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item "$($_.FullName)\*" -Recurse -Force -ErrorAction SilentlyContinue }
 Write-Host "Done. Relaunch Teams."
