@@ -1,3 +1,7 @@
+$teamsPath = "$env:LOCALAPPDATA\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams"
+Get-ChildItem -Path $teamsPath -Include 'Cache','Code Cache','GPUCache','Service Worker','blob_storage','tmp' -Recurse -Directory -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item "$($_.FullName)\*" -Recurse -Force -ErrorAction SilentlyContinue }
+Write-Host "Done. Relaunch Teams."
+
 Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name, @{N='Memory(MB)';E={[math]::Round($_.WorkingSet64/1MB,1)}}
 
 Stop-Process -Name explorer -Force; Start-Process explorer
