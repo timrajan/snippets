@@ -1,3 +1,7 @@
+Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name, @{N='Memory(MB)';E={[math]::Round($_.WorkingSet64/1MB,1)}}
+
+Stop-Process -Name explorer -Force; Start-Process explorer
+
 
 const allParts = rawCellValue
     .split('|')
