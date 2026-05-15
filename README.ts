@@ -1,52 +1,74 @@
 async function createAdoTestCase(
-    _witClient: IWorkItemTrackingApi,   // unused; kept for signature compatibility
+    witClient: IWorkItemTrackingApi,
     projectId: string,
     title: string
 ): Promise<number> {
     const cleanTitle = (title ?? "").trim();
-    if (!cleanTitle) throw new Error("Cannot create Test Case: title is empty.");
+    if (cleanTitle === "") {
+        throw new Error("Cannot create Test Case: title is empty.");
+    }
 
-    const url =
-        `${ORG_URL.replace(/\/+$/, "")}` +
-        `/${encodeURIComponent(projectId)}` +
-        `/_apis/wit/workitems/$${encodeURIComponent(WORK_ITEM_TYPE)}` +
-        `?api-version=7.1`;
-
-    const patchDocument = [
+    const patchDocument: any[] = [
         { op: "add", path: "/fields/System.Title", value: cleanTitle },
     ];
 
-    console.log(`[FETCH] POST ${url}`);
-
-    let res: Response;
-    try {
-        res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json-patch+json",
-                "Accept": "application/json",
-                "Authorization": `Basic ${Buffer.from(`:${PAT}`).toString("base64")}`,
-            },
-            body: JSON.stringify(patchDocument),
+    if (typeof SHARED_STEP_XML === "string" && SHARED_STEP_XML.trim() !== "") {
+        patchDocument.push({
+            op: "add",
+            path: "/fields/Microsoft.VSTS.TCM.Steps",
+            value: SHARED_STEP_XML,
         });
+    }
+
+    let workItem: any;
+    try {
+        workItem = await witClient.createWorkItem(
+            null,             // customHeaders
+            patchDocument,    // document
+            projectId,        // project
+            WORK_ITEM_TYPE,   // type — must be "Test Case" (with the space)
+            false,            // validateOnly
+            false,            // bypassRules
+            false             // suppressNotifications
+        );
     } catch (err: any) {
-        // Network-level failure (DNS, refused, timeout, cert). Surface the cause cleanly.
-        const cause = err?.cause?.code || err?.cause?.message || err?.code || err?.message;
-        throw new Error(`fetch to ${url} failed: ${cause}`);
+        const inner =
+            err?.serverError?.message ??
+            err?.result?.message ??
+            err?.message ??
+            String(err);
+        throw new Error(
+            `createWorkItem threw for "${cleanTitle}" (type="${WORK_ITEM_TYPE}"): ${inner}`
+        );
     }
 
-    console.log(`[FETCH] HTTP ${res.status}`);
-    const text = await res.text();
-
-    if (!res.ok) {
-        let detail = text;
-        try { detail = JSON.parse(text).message ?? text; } catch {}
-        throw new Error(`Test Case creation failed (HTTP ${res.status}): ${detail}`);
+    if (!workItem || typeof workItem.id !== "number") {
+        throw new Error(
+            `createWorkItem returned no numeric id for "${cleanTitle}". ` +
+            `Raw response: ${JSON.stringify(workItem)}`
+        );
     }
 
-    const body = JSON.parse(text);
-    if (typeof body.id !== "number") {
-        throw new Error(`Unexpected response shape: ${text.substring(0, 300)}`);
-    }
-    return body.id;
+    return workItem.id;
+}
+
+
+try {
+    const newId = await createAdoTestCase(witClient, PROJECT_ID, testTitleValue);
+    createdIdsBatch.push(newId);
+    row[idColIndex] = newId;
+    changesMade = true;
+    console.log(`  -> Row ${excelRowNo}: Successfully generated Test Case ID: ${newId}`);
+    await new Promise(resolve => setTimeout(resolve, 150));
+} catch (err: any) {
+    console.error(`  -> Row ${excelRowNo}: FAILED.`);
+    console.error("    name:          ", err?.name);
+    console.error("    message:       ", err?.message);
+    console.error("    code:          ", err?.code);
+    console.error("    statusCode:    ", err?.statusCode);
+    console.error("    cause:         ", err?.cause);
+    console.error("    cause.code:    ", err?.cause?.code);
+    console.error("    cause.message: ", err?.cause?.message);
+    console.error("    stack:         ", err?.stack);
+    break;
 }
