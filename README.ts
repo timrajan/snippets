@@ -1,74 +1,28 @@
-async function createAdoTestCase(
-    witClient: IWorkItemTrackingApi,
-    projectId: string,
-    title: string
-): Promise<number> {
-    const cleanTitle = (title ?? "").trim();
-    if (cleanTitle === "") {
-        throw new Error("Cannot create Test Case: title is empty.");
+async function pushExcelToAzureRepos(gitClient: IGitApi, repositoryId: string, projectId: string, filePath: string, branchPath: string, buffer: Buffer): Promise<void> {
+    console.log("[START] Step 8: Recompiling cell elements and executing cloud commit push into branch...");
+    const base64Content = buffer.toString("base64");
+    const simpleBranchName = branchPath.replace("refs/heads/", "");
+
+    const branchRefs = await gitClient.getRefs(repositoryId, projectId, `heads/${simpleBranchName}`);
+    if (!branchRefs || branchRefs.length === 0 || !branchRefs[0].objectId) {
+        throw new Error(`Failed to locate target branch metadata for refs/heads/${simpleBranchName}`);
     }
+    const oldObjectId = branchRefs[0].objectId;
 
-    const patchDocument: any[] = [
-        { op: "add", path: "/fields/System.Title", value: cleanTitle },
-    ];
+    const pushPayload = {
+        refUpdates: [{ name: branchPath, oldObjectId: oldObjectId }],
+        commits: [{
+            comment: "Automated update: Populated missing ADOIDs and mapped Test Suite entries",
+            changes: [{
+                changeType: 2, // 2 = Edit
+                item: { path: filePath },
+                newContent: { content: base64Content, contentType: 1 } // 1 = Base64
+            }]
+        }]
+    };
 
-    if (typeof SHARED_STEP_XML === "string" && SHARED_STEP_XML.trim() !== "") {
-        patchDocument.push({
-            op: "add",
-            path: "/fields/Microsoft.VSTS.TCM.Steps",
-            value: SHARED_STEP_XML,
-        });
-    }
-
-    let workItem: any;
-    try {
-        workItem = await witClient.createWorkItem(
-            null,             // customHeaders
-            patchDocument,    // document
-            projectId,        // project
-            WORK_ITEM_TYPE,   // type — must be "Test Case" (with the space)
-            false,            // validateOnly
-            false,            // bypassRules
-            false             // suppressNotifications
-        );
-    } catch (err: any) {
-        const inner =
-            err?.serverError?.message ??
-            err?.result?.message ??
-            err?.message ??
-            String(err);
-        throw new Error(
-            `createWorkItem threw for "${cleanTitle}" (type="${WORK_ITEM_TYPE}"): ${inner}`
-        );
-    }
-
-    if (!workItem || typeof workItem.id !== "number") {
-        throw new Error(
-            `createWorkItem returned no numeric id for "${cleanTitle}". ` +
-            `Raw response: ${JSON.stringify(workItem)}`
-        );
-    }
-
-    return workItem.id;
+    await gitClient.createPush(pushPayload, repositoryId, projectId);
+    console.log("[SUCCESS] Step 8: Cloud remote repository synchronization is COMPLETE. File updated successfully.\n");
 }
 
-
-try {
-    const newId = await createAdoTestCase(witClient, PROJECT_ID, testTitleValue);
-    createdIdsBatch.push(newId);
-    row[idColIndex] = newId;
-    changesMade = true;
-    console.log(`  -> Row ${excelRowNo}: Successfully generated Test Case ID: ${newId}`);
-    await new Promise(resolve => setTimeout(resolve, 150));
-} catch (err: any) {
-    console.error(`  -> Row ${excelRowNo}: FAILED.`);
-    console.error("    name:          ", err?.name);
-    console.error("    message:       ", err?.message);
-    console.error("    code:          ", err?.code);
-    console.error("    statusCode:    ", err?.statusCode);
-    console.error("    cause:         ", err?.cause);
-    console.error("    cause.code:    ", err?.cause?.code);
-    console.error("    cause.message: ", err?.cause?.message);
-    console.error("    stack:         ", err?.stack);
-    break;
-}
+CRITICAL ERROR: Execution script failed mid-transit: TF401021: 'test' is not a valid name for a Git ref. Visit https://go.microsoft.com/fwlink/?LinkId=800646 for more information on Git ref naming.
