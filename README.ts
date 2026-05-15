@@ -40,3 +40,13 @@ async function linkTestCasesToSuite(
         `[SUCCESS] Step 7: Linked ${result.length} Test Case(s) to suite ${suiteId}.\n`
     );
 }
+
+
+
+const patchDocument: any[] = [
+    { op: "add", path: "/fields/System.Title",          value: cleanTitle },
+    { op: "add", path: "/fields/System.AreaPath",       value: AREA_PATH },
+    { op: "add", path: "/fields/System.IterationPath",  value: ITERATION_PATH },
+];
+
+
