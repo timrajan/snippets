@@ -1,3 +1,8 @@
+https://atoonlinecdnflowptg.azureedge.net/2606-ir-jun.IP235.26.132.01/ui/scripts/vendor/knockout.validation-2.0.3.min.js
+https://atoonlinecdnflowptg.azureedge.net/2606-ir-jun.IP235.26.132.01/ui/scripts/vendor/ko.editables-0.9.0.min.js
+
+
+
 import ExcelJS from "exceljs";
 
 // === STEP 4: Load workbook with ExcelJS (preserves styles) ===
