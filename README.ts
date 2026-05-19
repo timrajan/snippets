@@ -1,3 +1,10 @@
+%windir%\system32\inetsrv\appcmd list site "YourSiteName" /config /xml > C:\temp\site.xml
+%windir%\system32\inetsrv\appcmd list apppool "YourAppPoolName" /config /xml > C:\temp\apppool.xml
+
+%windir%\system32\inetsrv\appcmd add apppool /in < C:\temp\apppool.xml
+%windir%\system32\inetsrv\appcmd add site /in < C:\temp\site.xml
+
+
 This page is a self-serve knowledge hub page for everything related to Puppeteer Automation Framework. The end user/audience You can have a look at this wiki page 
 For the following objectives 
 
