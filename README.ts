@@ -1,100 +1,39 @@
-https://atoonlinecdnflowptg.azureedge.net/2606-ir-jun.IP235.26.132.01/ui/scripts/vendor/knockout.validation-2.0.3.min.js
-https://atoonlinecdnflowptg.azureedge.net/2606-ir-jun.IP235.26.132.01/ui/scripts/vendor/ko.editables-0.9.0.min.js
+This page is a self-serve knowledge hub page for everything related to Puppeteer Automation Framework. The end user/audience You can have a look at this wiki page 
+For the following objectives 
+
+Objective one: to get to know how the framework works end to end, the mechanism involved, the controls, the way in which the controls hop inside the code
+ objective two:  a guide to create the spreadsheets which run the whole of the test
+ objective 3: To enhance/modify the core automation framework in future to accommodate any of the new features 
 
 
+    The whole of this Automation framework can be divided into three major parts. 
 
-import ExcelJS from "exceljs";
+        The first part is creating the spreadsheet, which can be easily  understood by the  puppeteer  automation framework.
+    The second part is configuring test cases in ADO via scripts. 
+The thirs part is  the Puppeteer Automation Framework which runs the configured test via the created Puppeteer framework. 
 
-// === STEP 4: Load workbook with ExcelJS (preserves styles) ===
-console.log("[START] Step 4: Loading workbook into ExcelJS engine...");
-const workbook = new ExcelJS.Workbook();
-await workbook.xlsx.load(excelBuffer as any);
-const worksheet = workbook.getWorksheet(WORKSHEET_NAME);
-if (!worksheet) {
-    throw new Error(`Worksheet "${WORKSHEET_NAME}" not found in workbook.`);
-}
-console.log(`[DEBUG] Workbook loaded. Sheet "${worksheet.name}" has ${worksheet.rowCount} rows.`);
 
-// === STEP 5: Locate ADOID and Test Name columns ===
-console.log("[START] Step 5: Locating ADOID and Test Name columns in header...");
-const headerRow = worksheet.getRow(1);
-let idColIndex = -1;
-let testNameColIndex = -1;
-headerRow.eachCell((cell, colNumber) => {
-    const v = String(cell.value ?? "").trim();
-    if (v === "ADOID")     idColIndex       = colNumber;
-    if (v === "Test Name") testNameColIndex = colNumber;
-});
-if (idColIndex === -1)       throw new Error("ADOID column not found in header row.");
-if (testNameColIndex === -1) throw new Error("Test Name column not found in header row.");
-console.log(`[DEBUG] ADOID col=${idColIndex}, Test Name col=${testNameColIndex}`);
+        Let's go through each of the moving parts separately in a very detailed manner.
 
-// === STEP 6: Process rows sequentially ===
-console.log("[START] Step 6: Processing row modification verification loops sequentially...");
-const createdIdsBatch: number[] = [];
-let changesMade = false;
+ first part 
 
-for (let i = 2; i <= worksheet.rowCount; i++) {
-    const row          = worksheet.getRow(i);
-    const excelRowNo   = i;                              // ExcelJS is already 1-indexed
-    const adoidCell    = row.getCell(idColIndex);
-    const testNameCell = row.getCell(testNameColIndex);
+ the spreadsheet  this is the most important and the main driver of the whole automation framework. Without a valid spreadsheet, the framework cannot run. We need to make sure the spreadsheet is valid and guardrails need to be established so that we do not get into a situation where the whole test suite fails because the representation of data in the spreadsheet is not following a particular rule set 
 
-    const adoidValue     = String(adoidCell.value    ?? "").trim();
-    const testTitleValue = String(testNameCell.value ?? "").trim();
+based on the understanding of the existing testing process, we have introduced a couple of changes in the spreadsheet, which will be read by the Automation Framework. The following are the essential columns which need to be there in the spreadsheet 
 
-    if (adoidValue === "") {
-        if (testTitleValue === "") {
-            console.log(`  -> Row ${excelRowNo}: Skipped. Cell data maps to a completely blank row template.`);
-            continue;
-        }
-        console.log(`  -> Row ${excelRowNo}: Missing ADOID detected. Commencing Test Case generation for "${testTitleValue}"...`);
+ Test Case Sheet 
+ a DOID 
+case name 
+ Field Level Validation
+ Page Level Validation 
+ Tooltip Text 
+ tooltip text config 
 
-        try {
-            const newId = await createAdoTestCase(witClient, PROJECT_ID, testTitleValue);
-            createdIdsBatch.push(newId);
-            adoidCell.value = newId;                     // value-only update; cell formatting preserved
-            changesMade = true;
-            console.log(`  -> Row ${excelRowNo}: Successfully generated Test Case ID: ${newId}`);
-            await new Promise(resolve => setTimeout(resolve, 150));
-        } catch (err: any) {
-            console.error(`  -> Row ${excelRowNo}: FAILED.`);
-            console.error("    name:          ", err?.name);
-            console.error("    message:       ", err?.message);
-            console.error("    code:          ", err?.code);
-            console.error("    statusCode:    ", err?.statusCode);
-            console.error("    cause:         ", err?.cause);
-            console.error("    cause.code:    ", err?.cause?.code);
-            console.error("    cause.message: ", err?.cause?.message);
-            console.error("    stack:         ", err?.stack);
-            break;
-        }
-    } else {
-        console.log(`  -> Row ${excelRowNo}: Skipped. Already maps to active tracking entry ID: ${adoidValue}`);
-    }
-}
-console.log("[SUCCESS] Step 6: Row processing evaluation sequence is COMPLETE.\n");
+ Question Sheet
+ accessible names 
+ action 
+ Tooltip Texts 
+Tooltip Text Validation 
 
-// === STEP 7: Link new Test Cases to the configured Suite ===
-if (createdIdsBatch.length > 0) {
-    await linkTestCasesToSuite(testClient, PROJECT_ID, PLAN_ID, SUITE_ID, createdIdsBatch);
-}
 
-// === STEP 8: Serialize and push (only if rows changed) ===
-if (changesMade) {
-    console.log("[START] Step 8: Serializing workbook (with styles preserved) and pushing to Azure Repos...");
-    const arrayBuffer  = await workbook.xlsx.writeBuffer();
-    const outputBuffer = Buffer.from(arrayBuffer as ArrayBuffer);
-    console.log(`[DEBUG] Updated workbook size: ${outputBuffer.length} bytes.`);
-
-    await pushExcelToAzureRepos(
-        gitClient,
-        repositoryId,
-        PROJECT_ID,
-        FILE_PATH,
-        SOURCE_BRANCH_NAME,
-        outputBuffer
-    );
-} else {
-    console.log("[INFO] Step 8: Remote repository check-in skipped. Memory cells contain zero changes.\n");
-}
+ the second part is configuring test cases in ADO. This spreadsheet, which we have, has a column ADO ID, and we have another column which represents the test case name. When we configure this script to update or to sync the test cases in ADO 
