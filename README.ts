@@ -1,71 +1,52 @@
-// === Helper functions (add near top of file, with other helpers) ===
+async function createAdoTestCase(
+    witClient: IWorkItemTrackingApi,
+    projectId: string,
+    title: string,
+    parametersXml: string,
+    localDataSourceXml: string
+): Promise<number> {
+    const cleanTitle = (title ?? "").trim();
+    if (!cleanTitle) throw new Error("Cannot create Test Case: title is empty.");
 
-function readParamsFromSheet(
-    workbook: ExcelJS.Workbook,
-    paramsSheetName: string
-): { paramNames: string[]; rows: Record<string, string>[] } {
-    const sheet = workbook.getWorksheet(paramsSheetName);
-    if (!sheet) {
-        throw new Error(`Params sheet "${paramsSheetName}" not found.`);
+    const patchDocument: any[] = [
+        { op: "add", path: "/fields/System.Title",         value: cleanTitle },
+        { op: "add", path: "/fields/System.AreaPath",      value: AREA_PATH },
+        { op: "add", path: "/fields/System.IterationPath", value: ITERATION_PATH },
+    ];
+
+    if (SHARED_STEP_XML?.trim()) {
+        patchDocument.push({
+            op: "add",
+            path: "/fields/Microsoft.VSTS.TCM.Steps",
+            value: SHARED_STEP_XML,
+        });
+    }
+    if (parametersXml?.trim()) {
+        patchDocument.push({
+            op: "add",
+            path: "/fields/Microsoft.VSTS.TCM.Parameters",
+            value: parametersXml,
+        });
+    }
+    if (localDataSourceXml?.trim()) {
+        patchDocument.push({
+            op: "add",
+            path: "/fields/Microsoft.VSTS.TCM.LocalDataSource",
+            value: localDataSourceXml,
+        });
     }
 
-    const headerRow = sheet.getRow(1);
-    const paramNames: string[] = [];
-    const colIndexByName: Record<string, number> = {};
-    headerRow.eachCell((cell, colNumber) => {
-        const name = String(cell.value ?? "").trim();
-        if (name !== "") {
-            paramNames.push(name);
-            colIndexByName[name] = colNumber;
-        }
-    });
-
-    const rows: Record<string, string>[] = [];
-    for (let i = 2; i <= sheet.rowCount; i++) {
-        const row = sheet.getRow(i);
-        const record: Record<string, string> = {};
-        let hasAny = false;
-        for (const name of paramNames) {
-            const v = String(row.getCell(colIndexByName[name]).value ?? "").trim();
-            record[name] = v;
-            if (v !== "") hasAny = true;
-        }
-        if (hasAny) rows.push(record);
+    let workItem: any;
+    try {
+        workItem = await witClient.createWorkItem(
+            null, patchDocument, projectId, WORK_ITEM_TYPE, false, false, false
+        );
+    } catch (err: any) {
+        const inner = err?.serverError?.message ?? err?.result?.message ?? err?.message ?? String(err);
+        throw new Error(`createWorkItem threw for "${cleanTitle}": ${inner}`);
     }
-
-    return { paramNames, rows };
+    if (!workItem || typeof workItem.id !== "number") {
+        throw new Error(`createWorkItem returned no numeric id for "${cleanTitle}". Raw: ${JSON.stringify(workItem)}`);
+    }
+    return workItem.id;
 }
-
-function buildParametersXml(paramNames: string[]): string {
-    const params = paramNames
-        .map(n => `<param name="${escapeXml(n)}" bind="default"/>`)
-        .join("");
-    return `<parameters>${params}</parameters>`;
-}
-
-function buildLocalDataSourceXml(
-    paramNames: string[],
-    rows: Record<string, string>[]
-): string {
-    const tables = rows.map(r => {
-        const inner = paramNames
-            .map(n => `<${n}>${escapeXml(r[n] ?? "")}</${n}>`)
-            .join("");
-        return `<Table1>${inner}</Table1>`;
-    }).join("");
-    return `<NewDataSet>${tables}</NewDataSet>`;
-}
-
-function escapeXml(s: string): string {
-    return s
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-}
-
-
-
-
-
