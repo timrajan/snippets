@@ -1,40 +1,71 @@
-Efficiency Through Automation
-The **Azure DevOps Test Case Creator** simplifies the process of migrating manual test definitions from legacy spreadsheets into structured ADO Work Items.
+// === Helper functions (add near top of file, with other helpers) ===
 
-By leveraging a **TypeScript script** and the **REST API**, we automate the heavy lifting of work item creation while ensuring data consistency.
+function readParamsFromSheet(
+    workbook: ExcelJS.Workbook,
+    paramsSheetName: string
+): { paramNames: string[]; rows: Record<string, string>[] } {
+    const sheet = workbook.getWorksheet(paramsSheetName);
+    if (!sheet) {
+        throw new Error(`Params sheet "${paramsSheetName}" not found.`);
+    }
 
- Detailed Matching Logic
+    const headerRow = sheet.getRow(1);
+    const paramNames: string[] = [];
+    const colIndexByName: Record<string, number> = {};
+    headerRow.eachCell((cell, colNumber) => {
+        const name = String(cell.value ?? "").trim();
+        if (name !== "") {
+            paramNames.push(name);
+            colIndexByName[name] = colNumber;
+        }
+    });
 
-The Self-Selection Pattern
+    const rows: Record<string, string>[] = [];
+    for (let i = 2; i <= sheet.rowCount; i++) {
+        const row = sheet.getRow(i);
+        const record: Record<string, string> = {};
+        let hasAny = false;
+        for (const name of paramNames) {
+            const v = String(row.getCell(colIndexByName[name]).value ?? "").trim();
+            record[name] = v;
+            if (v !== "") hasAny = true;
+        }
+        if (hasAny) rows.push(record);
+    }
 
-Instead of hardcoding data, each test instance identifies itself. It scans the shared spreadsheet to find the row that corresponds to its unique **Azure DevOps ID** (e.g., TC-1042).
+    return { paramNames, rows };
+}
 
-This allows for a **single, shared spreadsheet** to act as the source of truth for all tests in the suite.
+function buildParametersXml(paramNames: string[]): string {
+    const params = paramNames
+        .map(n => `<param name="${escapeXml(n)}" bind="default"/>`)
+        .join("");
+    return `<parameters>${params}</parameters>`;
+}
 
-Benefits:
+function buildLocalDataSourceXml(
+    paramNames: string[],
+    rows: Record<string, string>[]
+): string {
+    const tables = rows.map(r => {
+        const inner = paramNames
+            .map(n => `<${n}>${escapeXml(r[n] ?? "")}</${n}>`)
+            .join("");
+        return `<Table1>${inner}</Table1>`;
+    }).join("");
+    return `<NewDataSet>${tables}</NewDataSet>`;
+}
 
-- Simplified data management
+function escapeXml(s: string): string {
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+}
 
-- Dynamic test configuration
-
-- No redundant files
 
 
 
-Inside the Test: 4 Key Steps
 
-Read Spreadsheet:
-
-Test script initializes and loads the master spreadsheet into memory for fast lookup.
-
-Loop & Match:
-
-Iterate through rows to find the specific entry where 'ADO ID' matches the current test execution context.
-
-Execute Steps:
-
-Run the Puppeteer-driven browser steps defined by the data in that specific row.
-
-Exit & Report:
-
-Conclude execution and update ADO with a success or failure status based on runtime assertions.
