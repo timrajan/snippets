@@ -1,1 +1,3 @@
-await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+page.on('request', req => console.log('→', req.method(), req.url()));
+page.on('response', res => console.log('←', res.status(), res.url()));
+page.on('requestfailed', req => console.log('✗', req.url(), req.failure()?.errorText));
