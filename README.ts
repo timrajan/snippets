@@ -1,9 +1,5 @@
-- powershell: |
-    whoami
-    echo "Identity: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
-  displayName: 'Check running identity'
-
-- script: |
-    whoami
-    echo %USERDOMAIN%\%USERNAME%
-  displayName: 'Check running identity'
+const browser = await puppeteer.launch({
+  args: [
+    '--host-resolver-rules=MAP *azureedge.net 127.0.0.1'
+  ]
+});
