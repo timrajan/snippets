@@ -1,14 +1,9 @@
- const points: TestPoint[] = (
-        await testApi.getPoints(
-            testProject,
-            testPlanID,
-            targetTestSuiteID,
-            undefined,
-            testConfig ? testConfig.id.toString() : undefined,
-            testCaseID.toString()
-        )
-    ).filter((point) => {       
-        return point.testCase.id === testCaseID.toString();
-    });
+- powershell: |
+    whoami
+    echo "Identity: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
+  displayName: 'Check running identity'
 
- Cannot read properties of null (reading 'filter')
+- script: |
+    whoami
+    echo %USERDOMAIN%\%USERNAME%
+  displayName: 'Check running identity'
