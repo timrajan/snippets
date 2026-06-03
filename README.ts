@@ -1,5 +1,3 @@
-const browser = await puppeteer.launch({
-  args: [
-    '--host-resolver-rules=MAP *azureedge.net 127.0.0.1'
-  ]
-});
+const browser = await puppeteer.launch({ headless: true });
+const pid = browser.process()?.pid;
+console.log('Browser PID:', pid, '| Node account:', require('os').userInfo().username);
