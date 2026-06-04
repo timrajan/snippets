@@ -1,10 +1,10 @@
-const browser = await puppeteer.launch({ headless: true });
-const pid = browser.process()?.pid;
-console.log('Browser PID:', pid, '| Node account:', require('os').userInfo().username);
-
-
 - powershell: |
+    Write-Host "=== Identity ==="
     whoami
-    nslookup something.azureedge.net
-    curl -v https://something.azureedge.net
-  displayName: 'Prove service account cannot reach azureedge.net'
+    Write-Host "=== Direct (no proxy) ==="
+    curl.exe -v https://something.azureedge.net
+    Write-Host "=== Through the proxy ==="
+    curl.exe -v -x http://YOUR_PROXY:PORT https://something.azureedge.net
+    exit 0
+  displayName: 'Diagnose azureedge.net access'
+  continueOnError: true
