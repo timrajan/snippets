@@ -1,20 +1,18 @@
 // =====================================================================
-// BuildPollingService.cs — single-file drop-in
+// BuildPollingService.cs — minimal-schema version
 // ---------------------------------------------------------------------
-// The ONLY new file you need. Everything is in this one class.
+// Works with ONLY these columns on your existing table:
+//     run_id  (int)      — the ADO run ID you save at trigger time
+//     status  (string)   — Pending | InProgress | Completed | TimedOut | PollError
+//     result  (string?)  — succeeded | failed | partiallySucceeded | canceled
+//     created_at (timestamp) — set when the row is inserted
 //
-// Wiring (2 lines in Program.cs):
+// No last_polled_at, no completed_at, no poll_error_count columns needed.
+// Error counting is kept in memory (resets on app restart — by design).
+//
+// Wiring in Program.cs:
 //     builder.Services.AddHttpClient("ado");
 //     builder.Services.AddHostedService<BuildPollingService>();
-//
-// appsettings.json (1 small section):
-//     "Ado": { "Organization": "your-org", "Project": "your-project" }
-//
-// web.config (next to your existing HTTPS_PROXY variable):
-//     <environmentVariable name="ADO_PAT" value="your-pat" />
-//
-// Entity: uses your EXISTING entity/table where you already save the
-// run ID. Adjust the marked lines (entity type + property names) below.
 // =====================================================================
 
 using System.Net.Http.Headers;
@@ -38,6 +36,10 @@ namespace MyApp.Services
         private readonly int _intervalSeconds;
         private readonly int _maxPollHours;
         private readonly int _maxErrors;
+
+        // In-memory error counter per run ID. Resets on app restart, which is
+        // fine: a restart just gives a struggling run a fresh set of attempts.
+        private readonly Dictionary<int, int> _errorCounts = new();
 
         public BuildPollingService(
             IServiceScopeFactory scopeFactory,
@@ -92,49 +94,53 @@ namespace MyApp.Services
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();  // <-- your DbContext type
 
-            // ---------------------------------------------------------------
-            // ADJUST: entity type + property names to match your existing table.
-            // Required columns: RunId (int), Status (string), Result (string?),
-            //                   TriggeredAt, CompletedAt?, LastPolledAt?, PollErrorCount (int)
-            // ---------------------------------------------------------------
+            // ADJUST: db.BuildRuns + property names (RunId, Status, Result, CreatedAt)
+            // to match your entity exactly.
             var unfinished = await db.BuildRuns
                 .Where(b => b.Status == "Pending" || b.Status == "InProgress")
-                .OrderBy(b => b.TriggeredAt)
+                .OrderBy(b => b.CreatedAt)
                 .Take(50)
                 .ToListAsync(ct);
 
-            if (unfinished.Count == 0) return;
+            if (unfinished.Count == 0)
+            {
+                _errorCounts.Clear();   // nothing in flight; drop any stale counters
+                return;
+            }
 
             var http = CreateAdoClient();
 
             foreach (var run in unfinished)
             {
                 ct.ThrowIfCancellationRequested();
-                run.LastPolledAt = DateTime.UtcNow;
 
-                if (DateTime.UtcNow - run.TriggeredAt > TimeSpan.FromHours(_maxPollHours))
+                // Safety timeout based on created_at — never poll a row forever
+                if (DateTime.UtcNow - run.CreatedAt > TimeSpan.FromHours(_maxPollHours))
                 {
                     run.Status = "TimedOut";
-                    run.CompletedAt = DateTime.UtcNow;
+                    _errorCounts.Remove(run.RunId);
                     _logger.LogWarning("Run {id} timed out after {h}h", run.RunId, _maxPollHours);
                     continue;
                 }
 
-                var (ok, status, result, finishTime) = await GetBuildStatus(http, run.RunId, ct);
+                var (ok, status, result) = await GetBuildStatus(http, run.RunId, ct);
 
                 if (!ok)
                 {
-                    run.PollErrorCount++;
-                    if (run.PollErrorCount >= _maxErrors)
+                    var errors = _errorCounts.GetValueOrDefault(run.RunId) + 1;
+                    _errorCounts[run.RunId] = errors;
+
+                    if (errors >= _maxErrors)
                     {
                         run.Status = "PollError";
-                        run.CompletedAt = DateTime.UtcNow;
-                        _logger.LogError("Run {id} marked PollError after {n} failures", run.RunId, run.PollErrorCount);
+                        _errorCounts.Remove(run.RunId);
+                        _logger.LogError("Run {id} marked PollError after {n} consecutive failures",
+                            run.RunId, errors);
                     }
                     continue;
                 }
 
-                run.PollErrorCount = 0;
+                _errorCounts.Remove(run.RunId);   // success resets the counter
 
                 switch (status)
                 {
@@ -142,16 +148,18 @@ namespace MyApp.Services
                     case "postponed":
                         run.Status = "Pending";
                         break;
+
                     case "inProgress":
                     case "cancelling":
                         run.Status = "InProgress";
                         break;
+
                     case "completed":
                         run.Status = "Completed";
-                        run.Result = result;                       // succeeded | failed | partiallySucceeded | canceled
-                        run.CompletedAt = finishTime ?? DateTime.UtcNow;
+                        run.Result = result;     // succeeded | failed | partiallySucceeded | canceled
                         _logger.LogInformation("Run {id} completed: {result}", run.RunId, result);
                         break;
+
                     default:
                         _logger.LogWarning("Run {id}: unknown ADO status '{status}'", run.RunId, status);
                         break;
@@ -173,7 +181,7 @@ namespace MyApp.Services
             return http;
         }
 
-        private async Task<(bool ok, string status, string? result, DateTime? finishTime)>
+        private async Task<(bool ok, string status, string? result)>
             GetBuildStatus(HttpClient http, int runId, CancellationToken ct)
         {
             try
@@ -184,7 +192,7 @@ namespace MyApp.Services
                 if (!resp.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("ADO returned {code} for run {id}", (int)resp.StatusCode, runId);
-                    return (false, "", null, null);
+                    return (false, "", null);
                 }
 
                 await using var stream = await resp.Content.ReadAsStreamAsync(ct);
@@ -194,15 +202,13 @@ namespace MyApp.Services
                 return (
                     true,
                     root.GetProperty("status").GetString() ?? "",
-                    root.TryGetProperty("result", out var r) ? r.GetString() : null,
-                    root.TryGetProperty("finishTime", out var f) && f.ValueKind == JsonValueKind.String
-                        ? f.GetDateTime() : null);
+                    root.TryGetProperty("result", out var r) ? r.GetString() : null);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error polling run {id}", runId);
-                return (false, "", null, null);
+                return (false, "", null);
             }
         }
     }
