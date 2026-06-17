@@ -1,2 +1,3 @@
  <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Development" />
-</environmentVariable>
+  <environmentVariable name="ASPNETCORE_DETAILEDERRORS" value="true" />
+
