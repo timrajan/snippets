@@ -1,11 +1,15 @@
-appcmd unlock config -section:system.webServer/httpErrors
-appcmd unlock config -section:system.webServer/security/authentication/anonymousAuthentication
-appcmd unlock config -section:system.webServer/security/authentication/windowsAuthentication
-
-<remove name="WebDAVModule" />
-
-<modules>
-    <remove name="WebDAVModule" />
-</modules>
-
-  unlock with appcmd unlock config -section:system.webServer/modules (and /handlers)
+<location path="apath/bpath/webhook">
+  <system.webServer>
+    <security>
+      <authentication>
+        <anonymousAuthentication enabled="true" />
+        <windowsAuthentication enabled="false" />
+      </authentication>
+    </security>
+    <handlers>
+      <clear />
+      <add name="aspNetCore" path="*" verb="*"
+           modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+    </handlers>
+  </system.webServer>
+</location>
