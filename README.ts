@@ -1,7 +1,4 @@
-Here's a one-liner for the PR:
-
-Register tsconfig-paths in the ts-node run so the @framework/* path aliases resolve outside Jest (ts-node doesn't read tsconfig paths on its own), fixing the MODULE_NOT_FOUND when running run-test-suite.ts.
-
-If you want it even tighter for a commit subject line:
-
-Add tsconfig-paths/register to ts-node so @framework aliases resolve when running suites directly
+[dotenvx@1.51.0] injecting env (18) from .env
+getTestPlanApiInstance:Error: tunneling socket could not be established, cause=connect ETIMEDOUT 
+Something real bad happened, please fix
+Error: getTestPlanApiInstance: AzureDevOps Api connection error - Please check your personal access token.
