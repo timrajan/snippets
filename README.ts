@@ -1,36 +1,3 @@
-@{
-    ViewData["Title"] = "Access Denied";
-}
-
-<div class="text-center mt-5">
-    <h2>Access Denied</h2>
-    <p>You don't have permission to view this page. Please contact admin.</p>
-</div>
-
-
-Then Views/Shared/AccessDenied.cshtml:
-
-
-
-public class HomeController : Controller
-{
-    private readonly IPermissionService _permissions;
-
-    public HomeController(IPermissionService permissions)
-    {
-        _permissions = permissions;
-    }
-
-    public IActionResult Index()
-    {
-        // User.Identity.Name gives DOMAIN\username under Windows Auth
-        var userId = User.Identity?.Name;
-
-        if (!_permissions.IsAllowed(userId))
-        {
-            return View("AccessDenied");
-        }
-
-        return View();
-    }
-}
+-- The code sequence (for the 10007-style numbers).
+-- Starts at 10007 so your first reserved code is 10007.
+CREATE SEQUENCE table_name_code_seq START WITH 10007;
