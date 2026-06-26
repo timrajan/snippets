@@ -23,3 +23,14 @@ public async Task<JsonResult> GetNextId()
 
     return Json(new { id = nextId, code = nextCode });
 }
+
+
+function launchForm() {
+    fetch('/User/GetNextId')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('userIdField').value = data.id;
+            document.getElementById('codeField').value = data.code;
+        })
+        .catch(error => console.error('Error:', error));
+}
