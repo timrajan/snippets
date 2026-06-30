@@ -1,13 +1,11 @@
-[HttpPost]
-public IActionResult ReceiveWebhook([FromBody] JsonElement payload)
-{
-   var json = payload.GetRawText();
+const DATE_RE = /^(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])\/(\d{4})$/;
 
-    var folder = Path.Combine(_env.ContentRootPath, "WebhookLogs");
-    Directory.CreateDirectory(folder);
+function normalizeDate(input: string): string {
+  const match = input.trim().match(DATE_RE);
+  if (!match) return input;                // doesn't match the format → return as-is
 
-    var filePath = Path.Combine(folder, "webhook_payloads.txt");
-    System.IO.File.AppendAllText(filePath, $"{DateTime.UtcNow:O}\t{json}{Environment.NewLine}");
-
-    return Ok();
+  const dd = match[1].padStart(2, "0");
+  const mm = match[2].padStart(2, "0");
+  const year = match[3];
+  return `${dd}/${mm}/${year}`;            // matches → normalised to DD/MM/YYYY
 }
