@@ -1,8 +1,6 @@
-const frames = (typeof (page as any).frames === 'function')
-  ? (page as Page).frames()           // Page: all frames
-  : (page as Frame).childFrames();     // Frame: direct children only
-
-for (const frame of frames) {
-  if (typeof (page as any).mainFrame === 'function' && frame === (page as Page).mainFrame()) continue;
-  // ...loop body...
+{
+    "mappings": [
+        { "fileName": "AAA.xlsx", "testId": [4811109] },
+        { "fileName": "BBB.xlsx", "testId": [4822249] }     
+    ]
 }
