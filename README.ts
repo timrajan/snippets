@@ -5,13 +5,7 @@ test.ts:10:26 - error TS7016: Could not find a declaration file for module 'xlsx
 10 import XlsxPopulate from "xlsx-populate";
                            
 
-{
-  "ts-node": {
-    "files": true
-  },
-  "files": ["types/xlsx-populate.d.ts"],
-  ...
-}
+CRITICAL ERROR: Execution script failed mid-transit: workbook.getWorksheet is not a function
 
 
 
