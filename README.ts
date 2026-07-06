@@ -1,3 +1,15 @@
+TSError: ⨯ Unable to compile TypeScript:
+test.ts:10:26 - error TS7016: Could not find a declaration file for module 'xlsx-populate'. 'C:/code/puppeteer/node_modules/xlsx-populate/lib/XlsxPopulate.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/xlsx-populate` if it exists or add a new declaration (.d.ts) file containing `declare module 'xlsx-populate';`
+
+10 import XlsxPopulate from "xlsx-populate";
+                           
+
+
+
+
+
+
 import XlsxPopulate from "xlsx-populate";
 // if the import gives you grief: const XlsxPopulate = require("xlsx-populate");
 
