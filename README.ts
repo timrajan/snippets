@@ -1,9 +1,9 @@
-async teardown() {
-    // If page was swapped for a Frame during setup, restore the owning Page
-    const maybeFrame = this.global.page as any;
-    if (maybeFrame && typeof maybeFrame.close !== "function" && typeof maybeFrame.page === "function") {
-        this.global.page = maybeFrame.page(); // Frame.page() returns the real Page
-    }
+psql -U postgres
 
-    await super.teardown(); // now the parent's page.close() works
-}
+-- Kick any active connections to abc
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'abc' AND pid <> pg_backend_pid();
+
+-- Clone it
+CREATE DATABASE xyz TEMPLATE abc;
