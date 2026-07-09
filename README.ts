@@ -1,14 +1,14 @@
-psql -U postgres
+- powershell: |
+    Write-Host "=== Windows account running the build ==="
+    whoami
 
--- Kick any active connections to abc
-SELECT pg_terminate_backend(pid)
-FROM pg_stat_activity
-WHERE datname = 'abc' AND pid <> pg_backend_pid();
+    Write-Host "=== jf CLI config (server URL + user) ==="
+    jf c show
 
--- Clone it
-CREATE DATABASE xyz TEMPLATE abc;
+    Write-Host "=== Identity Artifactory sees for the build's credentials ==="
+    jf rt curl -XGET /api/security/users/current
 
-
-SELECT pg_terminate_backend(pid)
-FROM pg_stat_activity
-WHERE datname = 'abc' AND pid <> pg_backend_pid();
+    Write-Host "=== Can this identity see the repo? ==="
+    jf rt curl -XGET /api/npm/npm-registry-remote/lodash | Select-Object -First 5
+  displayName: 'JFrog identity diagnostics'
+  condition: always()
