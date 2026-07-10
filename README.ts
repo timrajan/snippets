@@ -1,14 +1,23 @@
-- powershell: |
-    Write-Host "=== Windows account running the build ==="
-    whoami
+{
+  "ConnectionStrings": {
+    "ProductionConnection": "Host=myserver;Port=5432;Database=myapp_prod;Username=appuser;Password=xxx",
+    "StagingConnection": "Host=myserver;Port=5432;Database=myapp_staging;Username=appuser;Password=xxx"
+  }
+}
 
-    Write-Host "=== jf CLI config (server URL + user) ==="
-    jf c show
 
-    Write-Host "=== Identity Artifactory sees for the build's credentials ==="
-    jf rt curl -XGET /api/security/users/current
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    Write-Host "=== Can this identity see the repo? ==="
-    jf rt curl -XGET /api/npm/npm-registry-remote/lodash | Select-Object -First 5
-  displayName: 'JFrog identity diagnostics'
-  condition: always()
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<Customer> Customers { get; set; }
+    // ... all your entities
+}
+
+public class StagingDbContext : AppDbContext
+{
+    public StagingDbContext(DbContextOptions<StagingDbContext> options)
+        : base(options) { }
+}
+
