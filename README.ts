@@ -2,8 +2,6 @@ import { ElementHandle, JSHandle, Frame } from 'puppeteer';
 
 interface FindNearestChevronOptions {
   maxLevels?: number;
-  maxSiblings?: number;
-  searchPreviousSiblings?: boolean;
   selector?: string; // defaults to span.chevron-panel
 }
 
@@ -13,8 +11,6 @@ async function findNearestChevron(
 ): Promise<ElementHandle<HTMLSpanElement> | null> {
   const {
     maxLevels = 15,
-    maxSiblings = 3,
-    searchPreviousSiblings = true,
     selector = 'span.chevron-panel',
   } = options;
 
@@ -27,12 +23,10 @@ async function findNearestChevron(
     throw new Error('Could not convert to ElementHandle');
   }
 
-  // Runs in btnSave's own frame — works the same whether the app
-  // is in the main frame or inside an iframe
   const ownerFrame: Frame = (element as ElementHandle).frame;
 
   const resultHandle = await ownerFrame.evaluateHandle(
-    (el, sel, maxLvls, maxSibs, searchPrev) => {
+    (el, sel, maxLvls) => {
       const isVisible = (node: Element): boolean => {
         const rect = node.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) return false;
@@ -40,55 +34,51 @@ async function findNearestChevron(
         return style.visibility !== 'hidden' && style.display !== 'none';
       };
 
-      // Search a node and its descendants, including nested (open) shadow roots
-      const deepSearch = (root: Element | ShadowRoot): HTMLSpanElement | null => {
+      // Collect ALL visible matches under a root, incl. nested open shadow roots
+      const collect = (root: Element | ShadowRoot, out: HTMLSpanElement[]) => {
         if (root instanceof Element && root.matches(sel) && isVisible(root)) {
-          return root as HTMLSpanElement;
+          out.push(root as HTMLSpanElement);
         }
-
         for (const c of Array.from(root.querySelectorAll<HTMLSpanElement>(sel))) {
-          if (isVisible(c)) return c;
+          if (isVisible(c)) out.push(c);
         }
-
         for (const child of Array.from(root.querySelectorAll('*'))) {
-          if (child.shadowRoot) {
-            const found = deepSearch(child.shadowRoot);
-            if (found) return found;
-          }
+          if (child.shadowRoot) collect(child.shadowRoot, out);
         }
-
-        return null;
       };
 
       if (!(el instanceof Element)) return null;
 
+      const refRect = el.getBoundingClientRect();
+      const refX = refRect.left + refRect.width / 2;
+      const refY = refRect.top + refRect.height / 2;
+
+      const distanceTo = (node: Element): number => {
+        const r = node.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = cx - refX;
+        const dy = cy - refY;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+
+      // Walk up until we find a level that contains at least one chevron,
+      // then pick the geometrically closest one at that level
       let currentNode: Element | null = el;
       let level = 0;
 
       while (currentNode && level < maxLvls) {
-        // 1. Inside the current node
-        let found = deepSearch(currentNode);
-        if (found) return found;
+        const candidates: HTMLSpanElement[] = [];
+        collect(currentNode, candidates);
 
-        // 2. Next siblings
-        let sibling: Element | null = currentNode.nextElementSibling;
-        for (let i = 0; i < maxSibs && sibling; i++) {
-          found = deepSearch(sibling);
-          if (found) return found;
-          sibling = sibling.nextElementSibling;
+        if (candidates.length > 0) {
+          // Dedupe (matches() + querySelectorAll can double-add the root)
+          const unique = Array.from(new Set(candidates));
+          unique.sort((a, b) => distanceTo(a) - distanceTo(b));
+          return unique[0];
         }
 
-        // 3. Previous siblings
-        if (searchPrev) {
-          sibling = currentNode.previousElementSibling;
-          for (let i = 0; i < maxSibs && sibling; i++) {
-            found = deepSearch(sibling);
-            if (found) return found;
-            sibling = sibling.previousElementSibling;
-          }
-        }
-
-        // 4. Hop out of a shadow root to its host if we hit the top of one
+        // Hop out of a shadow root to its host if we hit the top of one
         if (!currentNode.parentElement) {
           const rootNode = currentNode.getRootNode();
           if (rootNode instanceof ShadowRoot) {
@@ -106,9 +96,7 @@ async function findNearestChevron(
     },
     element,
     selector,
-    maxLevels,
-    maxSiblings,
-    searchPreviousSiblings
+    maxLevels
   );
 
   const chevron = resultHandle.asElement();
