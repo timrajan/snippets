@@ -1,14 +1,4 @@
-const result = {
-        gitClient: await connection.getGitApi(),
-        witClient: await connection.getWorkItemTrackingApi(),
-        testClient: await connection.getTestPlanApi(),
-    };
-
-
-interface AdoClients {
-    gitClient: IGitApi;
-    witClient: IWorkItemTrackingApi;
-    testClient: ITestPlanApi;
-}
-
-async function getAdoClients(connection: WebApi): Promise<AdoClients> {
+ const ifFrame = this.global.page as any;
+        if (ifFrame && typeof ifFrame.close !== "function" && typeof ifFrame.page === "function") {
+            this.global.page = ifFrame.page(); // Frame.page() returns the real Page
+        }
