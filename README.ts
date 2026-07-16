@@ -1,7 +1,1 @@
-const ifFrame = this.global.page as unknown as {
-    close?: unknown;
-    page?: () => Page;
-};
-if (ifFrame && typeof ifFrame.close !== "function" && typeof ifFrame.page === "function") {
-    this.global.page = ifFrame.page(); // Frame.page() returns the real Page
-}
+ error TS2739: Type 'HTMLSpanElement' is missing the following properties from type 'Promise<void>': then, catch, finally, [Symbol.toStringTag]
