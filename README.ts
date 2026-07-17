@@ -24,3 +24,5 @@ catch (DbUpdateException ex)
     }
     throw;
 }
+
+Include Error Detail=true
