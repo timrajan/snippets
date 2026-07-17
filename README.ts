@@ -1,13 +1,26 @@
- error TS2739: Type 'HTMLSpanElement' is missing the following properties from type 'Promise<void>': then, catch, finally, [Symbol.toStringTag]
- // Collect ALL visible matches under a root, incl. nested open shadow roots
-            const collect = (root: Element | ShadowRoot, out: HTMLSpanElement[])=> {
-                if (root instanceof Element && root.matches(sel) && isVisible(root)) {
-                    out.push(root as HTMLSpanElement);
-                }
-                for (const c of Array.from(root.querySelectorAll<HTMLSpanElement>(sel))) {
-                    if (isVisible(c)) out.push(c);
-                }
-                for (const child of Array.from(root.querySelectorAll("*"))) {
-                    if (child.shadowRoot) collect(child.shadowRoot, out);
-                }
-            };
+try
+{
+    await _stagingDbContext.SaveChangesAsync();
+}
+catch (DbUpdateException ex)
+{
+    // The real error from Postgres is here
+    var inner = ex.InnerException;
+    Console.WriteLine($"Outer: {ex.Message}");
+    Console.WriteLine($"Inner: {inner?.Message}");
+
+    if (inner is Npgsql.PostgresException pgEx)
+    {
+        Console.WriteLine($"SqlState: {pgEx.SqlState}");
+        Console.WriteLine($"Detail: {pgEx.Detail}");
+        Console.WriteLine($"Table: {pgEx.TableName}, Column: {pgEx.ColumnName}");
+        Console.WriteLine($"Constraint: {pgEx.ConstraintName}");
+    }
+
+    // Also dump which entities failed
+    foreach (var entry in ex.Entries)
+    {
+        Console.WriteLine($"Failed entity: {entry.Entity.GetType().Name}, State: {entry.State}");
+    }
+    throw;
+}
