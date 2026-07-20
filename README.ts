@@ -1,37 +1,32 @@
-Slide 1 — Mobile Automation
+$env:PGPASSWORD = "your_pass"
+$psql = "C:\Program Files\PostgreSQL\16\bin\psql.exe"
+$log  = "C:\jobs\move_rows.log"
+$csv  = "C:\jobs\transfer.csv"
+$ids  = "C:\jobs\transfer_ids.txt"
 
-Title: "Automation in Every Pocket"
-Tagline: Powered by Appium — one framework, every device
-Key lines: Appium at the core · Android + iOS, one codebase · Real devices & emulators · Mobile suites wired into CI
-Visual cue: phone icon, pillar number "01"
+"$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - run started" | Add-Content $log
 
-Slide 2 — UI Online Automation
+# 1. Capture IDs of Success rows that haven't been transferred yet
+& $psql -h localhost -U your_user -d ABC -t -A -c "SELECT id FROM abc WHERE status = 'Success' AND transferred_at IS NULL" | Set-Content $ids
 
-Title: "The Web, Tested at Speed"
-Tagline: Puppeteer-driven automation for every critical journey
-Key lines: Puppeteer as the engine · End-to-end user journeys · Headless runs, faster feedback · Regression on every release
-Visual cue: browser/globe icon, pillar number "02"
+$idList = (Get-Content $ids | Where-Object { $_ -match '\d' }) -join ','
 
-Slide 3 — API Automation
+if ($idList) {
+    # 2. Copy those rows out — exclude the marker column so it matches xyz's schema
+    & $psql -h localhost -U your_user -d ABC -c "\copy (SELECT id, name, status FROM abc WHERE id IN ($idList)) TO '$csv' WITH CSV"
 
-Title: "Testing Beneath the Surface"
-Tagline: Fast, stable, shift-left — catch it before the UI ever sees it
-Key lines: Contract & schema validation · Service-level regression · Faster than UI, more stable than UI · API-first, shift-left mindset
-Visual cue: plug/network icon, pillar number "03"
+    # 3. Insert into xyz
+    & $psql -h localhost -U your_user -d XYZ -c "\copy xyz FROM '$csv' WITH CSV"
 
-Slide 4 — Other Automation
+    # 4. Mark as transferred only if insert succeeded (rows stay in abc)
+    if ($LASTEXITCODE -eq 0) {
+        & $psql -h localhost -U your_user -d ABC -c "UPDATE abc SET transferred_at = NOW() WHERE id IN ($idList)"
+        "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - copied rows: $idList" | Add-Content $log
+    } else {
+        "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - INSERT FAILED, will retry next run: $idList" | Add-Content $log
+    }
+} else {
+    "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - nothing to copy" | Add-Content $log
+}
 
-Title: "Beyond the Script"
-Tagline: GenAI and smart initiatives that multiply the team's reach
-Key lines: GenAI-assisted test generation · Self-healing automation · Intelligent failure triage · Automating the un-automated
-Visual cue: sparkle/robot icon, pillar number "04"
-
-If you want a lead-in slide tying them together, a simple banner works: "Four Pillars. One Goal: Quality at Speed — FY2026-27" with the four icons in a row.
-Want alternative title options for any pillar, or shorter/longer versions of the key lines?
-
-    Slide 5 — The Testing Knowledge Bank
-
-Title: "One Brain for All Our Testing Knowledge"
-Tagline: An LLM-powered knowledge bank — ask it anything, it knows our testing world
-Key lines: Code, wikis & setup docs — unified · LLM-compiled, self-maintaining wiki · Ask questions, get grounded answers · Every insight filed back — knowledge that compounds
-Visual cue: brain/network-graph icon, pillar number "05"
+Remove-Item $csv, $ids -ErrorAction SilentlyContinue
