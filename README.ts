@@ -41,3 +41,6 @@ localhost:5432:XYZ:your_user:your_pass
 
 # Lock it down so only SYSTEM and Administrators can read it
 icacls "$pgpassDir\pgpass.conf" /inheritance:r /grant "SYSTEM:R" /grant "Administrators:F"
+
+powershell -ExecutionPolicy Bypass -File C:\jobs\MoveSuccessRows.ps1
+Get-Content C:\jobs\move_rows.log -Tail 2
