@@ -44,3 +44,6 @@ icacls "$pgpassDir\pgpass.conf" /inheritance:r /grant "SYSTEM:R" /grant "Adminis
 
 powershell -ExecutionPolicy Bypass -File C:\jobs\MoveSuccessRows.ps1
 Get-Content C:\jobs\move_rows.log -Tail 2
+
+New-Item -ItemType Directory -Path "$env:APPDATA\postgresql" -Force
+Copy-Item "C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql\pgpass.conf" "$env:APPDATA\postgresql\pgpass.conf"
