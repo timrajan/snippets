@@ -47,3 +47,7 @@ Get-Content C:\jobs\move_rows.log -Tail 2
 
 New-Item -ItemType Directory -Path "$env:APPDATA\postgresql" -Force
 Copy-Item "C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql\pgpass.conf" "$env:APPDATA\postgresql\pgpass.conf"
+
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -w -h localhost -U your_user -d ABC -c "\d abc"
+
+& $psql -w -h localhost -U your_user -d ABC -c "\copy (SELECT id, order_ref, amount, status, created_on FROM abc WHERE id IN ($idList)) TO '$csv' WITH CSV"
