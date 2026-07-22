@@ -51,3 +51,8 @@ Copy-Item "C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql\p
 & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -w -h localhost -U your_user -d ABC -c "\d abc"
 
 & $psql -w -h localhost -U your_user -d ABC -c "\copy (SELECT id, order_ref, amount, status, created_on FROM abc WHERE id IN ($idList)) TO '$csv' WITH CSV"
+
+
+$idRows = & $psql -w -h localhost -U your_user -d ABC -t -A -c "SELECT id FROM abc WHERE status = 'Success' AND transferred_at IS NULL"
+
+$idList = ($idRows | Where-Object { $_ -match '\d' }) -join ','
