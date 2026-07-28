@@ -1,5 +1,1 @@
-> tsc *
-
-error TS6231: Could not resolve the path '*' with the extensions: '.ts', '.tsx', '.d.ts', '.cts', '.d.cts', '.mts', '.d.mts'.
-  The file is in the program because:
-    Root file specified for compilation
+"Our Azure DevOps build agent on <machine name> started failing pipeline steps around <break date> with network errors ('unable to get packaging URIs') when calling https://pkgs.dev.azure.com — the same date the machine appears to have had a reboot/maintenance event and its agent service account profile was partially reset. The agent is configured with an authenticated proxy (.proxy and .proxy.credentials files in the agent folder), so we need to verify: (1) whether the proxy account's password was rotated around that date, and (2) whether the proxy/firewall currently allows this machine to reach pkgs.dev.azure.com. If the credentials rotated, please provide the current proxy account details so we can re-run the agent's proxy configuration and restart the service."
