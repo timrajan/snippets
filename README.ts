@@ -1,1 +1,8 @@
-"Our Azure DevOps build agent on <machine name> started failing pipeline steps around <break date> with network errors ('unable to get packaging URIs') when calling https://pkgs.dev.azure.com — the same date the machine appears to have had a reboot/maintenance event and its agent service account profile was partially reset. The agent is configured with an authenticated proxy (.proxy and .proxy.credentials files in the agent folder), so we need to verify: (1) whether the proxy account's password was rotated around that date, and (2) whether the proxy/firewall currently allows this machine to reach pkgs.dev.azure.com. If the credentials rotated, please provide the current proxy account details so we can re-run the agent's proxy configuration and restart the service."
+Gather two things first: the proxy account's username/password from infra (they confirmed it never rotates, so they have it), and an ADO PAT with Agent Pools (read & manage) scope — created by you or whoever administers the agent pool.
+Stop the agent service.
+In the agent root, from an admin prompt: .\config.cmd remove (it'll ask for the PAT to deregister).
+Reconfigure with proxy included:
+.\config.cmd --url https://dev.azure.com/yourorg --auth pat --token <PAT> --pool <your-pool> --agent <agent-name> --runAsService --windowsLogonAccount <service-account> --proxyurl http://your-proxy:port --proxyusername "<proxy-user>" --proxypassword "<proxy-pass>"
+
+(or run .\config.cmd bare and answer the prompts — same result). Reuse the same pool and agent name so your pipelines don't need touching. This re-stores the proxy credential fresh in the (now-healthy) profile.
+5. Verify the agent shows Online in the ADO pool view,
