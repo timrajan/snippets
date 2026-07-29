@@ -1,4 +1,2 @@
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'ClientData'
-ORDER BY ordinal_position;
+powershell -ExecutionPolicy Bypass -File C:\jobs\MoveSuccessRows.ps1
+Get-Content C:\jobs\move_rows.log -Tail 5
