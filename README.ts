@@ -1,1 +1,1 @@
-When attaching existing entities, ensure that only one entity instance with a given key value is attached. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the conflicting key values.
+string.Join(" | ", _db.ChangeTracker.Entries<TestData>().Select(e => e.Entity.Id + ":" + e.Entity.TestId + ":" + e.State))
