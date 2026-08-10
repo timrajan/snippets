@@ -1,5 +1,8 @@
-$idsRaw = & $psql -w -h localhost -U your_user -d ABC -t -A -c "SELECT id FROM abc WHERE status = 'Success' AND transferred_at IS NULL" 2>&1
-"$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - step1 exit=$LASTEXITCODE raw: $idsRaw" | Add-Content $log
-$idList = ($idsRaw | Where-Object { $_ -match '^\d+$' }) -join ','
-
-$env:PGPASSWORD = (Get-Content "C:\jobs\pgpassword.txt" -Raw).Trim()
+SELECT c.conname,
+       c.contype,
+       pg_get_constraintdef(c.oid) AS definition
+FROM   pg_constraint c
+JOIN   pg_class      t ON t.oid = c.conrelid
+JOIN   pg_namespace  n ON n.oid = t.relnamespace
+WHERE  t.relname = 'testdata'
+AND    n.nspname = 'public';
