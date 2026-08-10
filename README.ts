@@ -1,8 +1,3 @@
-SELECT c.conname,
-       c.contype,
-       pg_get_constraintdef(c.oid) AS definition
-FROM   pg_constraint c
-JOIN   pg_class      t ON t.oid = c.conrelid
-JOIN   pg_namespace  n ON n.oid = t.relnamespace
-WHERE  t.relname = 'testdata'
-AND    n.nspname = 'public';
+var et = _db.Model.FindEntityType(typeof(TestData))!;
+foreach (var k in et.GetKeys())
+    Console.WriteLine($"{(k.IsPrimaryKey() ? "PK" : "AK")}: {string.Join(",", k.Properties.Select(p => p.Name))}");
