@@ -1,27 +1,28 @@
-Block C — mousedown handler
+Block D — new keydown listener
 
-In the existing mousedown listener, replace everything from var el = __recFindInteractive(e.target); down to var role = __recGetRole(el); with this. Note the tag guard has moved below the combobox checks.
+Append after the input listener. Handles arrow-down-then-Enter, which fires no click at all.
 
 js
-        var el = __recFindInteractive(e.target);
-        var role = __recGetRole(el);
+// Keyboard selection from a combobox: no click fires, so read the highlighted
+// option off aria-activedescendant instead.
+document.addEventListener('keydown', function(e) {
+    try {
+        if (!window.__recorderActive) return;
+        if (e.key !== 'Enter' && e.key !== 'Tab') return;
 
-        // --- Combobox: an option was chosen -----------------------------
-        if (role === 'option' || role === 'menuitem' ||
-            role === 'menuitemradio' || role === 'treeitem') {
-            __recEmitComboSelect(__recFindComboForOption(el), el);
-            return;
-        }
+        var el = e.target;
+        if (!el || !el.closest) return;
 
-        // --- Combobox: the list was opened ------------------------------
-        // Opening a dropdown is not a test step on its own. Remember it and
-        // wait for the option. (We never preventDefault, so the UI still opens.)
-        if (__recIsComboTrigger(el)) {
-            window.__recCombo = { el: el, name: __recGetControlName(el), at: Date.now() };
-            return;
-        }
+        var combo = (el.getAttribute && el.getAttribute('role') === 'combobox')
+            ? el
+            : el.closest('[role=""combobox""]');
+        if (!combo) return;
+        if (combo.getAttribute('aria-expanded') !== 'true') return;
 
-        var tag = el.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        var adId = combo.getAttribute('aria-activedescendant');
+        var opt = adId ? document.getElementById(adId) : null;
+        if (!opt) return;
 
-Then the existing if (role === 'radio' || role === 'checkbox') return; and the __recorderLog.push({...}) continue unchanged.
+        __recEmitComboSelect(combo, opt);
+    } catch (ex) {}
+}, true);
