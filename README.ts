@@ -1,508 +1,88 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Windows;
-using TestRecorder.Models;
-using TestRecorder.Services;
-using MessageBox = System.Windows.MessageBox;
-using MediaBrushes = System.Windows.Media.Brushes;
-using System.Windows.Controls;
+That message comes from a different place than the patch — it's the default: case in OnApplyValidationClick, which is the highlight & validate path, not the recording path. The Block A–G patch never touches it. Two separate things are broken here.
 
-namespace TestRecorder;
-
-public class FieldMapping : INotifyPropertyChanged
+1. The switch only knows five roles
+csharp
+switch (_pendingValidationRole)
 {
-    private string _fieldName = string.Empty;
-    private string _fieldValue = string.Empty;
-    private string _dataTableHeader = string.Empty;
-    private string _actionType = "type";
-
-    public string FieldName
-    {
-        get => _fieldName;
-        set
-        {
-            if (_fieldName == value) return;
-            _fieldName = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string FieldValue
-    {
-        get => _fieldValue;
-        set
-        {
-            if (_fieldValue == value) return;
-            _fieldValue = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string DataTableHeader
-    {
-        get => _dataTableHeader;
-        set
-        {
-            if (_dataTableHeader == value) return;
-            _dataTableHeader = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public string ActionType
-    {
-        get => _actionType;
-        set
-        {
-            if (_actionType == value) return;
-            _actionType = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    case "radio":
+    case "button":
+    case "header":
+    case "heading":
+    case "h1":
+    default: // "'{role}' is not mapped yet."
 }
 
-public partial class RecorderToolbar : Window
+combobox isn't there — nor are textbox, link, checkbox, or table, all of which you already have working ComponentMap entries for. Note h2 through h6 also fall through to default, even though IsHeaderRole returns true for them and shows the level panel. So a validated <h2> shows the dropdown and then tells you it isn't mapped.
+
+2. Highlight mode can't see comboboxes either
+
+Even with the switch fixed, resolveTargetElement in EnableHighlightModeAsync has the exact problem Block B fixed on the recording side — it stops at button, a, input, select, textarea or role in {button, link, checkbox, radio, tab}. role="combobox" isn't in that list, so it walks past your combobox to document.body, gives up, and returns the raw elementFromPoint result — usually an inner <span> or <div>. getRole then returns the tag name, and you get "'span' is not mapped yet."
+
+If that's the message you're actually seeing, fix #2 first — #1 alone won't help.
+
+Fix the JS ancestor walk — replace the "nearest interactive ancestor" block inside resolveTargetElement:
+
+js
+        var cur = el;
+        while (cur && cur !== document.body) {
+            var role = cur.getAttribute && cur.getAttribute('role');
+            if (role === 'combobox' || role === 'option' || role === 'menuitem' ||
+                role === 'treeitem' || role === 'switch') return cur;
+
+            var tag = (cur.tagName || '').toLowerCase();
+            if (tag === 'button' || tag === 'a' || tag === 'input' || tag === 'select' || tag === 'textarea') return cur;
+            if (role === 'button' || role === 'link' || role === 'checkbox' || role === 'radio' || role === 'tab') return cur;
+
+            cur = cur.parentElement;
+        }
+
+And in getAccessibleName, guard the innerText fallback — otherwise a combobox validates against its selected value rather than its label, which will pass on the recording machine and fail everywhere else:
+
+js
+            var isCombo = el.getAttribute && el.getAttribute('role') === 'combobox';
+            if (!isCombo) {
+                var tc = (el.innerText || el.textContent || '').trim();
+                if (tc) return tc;
+            }
+3. Better: stop hand-maintaining the switch
+
+The switch is duplicating what ComponentMap.json already knows. Add to AxMapperService:
+
+csharp
+public string? GetComponentName(string role)
 {
-    private readonly TestCase _testCase;
-    private readonly string _outputFolder;
-    private readonly FileGeneratorService _fileGenerator;
-    private readonly CdpRecorderService _recorderService;
-    private readonly List<string> _recordedLines = new();
+    var normalized = NormalizeRole(role);
+    return _componentMap.TryGetValue(normalized, out var config)
+        ? config["component"]?.ToString()
+        : null;
+}
 
-    private bool _isStopping;
-    private bool _isHighlightBusy;
+Store the mapper on the toolbar (private readonly AxMapperService _axMapper;, assigned in the constructor — you're already receiving it, just passing it straight through), then replace the entire switch with:
 
-    private string _pendingValidationRole = string.Empty;
-    private string _pendingValidationName = string.Empty;
-
-    private string CsvPath => Path.Combine(_outputFolder, "test-data.csv");
-
-    public ObservableCollection<FieldMapping> Fields { get; } = new();
-
-    public RecorderToolbar(
-        TestCase testCase,
-        string outputFolder,
-        AxMapperService axMapper,
-        FileGeneratorService fileGenerator)
-    {
-        InitializeComponent();
-
-        _testCase = testCase;
-        _outputFolder = outputFolder;
-        _fileGenerator = fileGenerator;
-        _recorderService = new CdpRecorderService(axMapper);
-
-        FieldItemsControl.ItemsSource = Fields;
-
-        PageLabel.Text = string.IsNullOrWhiteSpace(_testCase.Id) ? "Recording" : _testCase.Id;
-        MethodLabel.Text = "recordedSteps";
-
-        _recorderService.LineRecorded += OnLineRecorded;
-        _recorderService.LineCountUpdated += OnLineCountUpdated;
-        _recorderService.ValidationTargetCaptured += OnValidationTargetCaptured;
-
-        Loaded += async (_, _) => await StartRecordingAsync();
-    }
-
-    private async Task StartRecordingAsync()
-    {
-        var connected = await _recorderService.ConnectAsync();
-        if (!connected)
-        {
-            MessageBox.Show(
-                "Could not connect to Chrome.\nStart Chrome with --remote-debugging-port=9222 and try again.",
-                "Connection Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-
-            Close();
-        }
-    }
-
-    private void OnLineRecorded(string line)
-    {
-        Dispatcher.Invoke(() => _recordedLines.Add(line));
-    }
-
-    private void OnLineCountUpdated(int lineCount)
-    {
-        Dispatcher.Invoke(() => { LinesLabel.Text = $"Lines captured: {lineCount}"; });
-    }
-
-    private void OnValidationTargetCaptured(string role, string name)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            _pendingValidationRole = string.IsNullOrWhiteSpace(role) ? string.Empty : role.ToLowerInvariant();
-            _pendingValidationName = name;
-
-            ValidationElementTypeText.Text = string.IsNullOrWhiteSpace(role) ? "Unknown" : role;
-            ValidationElementNameText.Text = string.IsNullOrWhiteSpace(name) ? "(no accessible name)" : name;
-
-            IsDisplayedCheckBox.IsChecked = false;
-            ApplyValidationButton.IsEnabled = false;
-
-            HeaderLevelComboBox.SelectedIndex = 0;
-            HeaderLevelPanel.Visibility = IsHeaderRole(_pendingValidationRole)
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-            ValidationPane.Visibility = Visibility.Visible;
-
-            _isHighlightBusy = false;
-            HighlightButton.IsEnabled = true;
-            HighlightButton.Content = "HIGHLIGHT & VALIDATE";
-        });
-    }
-
-    private async void OnHighlightClick(object sender, RoutedEventArgs e)
-    {
-        if (_isHighlightBusy || _isStopping)
-        {
-            return;
-        }
-
-        try
-        {
-            _isHighlightBusy = true;
-            HighlightButton.IsEnabled = false;
-            HighlightButton.Content = "DRAW IN BROWSER...";
-            await _recorderService.EnableHighlightModeAsync();
-        }
-        catch (Exception ex)
-        {
-            _isHighlightBusy = false;
-            HighlightButton.IsEnabled = true;
-            HighlightButton.Content = "HIGHLIGHT & VALIDATE";
-            MessageBox.Show($"Failed to start highlight mode: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private static bool IsHeaderRole(string role)
-    {
-        return role == "header" ||
-               role == "heading" ||
-               role == "h1" || role == "h2" || role == "h3" ||
-               role == "h4" || role == "h5" || role == "h6";
-    }
-
-    private void OnValidationOptionChanged(object sender, RoutedEventArgs e)
-    {
-        ApplyValidationButton.IsEnabled = IsDisplayedCheckBox.IsChecked == true;
-    }
-
-    private void OnCancelValidationClick(object sender, RoutedEventArgs e)
-    {
-        ValidationPane.Visibility = Visibility.Collapsed;
-        HeaderLevelPanel.Visibility = Visibility.Collapsed;
-        HeaderLevelComboBox.SelectedIndex = 0;
-        _pendingValidationRole = string.Empty;
-        _pendingValidationName = string.Empty;
-    }
-
-    private string GetSelectedHeaderLevel()
-    {
-        if (HeaderLevelComboBox.SelectedItem is ComboBoxItem item)
-        {
-            return item.Content?.ToString()?.Trim().ToLowerInvariant() ?? "default";
-        }
-
-        return "default";
-    }
-
-    private void OnApplyValidationClick(object sender, RoutedEventArgs e)
-    {
-        if (IsDisplayedCheckBox.IsChecked != true)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(_pendingValidationName))
-        {
-            MessageBox.Show("Captured element has no accessible name.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
+csharp
         string line;
 
-        switch (_pendingValidationRole)
+        if (IsHeaderRole(_pendingValidationRole))
         {
-            case "radio": //This will be done after the demo
-                line = $"await RadioComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                break;
-
-            case "button":
-                line = $"await ButtonComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                break;
-
-            case "header":
-                var selectedLevel = GetSelectedHeaderLevel();
-                if (selectedLevel == "default")
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                else if (selectedLevel.Length == 2 &&
-                         selectedLevel[0] == 'h' &&
-                         int.TryParse(selectedLevel[1].ToString(), out var level) &&
-                         level >= 1 && level <= 6)
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\", {level});";
-                }
-                else
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                break;
-
-            case "heading":
-                selectedLevel = GetSelectedHeaderLevel();
-                if (selectedLevel == "default")
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                else if (selectedLevel.Length == 2 &&
-                         selectedLevel[0] == 'h' &&
-                         int.TryParse(selectedLevel[1].ToString(), out var level) &&
-                         level >= 1 && level <= 6)
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\", {level});";
-                }
-                else
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                break;
-
-            case "h1":
-                selectedLevel = GetSelectedHeaderLevel();
-                if (selectedLevel == "default")
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                else if (selectedLevel.Length == 2 &&
-                         selectedLevel[0] == 'h' &&
-                         int.TryParse(selectedLevel[1].ToString(), out var level) &&
-                         level >= 1 && level <= 6)
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\", {level});";
-                }
-                else
-                {
-                    line = $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
-                }
-                break;
-
-            default:
-                MessageBox.Show($"'{_pendingValidationRole}' is not mapped yet.", "Validation", MessageBoxButton.OK, MessageBoxImage.Information);
+            var selected = GetSelectedHeaderLevel();
+            line = selected.Length == 2 && selected[0] == 'h' &&
+                   int.TryParse(selected[1].ToString(), out var level) && level is >= 1 and <= 6
+                ? $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\", {level});"
+                : $"await HeaderComponent(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
+        }
+        else
+        {
+            var component = _axMapper.GetComponentName(_pendingValidationRole);
+            if (string.IsNullOrEmpty(component))
+            {
+                MessageBox.Show($"'{_pendingValidationRole}' is not mapped yet.", "Validation",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
-        }
-
-        if (!_recordedLines.Contains(line))
-        {
-            _recordedLines.Add(line);
-            LinesLabel.Text = $"Lines captured: {_recordedLines.Count}";
-        }
-
-        ValidationPane.Visibility = Visibility.Collapsed;
-        HeaderLevelPanel.Visibility = Visibility.Collapsed;
-        HeaderLevelComboBox.SelectedIndex = 0;
-        _pendingValidationRole = string.Empty;
-        _pendingValidationName = string.Empty;
-    }
-
-    private static string EscapeTsString(string value)
-    {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
-    private async void OnStopClick(object sender, RoutedEventArgs e)
-    {
-        if (_isStopping)
-        {
-            return;
-        }
-
-        try
-        {
-            _isStopping = true;
-            StopButton.IsEnabled = false;
-            HighlightButton.IsEnabled = false;
-            ValidationPane.Visibility = Visibility.Collapsed;
-
-            await _recorderService.StopAsync();
-            _recorderService.ExportCsv(_outputFolder);
-
-            LoadFieldsFromCsv(CsvPath);
-
-            FieldEditorPanel.Visibility = Visibility.Visible;
-            RecordingDot.Fill = MediaBrushes.Gray;
-            LinesLabel.Text = $"Recording stopped. Fields captured: {Fields.Count}";
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Failed to stop recording: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            StopButton.IsEnabled = true;
-            HighlightButton.IsEnabled = true;
-            _isStopping = false;
-        }
-    }
-
-    private void OnGenerateCodeClick(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            SaveFieldsToCsv(CsvPath);
-            _fileGenerator.GeneratePageFileFromCsv(_testCase, _outputFolder, _recordedLines, CsvPath);
-            Close();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Failed to generate code: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void LoadFieldsFromCsv(string csvPath)
-    {
-        Fields.Clear();
-
-        if (!File.Exists(csvPath))
-        {
-            return;
-        }
-
-        var lines = File.ReadAllLines(csvPath);
-        foreach (var line in lines.Skip(1))
-        {
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                continue;
             }
 
-            var parts = ParseCsvLine(line);
-            if (parts.Count < 3)
-            {
-                continue;
-            }
-
-            var fieldName = GetCsvColumn(parts, 1).Trim();
-            var fieldValue = GetCsvColumn(parts, 2).Trim();
-            var actionType = GetCsvColumn(parts, 3).Trim().ToLowerInvariant();
-            var dataTableHeader = GetCsvColumn(parts, 5).Trim();
-
-            if (string.IsNullOrWhiteSpace(fieldName))
-            {
-                continue;
-            }
-
-            Fields.Add(new FieldMapping
-            {
-                FieldName = fieldName,
-                FieldValue = fieldValue,
-                ActionType = string.IsNullOrWhiteSpace(actionType) ? "type" : actionType,
-                DataTableHeader = string.IsNullOrWhiteSpace(dataTableHeader)
-                    ? SuggestDataTableHeader(fieldName)
-                    : dataTableHeader
-            });
-        }
-    }
-
-
-    private static string GetCsvColumn(IReadOnlyList<string> columns, int index)
-    {
-        return index >= 0 && index < columns.Count ? columns[index] : string.Empty;
-    }
-
-    private static List<string> ParseCsvLine(string line)
-    {
-        var result = new List<string>();
-        var sb = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        for (var i = 0; i < line.Length; i++)
-        {
-            var c = line[i];
-
-            if (c == '"')
-            {
-                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    sb.Append('"');
-                    i++;
-                }
-                else
-                {
-                    inQuotes = !inQuotes;
-                }
-
-                continue;
-            }
-
-            if (c == ',' && !inQuotes)
-            {
-                result.Add(sb.ToString());
-                sb.Clear();
-                continue;
-            }
-
-            sb.Append(c);
+            line = $"await {component}(this.#page, \"{EscapeTsString(_pendingValidationName)}\");";
         }
 
-        result.Add(sb.ToString());
-        return result;
-    }
+That collapses ~70 lines to ~20, picks up combobox/textbox/link/checkbox/table for free, fixes h2–h6, and means adding a role to ComponentMap.json in future works in both the recorder and the validator without a code change.
 
-    private static string SuggestDataTableHeader(string fieldName)
-    {
-        var cleaned = fieldName
-            .Replace("Enter your ", "")
-            .Replace("Select your ", "")
-            .Replace("Choose your ", "")
-            .Replace("Enter ", "")
-            .Replace("Select ", "")
-            .Trim();
-
-        var words = cleaned.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-        return string.Join("", words.Select(w => char.ToUpper(w[0]) + w[1..].ToLower()));
-    }
-
-    private void SaveFieldsToCsv(string csvPath)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("StepNumber,FieldName,FieldValue,ActionType,Timestamp,DataTableHeader");
-
-        var stepNumber = 1;
-        foreach (var field in Fields)
-        {
-            var actionType = string.IsNullOrWhiteSpace(field.ActionType) ? "type" : field.ActionType;
-
-            sb.AppendLine(
-                $"{stepNumber}," +
-                $"{EscapeCsvValue(field.FieldName)}," +
-                $"{EscapeCsvValue(field.FieldValue)}," +
-                $"{EscapeCsvValue(actionType)}," +
-                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}," +
-                $"{EscapeCsvValue(field.DataTableHeader)}");
-
-            stepNumber++;
-        }
-
-        File.WriteAllText(csvPath, sb.ToString());
-    }
-
-    private static string EscapeCsvValue(string value)
-    {
-        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
-        {
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
-        return value;
-    }
-}
+One thing to note about the emitted line either way: await ButtonComponent(this.#page, "X"); constructs the component but doesn't assert anything. If your components throw on not-found that's a valid implicit assertion — if they don't, these validation lines are no-ops. Worth checking, since a silently-passing validation is worse than none.
