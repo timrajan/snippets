@@ -1,3 +1,6 @@
+ Microsoft.EntityFrameworkCore.Query[10100]
+      An exception occurred while iterating over the results of a query for context type ''.
+
 // A combobox's inner text is its currently *selected value*, and a
             // <select>'s is every option concatenated — neither is the field name.
             var tag = (el.tagName || '').toLowerCase();
