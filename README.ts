@@ -1,3 +1,14 @@
+// A combobox's inner text is its currently *selected value*, and a
+            // <select>'s is every option concatenated — neither is the field name.
+            var tag = (el.tagName || '').toLowerCase();
+            var skipText = tag === 'select' ||
+                           (el.getAttribute && el.getAttribute('role') === 'combobox');
+            if (!skipText) {
+                var tc = (el.innerText || el.textContent || '').trim();
+                if (tc) return tc;
+            }
+
+
 That message comes from a different place than the patch — it's the default: case in OnApplyValidationClick, which is the highlight & validate path, not the recording path. The Block A–G patch never touches it. Two separate things are broken here.
 
 1. The switch only knows five roles
