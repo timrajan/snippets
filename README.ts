@@ -1,72 +1,119 @@
-Block E — input handler guard
+using System.IO;
+using Newtonsoft.Json.Linq;
 
-In the input listener, immediately after the existing type exclusion list (if (t === 'radio' || ... ) return;), add:
+namespace TestRecorder.Services;
 
-js
-            // Ignore the echo when the library writes the chosen option back
-            // into the combobox's own text field.
-            if (window.__recComboSuppress &&
-                Date.now() < window.__recComboSuppress.until &&
-                (el === window.__recComboSuppress.el ||
-                 (el.closest && el.closest('[role=""combobox""]') === window.__recComboSuppress.el))) return;
-Block F — EmitAction, C#
+// =============================================================================
+// AxMapperService
+// =============================================================================
+//
+// PURPOSE
+// -------
+// Converts a single captured user action (from CdpRecorderService) into one line of TypeScript test code that will be written into the generated
+// page.ts file. This service is the bridge between "what the user did in the browser" and "what the generated Puppeteer code looks like in accordance with ATO's
+// Automation components".
+//
+// INPUT  : 1. Role (e.g. "button", "text", "email" - Basically the type of web element/component)
+//          2. Accessible name  (e.g. "First name *"), action type ("click" / "type" / "change" /
+//          3. An optional value (e.g. ABN Number typed in ABN Text Field).
+// OUTPUT : A single line of Typescript code for every user action in the web page , e.g.
+//            await TextboxComponent(this.#page, "Amount").type("100");
 
-Insert immediately after the var groupName = Clean(rawGroup); line, before the radio-name fallback.
+public class AxMapperService
+{
+    private readonly Dictionary<string, JObject> _componentMap;
+    private const int SmartWaitThresholdMs = 1000;
+    private const int SmartWaitRoundMs = 100;
 
-csharp
-        // A combobox selection is semantically identical to a <select> change:
-        // field = combobox name, value = chosen option. Normalise it here so the
-        // CSV writer and AxMapper need no new cases.
-        if (type == "comboselect")
+    public AxMapperService()
+    {
+        var mapPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "ComponentMap.json");
+        DebugLogger.Log($"AxMapper: loading ComponentMap from {mapPath}");
+        var json = File.ReadAllText(mapPath);
+        _componentMap = JObject.Parse(json).ToObject<Dictionary<string, JObject>>() ?? new();
+        DebugLogger.Log($"AxMapper: loaded {_componentMap.Count} role mappings: [{string.Join(", ", _componentMap.Keys)}]");
+    }
+
+    public string? MapToComponentLine(string role, string accessibleName, string actionType, string value = "", string groupName = "", int tablistIndex = -1)
+    {
+        var normalizedRole = NormalizeRole(role);
+        DebugLogger.Log($"AxMapper: role='{role}' -> normalized='{normalizedRole}', action={actionType}, name='{accessibleName}', group='{groupName}', tablistIndex={tablistIndex}");
+
+        if (_componentMap.TryGetValue(normalizedRole, out var config))
         {
-            type = "change";
-            role = "combobox";
+            var componentName = config["component"]?.ToString() ?? "";
+
+            // Radio: component arg is the group name, selected option name goes to .select(...)
+            if (normalizedRole == "radio" && actionType == "click")
+            {
+                var group = !string.IsNullOrWhiteSpace(groupName) ? groupName : accessibleName;
+                return $"await {componentName}(this.#page, \"{group}\").select(\"{accessibleName}\");";
+            }
+
+            // Checkbox: emit .check() or .uncheck() based on the new state
+            if (normalizedRole == "checkbox" && (actionType == "check" || actionType == "uncheck"))
+                return $"await {componentName}(this.#page, \"{accessibleName}\").{actionType}();"; // ✅ Fixed
+
+            // Tab: component args are (page, tablist index); tab label goes to .click(...)
+            if (normalizedRole == "tab" && actionType == "click" && tablistIndex >= 0)
+                return $"await {componentName}(this.#page, {tablistIndex}).click(\"{accessibleName}\");";
+
+            // General click actions (non-radio)
+            if (actionType == "click")
+                return $"await {componentName}(this.#page, \"{accessibleName}\").click();";
+
+            // Textbox typing
+            if (normalizedRole == "textbox" && actionType == "type")
+                return $"await {componentName}(this.#page, \"{accessibleName}\").type(\"{value}\");"; // ✅ Fixed
+
+            // Combobox selection
+            if (normalizedRole == "combobox" && (actionType == "change" || actionType == "select"))
+                return $"await {componentName}(this.#page, \"{accessibleName}\").select(\"{value}\");"; // ✅ Fixed
+
+            // Fallback for other mapped components
+            return actionType switch
+            {
+                "type" => $"await {componentName}(this.#page, \"{accessibleName}\").type(\"{value}\");",
+                "select" or "change" => $"await {componentName}(this.#page, \"{accessibleName}\").select(\"{value}\");",
+                _ => null
+            };
         }
-Block G — ProcessLoggedActionsAsync, C#
 
-Replace the final foreach (var action in actions) loop with this. The added block fixes the ordering inversion — without it, typing a filter and picking an option emits the selection before the text.
-
-csharp
-        var actions = JArray.Parse(value);
-        foreach (var action in actions)
+        // Fallback for unmapped roles — still generate a line so clicks aren't silently lost
+        DebugLogger.Log($"AxMapper: no ComponentMap entry for '{normalizedRole}' — using fallback");
+        return actionType switch
         {
-            var type = action["type"]?.ToString() ?? "";
-            var name = action["name"]?.ToString() ?? "";
+            "click" => $"await page.getByRole('{normalizedRole}', {{ name: '{accessibleName}' }}).click();",
+            "type" => $"await page.getByRole('{normalizedRole}', {{ name: '{accessibleName}' }}).fill('{value}');",
+            "check" or "uncheck" => $"await page.getByRole('{normalizedRole}', {{ name: '{accessibleName}' }}).{actionType}();",
+            _ => null
+        };
+    }
 
-            // Buffer type events — only emit once typing stops
-            if (type == "type")
-            {
-                DebugLogger.Log($"Poll: buffering type event for field '{name}' (waiting for typing to stop)");
-                _pendingTypes[name] = action;
-                continue;
-            }
+    public string GenerateSmartWait(DateTime lastActionTime)
+    {
+        var elapsedMs = (DateTime.Now - lastActionTime).TotalMilliseconds;
+        var rounded = (int)(Math.Round(elapsedMs / SmartWaitRoundMs) * SmartWaitRoundMs);
+        return $"await waitForTimeout({rounded});";
+    }
 
-            // Skip change events for fields that already have a pending or just-flushed type
-            if (type == "change" && (_pendingTypes.ContainsKey(name) || flushedFields.Contains(name)))
-            {
-                DebugLogger.Log($"Poll: SKIPPED change event for '{name}' (redundant with pending/flushed type)");
-                continue;
-            }
+    public bool RequiresSmartWait(DateTime lastActionTime)
+    {
+        return (DateTime.Now - lastActionTime).TotalMilliseconds > SmartWaitThresholdMs;
+    }
 
-            // Any non-type action ends typing. Flush what is buffered FIRST so the
-            // generated script preserves the order the user actually performed.
-            if (_pendingTypes.Count > 0)
-            {
-                DebugLogger.Log($"Poll: flushing {_pendingTypes.Count} pending type(s) ahead of '{type}' on '{name}'");
-                foreach (var pending in _pendingTypes.Values.ToList())
-                    EmitAction(pending);
-                foreach (var k in _pendingTypes.Keys.ToList())
-                    flushedFields.Add(k);
-                _pendingTypes.Clear();
-            }
-
-            EmitAction(action);
-        }
-One thing to verify on your side
-
-Block F routes combobox selections into MapToComponentLine("combobox", name, "change", value, "", -1). That only produces output if AxMapperService has:
-
-NormalizeRole("combobox") returning "combobox", and
-a change + combobox mapping.
-
-If your native <select> path normalises "select" to something else (e.g. "dropdown"), point the role = "combobox" assignment in Block F at that same value instead. If it's missing entirely you'll see DROPPED: no mapping found for role='combobox' in the debug log — that's the symptom to look for.
+    public string NormalizeRole(string role)
+    {
+        return role.ToLower() switch
+        {
+            "button" or "submit" or "reset" => "button",
+            "textbox" or "text" or "input" or "searchbox" or "textarea" or "email" or "password" or "number" or "tel" or "url" or "search" => "textbox",
+            "radio" or "radiobutton" => "radio",
+            "link" or "hyperlink" or "a" => "link",
+            "combobox" or "listbox" or "select" or "select-one" or "select-multiple" => "combobox",
+            "table" or "grid" => "table",
+            "checkbox" => "checkbox",
+            _ => role.ToLower()
+        };
+    }
+}
