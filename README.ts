@@ -1,17 +1,12 @@
-  @{
-      <partial name="_ValidationScriptsPartial" />
-  }
+const i = myDivContainer.querySelectorAll(".template-row").length;
+clone.querySelectorAll("input, select").forEach(el => {
+    el.value = "";
+    if (el.name) el.name = el.name.replace(/\[\d+\]/, `[${i}]`);
+    if (el.id)   el.id   = el.id.replace(/_\d+__/, `_${i}__`);
+});
+clone.querySelectorAll("[data-valmsg-for]").forEach(s =>
+    s.setAttribute("data-valmsg-for", s.getAttribute("data-valmsg-for").replace(/\[\d+\]/, `[${i}]`)));
 
-  <script>
-
-      const myDivContainer = document.getElementById("abc");
-      document.addEventListener('click', function(e) {
-          if(e.target.classList.contains("add-row")) {
-              const row = e.target.closest(".template-row");
-              const clone = row.cloneNode(true);
-
-              clone.querySelectorAll("input","select").forEach(el => el.value = "");
-
-              myDivContainer.appendChild(clone);
-          }
-      });
+const form = $(myDivContainer.closest("form"));
+form.removeData("validator").removeData("unobtrusiveValidation");
+$.validator.unobtrusive.parse(form);
