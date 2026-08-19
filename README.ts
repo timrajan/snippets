@@ -1,3 +1,17 @@
-By default Puppeteer forces an 800×600 viewport via the CDP Emulation.setDeviceMetricsOverride command, regardless of how big the actual browser window is. Passing zeros is the protocol's signal to clear that override:
+  @{
+      <partial name="_ValidationScriptsPartial" />
+  }
 
-width: 0, height: 0 — remove the size override, so the page renders at whatever the real browser window's content area is.
+  <script>
+
+      const myDivContainer = document.getElementById("abc");
+      document.addEventListener('click', function(e) {
+          if(e.target.classList.contains("add-row")) {
+              const row = e.target.closest(".template-row");
+              const clone = row.cloneNode(true);
+
+              clone.querySelectorAll("input","select").forEach(el => el.value = "");
+
+              myDivContainer.appendChild(clone);
+          }
+      });
