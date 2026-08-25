@@ -1,2 +1,12 @@
-[RegularExpression(@"^\d+$", ErrorMessage = "Only numbers are allowed in this field")]
-[StringLength(10, MinimumLength = 10, ErrorMessage = "Must be exactly 10 digits")]
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**\*.xml'
+    searchFolder: '$(PuppeteerDir)\test-results\junit'
+    mergeTestResults: true
+    failTaskOnFailedTests: true
+    failTaskOnMissingResultsFile: true
+  continueOnError: true
+  condition: succeededOrFailed()
+  timeoutInMinutes: 5
