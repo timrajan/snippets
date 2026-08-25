@@ -1,12 +1,7 @@
-- task: PublishTestResults@2
-  displayName: 'Publish Test Results'
-  inputs:
-    testResultsFormat: 'JUnit'
-    testResultsFiles: '**\*.xml'
-    searchFolder: '$(PuppeteerDir)\test-results\junit'
-    mergeTestResults: true
-    failTaskOnFailedTests: true
-    failTaskOnMissingResultsFile: true
-  continueOnError: true
-  condition: succeededOrFailed()
-  timeoutInMinutes: 5
+  TypeError: Cannot read properties of undefined (reading 'id')
+
+      291 |         testPlanID,
+      292 |         targetTestSuiteID,
+    > 293 |         points[points.length - 1].id.toString()
+          |                                   ^
+      294 |     );
