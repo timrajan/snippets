@@ -1,1 +1,8 @@
-Cannot write DateTime with Kind=Local to PostgreSQL type 'timestamp with time zone', only UTC is supported. Note that it's not possible to mix DateTimes with different Kinds in an array, range, or multirange. (Parameter 'value')
+ private List<MyModel> PendingQuery()
+ {            
+     var cutoff = DateTime.Now.AddHours(-1);
+
+     var allRecords = _stgcontext.testdata
+                            .AsNoTracking()
+                            .Where(x => x.status.ToLower() != "active" && x.created_at >= cutoff)
+                            .ToList();
