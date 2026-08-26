@@ -1,14 +1,1 @@
-[HttpGet]
-public IActionResult PendingRecordsData()
-{
-    try
-    {
-        var results = PendingQuery();
-        Response.Headers["Cache-Control"] = "no-store";
-        return Json(new { count = results.Count, rows = results });
-    }
-    catch (Exception ex)
-    {
-        return Json(new { error = ex.ToString() });
-    }
-}
+Cannot write DateTime with Kind=Local to PostgreSQL type 'timestamp with time zone', only UTC is supported. Note that it's not possible to mix DateTimes with different Kinds in an array, range, or multirange. (Parameter 'value')
