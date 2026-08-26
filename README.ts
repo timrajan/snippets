@@ -1,9 +1,10 @@
-.abc-bg-primary .popover-header,
-.abc-bg-primary .popover-body {
-    background-color: inherit;
-    color: #fff;
-}
+private IQueryable<YourExistingModel> PendingQuery()
+{
+    // created_at is timestamp WITHOUT time zone — local time, so Now not UtcNow
+    var cutoff = DateTime.Now.AddHours(-1);
 
-.abc-bg-primary .popover-arrow::after {
-    border-left-color: inherit;
+    return _context.YourExistingDbSet
+        .AsNoTracking()
+        .Where(x => x.Status.ToLower() == "new" && x.CreatedAt >= cutoff)
+        .OrderByDescending(x => x.CreatedAt);
 }
