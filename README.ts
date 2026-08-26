@@ -1,10 +1,17 @@
-private IQueryable<YourExistingModel> PendingQuery()
-{
-    // created_at is timestamp WITHOUT time zone — local time, so Now not UtcNow
-    var cutoff = DateTime.Now.AddHours(-1);
+[HttpGet]
+public IActionResult PendingRecords() => View();
 
-    return _context.YourExistingDbSet
-        .AsNoTracking()
-        .Where(x => x.Status.ToLower() == "new" && x.CreatedAt >= cutoff)
-        .OrderByDescending(x => x.CreatedAt);
+[HttpGet]
+public IActionResult PendingRecordsData()
+{
+    var results = PendingQuery();
+    Response.Headers["Cache-Control"] = "no-store";
+    return Json(new { count = results.Count, rows = results });
+}
+
+[HttpGet]
+public IActionResult PendingCount()
+{
+    Response.Headers["Cache-Control"] = "no-store";
+    return Json(new { count = PendingQuery().Count });
 }
