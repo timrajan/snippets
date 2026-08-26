@@ -1,10 +1,24 @@
-<table class="table table-striped table-bordered">
-    <thead>
-        <tr>
-            <th>Column One</th>
-            <th>Column Two</th>
-            <th>Column Three</th>
-        </tr>
-    </thead>
-    <tbody id="recordsBody"></tbody>
-</table>
+@section Scripts {
+<script>
+    var inFlight = false;
+
+    function loadPending() {
+        if (inFlight || document.hidden) return;
+        if ($('.popover.show').length) return;
+        inFlight = true;
+
+        $('#recordsBody').load('/TestClient/PendingRecordsData', function () {
+            $('[data-bs-toggle="popover"]').each(function () {
+                new bootstrap.Popover(this, { container: 'body', sanitize: false });
+            });
+            $('#lastUpdated').text(new Date().toLocaleTimeString());
+            inFlight = false;
+        });
+    }
+
+    $(function () {
+        loadPending();
+        setInterval(loadPending, 30000);
+    });
+</script>
+}
