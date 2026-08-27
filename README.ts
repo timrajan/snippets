@@ -1,24 +1,21 @@
 @section Scripts {
 <script>
-    var inFlight = false;
-
-    function loadPending() {
-        if (inFlight || document.hidden) return;
-        if ($('.popover.show').length) return;
-        inFlight = true;
-
-        $('#recordsBody').load('/TestClient/PendingRecordsData', function () {
-            $('[data-bs-toggle="popover"]').each(function () {
-                new bootstrap.Popover(this, { container: 'body', sanitize: false });
-            });
-            $('#lastUpdated').text(new Date().toLocaleTimeString());
-            inFlight = false;
+    function refreshPendingCount() {
+        if (document.hidden) return;
+        $.getJSON('/TestClient/PendingCount', function (d) {
+            $('#pendingBadge').text(d.count);
+            $('#pendingBtn').toggle(d.count > 0);
         });
     }
 
     $(function () {
-        loadPending();
-        setInterval(loadPending, 30000);
+        refreshPendingCount();
+        setInterval(refreshPendingCount, 30000);
     });
 </script>
 }
+
+
+<a href="/TestClient/PendingRecords" class="btn btn-warning" id="pendingBtn" style="display:none;">
+    Pending Records <span class="badge bg-dark" id="pendingBadge">0</span>
+</a>
