@@ -1,7 +1,7 @@
+public class RegionOptions
 {
-  "Regions": [
-    { "code": "vic", "name": "Victoria" },
-    { "code": "nsw", "name": "New South Wales" },
-    { "code": "qld", "name": "Queensland" }
-  ]
+    public List<RegionItem> Regions { get; set; } = new();
 }
+
+// Program.cs
+builder.Services.Configure<RegionOptions>(builder.Configuration);
