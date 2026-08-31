@@ -1,3 +1,24 @@
+builder.Configuration.AddJsonFile("stateaus.json", optional: false, reloadOnChange: true);
+
+Regions.All = builder.Configuration
+    .GetSection("Regions").Get<List<RegionItem>>() ?? new();
+
+if (Regions.All.Count == 0)
+    throw new InvalidOperationException("No regions loaded from stateaus.json.");
+
+
+Then confirm the .csproj entry so the file lands next to your DLL after publish:
+
+xml
+<ItemGroup>
+  <None Update="stateaus.json" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+
+    
+
+
+
+
 public class RegionOptions
 {
     public List<RegionItem> Regions { get; set; } = new();
