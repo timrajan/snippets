@@ -1,3 +1,6 @@
-var opts = builder.Configuration.Get<RegionOptions>();
-Console.WriteLine($"Bound count: {opts?.Regions?.Count ?? 0}");
-Console.WriteLine($"First code: {opts?.Regions?.FirstOrDefault()?.Code}");
+{
+  "Regions": [
+    { "code": "vic", "name": "Victoria", "groups": [ "A", "B" ] },
+    { "code": "nsw", "name": "New South Wales", "groups": [ "B" ] }
+  ]
+}
