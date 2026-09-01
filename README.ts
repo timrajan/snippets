@@ -1,3 +1,4 @@
-var path = Path.Combine(builder.Environment.ContentRootPath, "stateaus.json");
-Console.WriteLine($"Exists: {File.Exists(path)}");
-Console.WriteLine(File.ReadAllText(path));
+foreach (var kvp in builder.Configuration.AsEnumerable()
+                           .Where(k => k.Key.StartsWith("Regions"))
+                           .OrderBy(k => k.Key))
+    Console.WriteLine($"{kvp.Key} = {kvp.Value}");
