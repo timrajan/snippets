@@ -1,3 +1,14 @@
+@inject Microsoft.Extensions.Options.IOptions<YourApp.Models.RegionOptions> RegionOpts
+
+<select id="regionSelect" asp-for="MyViewModel.Region" class="form-select">
+    <option value="">-- Select --</option>
+    @foreach (var r in RegionOpts.Value.Regions)
+    {
+        <option value="@r.Code" data-groups="@string.Join(",", r.Groups)">@r.Code</option>
+    }
+</select>
+
+
 2. RegionItem.cs — one property added:
 
 csharp
