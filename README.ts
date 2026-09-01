@@ -1,3 +1,9 @@
+foreach (var kvp in builder.Configuration.AsEnumerable()
+                           .Where(k => k.Key.StartsWith("Regions"))
+                           .OrderBy(k => k.Key))
+    System.Diagnostics.Debug.WriteLine($"{kvp.Key} = {kvp.Value}");
+
+
 $('#groupSelect').on('change', function () {
     var g = $(this).val();
     var showAll = !g || g === 'C';
