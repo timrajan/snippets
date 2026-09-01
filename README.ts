@@ -1,3 +1,13 @@
+$('#groupSelect').on('change', function () {
+    var g = $(this).val();
+    var showAll = !g || g === 'C';
+    $('#regionSelect').val('').find('option[data-groups]').each(function () {
+        var groups = ($(this).attr('data-groups') || '').split(',');
+        $(this).toggle(showAll || groups.indexOf(g) !== -1);
+    });
+}).trigger('change');
+
+
 @inject Microsoft.Extensions.Options.IOptions<YourApp.Models.RegionOptions> RegionOpts
 
 <select id="regionSelect" asp-for="MyViewModel.Region" class="form-select">
