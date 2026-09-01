@@ -7,6 +7,11 @@ $('#groupSelect').on('change', function () {
     });
 }).trigger('change');
 
+foreach (var kvp in builder.Configuration.AsEnumerable()
+                           .Where(k => k.Key.StartsWith("Regions"))
+                           .OrderBy(k => k.Key))
+    System.Diagnostics.Debug.WriteLine($"{kvp.Key} = {kvp.Value}");
+
 
 @inject Microsoft.Extensions.Options.IOptions<YourApp.Models.RegionOptions> RegionOpts
 
