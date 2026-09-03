@@ -13,3 +13,17 @@ results = allRecords
     })
     .Take(5)
     .ToList();
+
+
+
+.Select(g =>
+{
+    var types = string.Join(", ", g.Select(r => r.mytype).Distinct());
+
+    return new myModel
+    {
+        RowCount = g.Count(),
+        myTypes = types.Length == 1 ? "NA" : types,
+        Status = string.Join(", ", g.Select(r => r.status).Distinct()),
+    };
+})
