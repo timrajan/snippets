@@ -1,12 +1,15 @@
 results = allRecords
-            .Where(r => r.emailaddress != null)
-            .Select(g => new myModel
-            {                            
-                RowCount = g.Count(),                
-                myTypes = string.Join(", ", g.Select(r => r.mytype).Distinct()),
-                Status = string.Join(", ", g.Select(r => r.status).Distinct()),                
-            .Select(id => $"<div class='py-1 border-bottom'>{id}</div>"))
-            })
-            .Take(5)
-            .ToList();
-return results;
+    .Where(r => r.emailaddress != null)
+    .Select(g =>
+    {
+        var types = g.Select(r => r.mytype).Distinct().ToList();
+
+        return new myModel
+        {
+            RowCount = g.Count(),
+            myTypes = types.Count == 1 ? "NA" : string.Join(", ", types),
+            Status = string.Join(", ", g.Select(r => r.status).Distinct()),
+        };
+    })
+    .Take(5)
+    .ToList();
