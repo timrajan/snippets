@@ -1,22 +1,61 @@
-@{
-    var msgType = TempData["MessageType"] as string ?? "success";
-    var message = TempData["Message"] as string;
-    var bgColour = msgType switch
+[HttpGet]
+public async Task<IActionResult> Index(StudentSearchViewModel vm)
+{
+    if (vm.Page < 1) vm.Page = 1;
+
+    var query = _context.TestData.AsNoTracking().AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(vm.Name))
     {
-        "danger"  => "#dc3545",
-        "warning" => "#ffc107",
-        "info"    => "#0dcaf0",
-        _         => "#28a745"
-    };
+        var term = vm.Name.Trim();
+        query = query.Where(s => EF.Functions.ILike(s.Name, $"%{term}%"));
+    }
+
+    if (!string.IsNullOrWhiteSpace(vm.RollNumber))
+    {
+        var term = vm.RollNumber.Trim();
+        query = query.Where(s => s.RollNumber == term);
+    }
+
+    if (vm.Year is not null)
+        query = query.Where(s => s.Year == vm.Year);
+
+    if (!string.IsNullOrWhiteSpace(vm.Gender))
+        query = query.Where(s => s.Gender == vm.Gender);
+
+    vm.TotalCount = await query.CountAsync();
+
+    if (vm.Page > vm.TotalPages) vm.Page = vm.TotalPages;
+
+    vm.Rows = await query
+        .OrderBy(s => s.Name)
+        .ThenBy(s => s.Id)
+        .Skip((vm.Page - 1) * StudentSearchViewModel.PageSize)
+        .Take(StudentSearchViewModel.PageSize)
+        .Select(s => new StudentRowDto(
+            s.Id, s.Name, s.RollNumber, s.Year, s.Gender, s.Status))
+        .ToListAsync();
+
+    vm.Years = await BuildYearsAsync();
+    vm.Genders = BuildGenders();
+
+    return View(vm);
 }
 
-@if (!string.IsNullOrEmpty(message))
+private async Task<IEnumerable<SelectListItem>> BuildYearsAsync()
 {
-    <div id="appAlert"
-         class="alert alert-@msgType alert-dismissible fade show position-fixed start-50 translate-middle p-4"
-         role="alert"
-         style="z-index: 9999; min-width: 800px; top: 75%; background-color: @bgColour; color: white; border: none;">
-        @message
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-    </div>
+    var years = await _context.TestData
+        .AsNoTracking()
+        .Select(s => s.Year)
+        .Distinct()
+        .OrderBy(y => y)
+        .ToListAsync();
+
+    return years.Select(y => new SelectListItem($"Year {y}", y.ToString()));
 }
+
+private static IEnumerable<SelectListItem> BuildGenders() =>
+[
+    new SelectListItem("Female", "Female"),
+    new SelectListItem("Male", "Male"),
+];
