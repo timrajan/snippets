@@ -1,8 +1,15 @@
-<td class="text-end">
-    <button type="button"
-            class="btn btn-sm btn-outline-secondary copy-row"
-            data-copy="@row.Name&#9;@row.RollNumber&#9;@row.Year&#9;@row.Gender"
-            title="Copy row">
-        <i class="bi bi-clipboard"></i>
-    </button>
-</td>
+@section Scripts {
+    <script>
+        $(function () {
+            $('.copy-row').on('click', function () {
+                var btn = $(this);
+                navigator.clipboard.writeText(btn.data('copy')).then(function () {
+                    btn.addClass('btn-success').removeClass('btn-outline-secondary');
+                    setTimeout(function () {
+                        btn.addClass('btn-outline-secondary').removeClass('btn-success');
+                    }, 1000);
+                });
+            });
+        });
+    </script>
+}
