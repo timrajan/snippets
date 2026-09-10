@@ -1,5 +1,5 @@
-// row 0 has no minus button, so give the clone one
-    if (!clone.querySelector('.remove-row')) {
-        clone.insertAdjacentHTML('beforeend',
-            '<button type="button" class="remove-row">−</button>');
-    }
+const addInClone = clone.querySelector('.btn-success');
+if (!clone.querySelector('.remove-row')) {
+    addInClone.insertAdjacentHTML('afterend',
+        '<button type="button" class="btn btn-danger remove-row">−</button>');
+}
