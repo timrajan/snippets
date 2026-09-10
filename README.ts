@@ -1,3 +1,9 @@
+@{
+    var prefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var isFirst = prefix.EndsWith("[0]");
+}
+
+
 const MAX_ROWS = 20;
 const container = document.getElementById('studentContainer');
 
