@@ -4,6 +4,18 @@
 }
 
 
+<div class="student-row">
+    @Html.TextBoxFor(m => m.Name)
+    @Html.TextBoxFor(m => m.Age)
+
+    <button type="button" class="add-row">+</button>
+    @if (!isFirst)
+    {
+        <button type="button" class="remove-row">−</button>
+    }
+</div>
+
+
 const MAX_ROWS = 20;
 const container = document.getElementById('studentContainer');
 
