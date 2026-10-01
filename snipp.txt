@@ -22,3 +22,26 @@ console.log(`Seeding test data for ${env}...`);
 // then pass `env` into your existing logic, e.g.
 // const config = getDbConfig(env);
 // await seed(config);
+
+
+
+import { parseArgs } from 'node:util';
+
+export const ALLOWED_ENVS = ['DEV', 'SIT', 'UAT', 'PROD'] as const;
+export type Env = (typeof ALLOWED_ENVS)[number];
+
+function resolveEnv(): Env {
+  const { values } = parseArgs({
+    options: { env: { type: 'string', short: 'e' } },
+    strict: false, // tolerate other flags when imported by different scripts
+  });
+
+  const raw = String(values.env ?? process.env.TEST_ENV ?? 'DEV').toUpperCase();
+
+  if (!ALLOWED_ENVS.includes(raw as Env)) {
+    throw new Error(`Invalid env "${raw}". Use one of: ${ALLOWED_ENVS.join(', ')}`);
+  }
+  return raw as Env;
+}
+
+export const env: Env = resolveEnv();
