@@ -1,3 +1,24 @@
- [Required]
- [MaxLength(100)]
- public int imsidentityid { get; set; } = string.Empty;
+import { parseArgs } from 'node:util';
+
+const ALLOWED_ENVS = ['DEV', 'SIT', 'UAT', 'PROD'] as const;
+type Env = (typeof ALLOWED_ENVS)[number];
+
+const { values } = parseArgs({
+  options: {
+    env: { type: 'string', short: 'e' },
+  },
+  strict: true, // errors on unknown flags like --evn
+});
+
+const env = (values.env ?? 'DEV').toUpperCase() as Env;
+
+if (!ALLOWED_ENVS.includes(env)) {
+  console.error(`Invalid --env "${values.env}". Use one of: ${ALLOWED_ENVS.join(', ')}`);
+  process.exit(1);
+}
+
+console.log(`Seeding test data for ${env}...`);
+
+// then pass `env` into your existing logic, e.g.
+// const config = getDbConfig(env);
+// await seed(config);
