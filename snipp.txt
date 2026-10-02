@@ -1,17 +1,1 @@
-- script: |
-    echo "=== Working dir ==="
-    pwd
-    ls -la
-    echo "=== npm version ==="
-    npm -v
-    echo "=== npm config (with sources) ==="
-    npm config list -l | grep -i prefix
-    npm config list
-    echo "=== npm env vars ==="
-    env | grep -i npm_config || echo "none"
-    echo "=== user .npmrc ==="
-    cat ~/.npmrc 2>/dev/null || echo "no user .npmrc"
-    echo "=== project .npmrc ==="
-    cat .npmrc 2>/dev/null || echo "no project .npmrc"
-  displayName: 'Debug npm config'
-  workingDirectory: <same folder as the JFrog step>
+@{ sql = Get-Content mysql.sql -Raw } | ConvertTo-Json | Set-Content query.json -Encoding utf8
