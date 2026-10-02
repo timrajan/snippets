@@ -1,18 +1,7 @@
-// seedData.ts
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
-
-export function updateRequirementSql(folderPath: string): Record<string, any> {
-  const requirementFile = join(folderPath, 'requirement.json');
-  const sqlFile = join(folderPath, 'mysql.sql');
-
-  const requirement = JSON.parse(readFileSync(requirementFile, 'utf8'));
-  requirement.sql = readFileSync(sqlFile, 'utf8');
-
-  writeFileSync(requirementFile, JSON.stringify(requirement, null, 2), 'utf8');
-  return requirement;
-}
-
-
-
+Plain-English test case
+  → step parser (split into steps)
+  → LLM converts each step to a structured action intent
+  → agent drives the live browser headless, performing those actions
+  → your recorder captures what it performed → Puppeteer script
+  → replay + lint validation → repair or flag → Azure DevOps PR
 
