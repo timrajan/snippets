@@ -1,1 +1,18 @@
-@{ sql = Get-Content mysql.sql -Raw } | ConvertTo-Json | Set-Content query.json -Encoding utf8
+// seedData.ts
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+
+export function updateRequirementSql(folderPath: string): Record<string, any> {
+  const requirementFile = join(folderPath, 'requirement.json');
+  const sqlFile = join(folderPath, 'mysql.sql');
+
+  const requirement = JSON.parse(readFileSync(requirementFile, 'utf8'));
+  requirement.sql = readFileSync(sqlFile, 'utf8');
+
+  writeFileSync(requirementFile, JSON.stringify(requirement, null, 2), 'utf8');
+  return requirement;
+}
+
+
+
+
