@@ -1,70 +1,37 @@
-{
-  "testCaseId": "TC-1001",
-  "testCaseTitle": "Successful login with valid credentials",
-  "preconditions": [
-    "The login page is open.",
-    "A valid test user exists.",
-    "The username and password are available in the approved test-data source."
-  ],
-  "steps": [
-    {
-      "stepId": "1",
-      "originalText": "Enter a valid username in the Username text box.",
-      "actions": [
-        {
-          "type": "fill",
-          "target": {
-            "description": "Username text box",
-            "accessibleName": "Username",
-            "role": "textbox"
-          },
-          "valueRef": "testData.username"
-        }
-      ],
-      "expectedResult": null,
-      "assertions": []
-    },
-    {
-      "stepId": "2",
-      "originalText": "Enter the corresponding password in the Password text box.",
-      "actions": [
-        {
-          "type": "fill",
-          "target": {
-            "description": "Password input",
-            "accessibleName": "Password",
-            "inputType": "password"
-          },
-          "valueRef": "testData.password"
-        }
-      ],
-      "expectedResult": null,
-      "assertions": []
-    },
-    {
-      "stepId": "3",
-      "originalText": "Click Submit and verify that the successful-login page is displayed.",
-      "actions": [
-        {
-          "type": "click",
-          "target": {
-            "description": "Submit button",
-            "accessibleName": "Submit",
-            "role": "button"
-          }
-        }
-      ],
-      "expectedResult": "The authenticated Dashboard page is displayed.",
-      "assertions": [
-        {
-          "type": "visible",
-          "target": {
-            "description": "Dashboard heading on the authenticated page",
-            "accessibleName": "Dashboard",
-            "role": "heading"
-          }
-        }
-      ]
-    }
-  ]
-}
+# Customer tables, keys and relationships (FICTIONAL DEMO)
+
+> FICTIONAL demonstration content. Document ID: `customer-table-relationships`.
+
+## Table grain and keys
+
+| Table | Grain | Primary key |
+|---|---|---|
+| `APP.CUSTOMER_MASTER` | One row per current customer | `CUSTOMER_ID` |
+| `APP.CUSTOMER_HISTORY` | One row per customer version | `CUSTOMER_ID`, `VERSION_NO` |
+| `APP.CUSTOMER_APPLICATIONS` | One row per application | `APPLICATION_ID` |
+| `APP.CUSTOMER_CONTACTS` | One row per contact | `CONTACT_ID` |
+| `APP.CUSTOMER_ARCHIVE` | One row per archived customer | `CUSTOMER_ID` |
+
+## Documented relationships
+
+These are the only documented relationships. Do not join on any other columns.
+
+- `APP.CUSTOMER_CONTACTS.CUSTOMER_ID` references `APP.CUSTOMER_MASTER.CUSTOMER_ID`.
+  This is one-to-many: a customer can have many contacts, so joining contacts to
+  the master table repeats customer rows. Count customers with
+  `COUNT(DISTINCT CUSTOMER_ID)`, or aggregate contacts before joining.
+- `APP.CUSTOMER_APPLICATIONS.CUSTOMER_ID` references `APP.CUSTOMER_MASTER.CUSTOMER_ID`.
+  It is NULL for applicants who have not become customers. One customer can come
+  from more than one application.
+- `APP.CUSTOMER_HISTORY.CUSTOMER_ID` identifies the customer a version belongs to.
+  That customer may now be current (`APP.CUSTOMER_MASTER`) or archived
+  (`APP.CUSTOMER_ARCHIVE`). There are many history rows per customer. The version
+  in effect at time T satisfies `VALID_FROM <= T AND (VALID_TO IS NULL OR VALID_TO > T)`.
+- `APP.CUSTOMER_ARCHIVE` holds customers that are no longer current. An archived
+  customer has no row in `APP.CUSTOMER_MASTER`. Do not `UNION` archive and master
+  rows unless the question explicitly asks for both current and former customers.
+
+## Applicants are not customers
+
+Rows in `APP.CUSTOMER_APPLICATIONS` describe applicants. Do not count or list
+applicants as customers.
